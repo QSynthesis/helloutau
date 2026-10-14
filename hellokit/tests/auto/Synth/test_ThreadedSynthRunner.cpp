@@ -112,7 +112,7 @@ namespace {
             reports.push_back({done, total});
         }
 
-        bool cancelled() override {
+        bool canceled() override {
             return cancelAt >= 0 && !reports.isEmpty() && reports.last().first >= cancelAt;
         }
     };
@@ -139,20 +139,20 @@ namespace {
     };
 
     /// A substitute synth tool whose behavior receives the cancellation query and returns the
-    /// whole result, for the cases of a cancelled or timed-out call. The behavior runs on the
+    /// whole result, for the cases of a canceled or timed-out call. The behavior runs on the
     /// threads of the runner.
     class PollingStandIn : public SynthToolProcess {
     public:
         using Behaviour = std::function<SynthToolRun(const std::filesystem::path &program,
                                                      const QStringList &arguments,
-                                                     const std::function<bool()> &cancelled)>;
+                                                     const std::function<bool()> &canceled)>;
 
         explicit PollingStandIn(Behaviour behaviour) : m_behaviour(std::move(behaviour)) {
         }
 
         SynthToolRun run(const std::filesystem::path &program, const QStringList &arguments,
-                         DiagnosticList &, const std::function<bool()> &cancelled) const override {
-            return m_behaviour(program, arguments, cancelled);
+                         DiagnosticList &, const std::function<bool()> &canceled) const override {
+            return m_behaviour(program, arguments, canceled);
         }
 
     private:
@@ -179,11 +179,11 @@ namespace {
         return std::filesystem::path(arguments.at(1).toStdU16String());
     }
 
-    /// Waits until \a cancelled returns true, for at most five seconds, and returns whether it
+    /// Waits until \a canceled returns true, for at most five seconds, and returns whether it
     /// did.
-    bool waitForCancellation(const std::function<bool()> &cancelled) {
+    bool waitForCancellation(const std::function<bool()> &canceled) {
         for (int i = 0; i < 500; ++i) {
-            if (cancelled && cancelled()) {
+            if (canceled && canceled()) {
                 return true;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -575,7 +575,7 @@ private Q_SLOTS:
     // A render from a full cache consists of appends only. A cancellation therefore takes effect
     // between the appends as well. The partial header and data are removed, and no track is
     // written.
-    void a_render_is_cancelled_between_the_appends() {
+    void a_render_is_canceled_between_the_appends() {
         const auto p = plan(3);
         QVERIFY(p.has_value());
         fillCache(*p);
@@ -589,7 +589,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, &recorder, diagnostics);
 
-        QVERIFY(outcome.cancelled);
+        QVERIFY(outcome.canceled);
         QVERIFY(!outcome.rendered);
         QCOMPARE(log.appended(), 1);
         QVERIFY(!std::filesystem::exists(p->outputFile()));
@@ -692,19 +692,19 @@ private Q_SLOTS:
 
     // A resampler killed by a cancellation may have written part of its fragment, which the next
     // render would otherwise reuse as complete.
-    void a_cancelled_resampler_call_leaves_no_fragment() {
+    void a_canceled_resampler_call_leaves_no_fragment() {
         const auto p = plan(2);
         QVERIFY(p.has_value());
         const auto synthTools = somewhere();
         std::atomic_int calls{0};
         PollingRunner runner([&](const std::filesystem::path &program, const QStringList &arguments,
-                                 const std::function<bool()> &cancelled) {
+                                 const std::function<bool()> &canceled) {
             SynthToolRun run;
             run.started = true;
             if (program == synthTools.resampler) {
                 ++calls;
                 std::ofstream(fragmentOf(arguments), std::ios::binary) << "RIFF half";
-                run.cancelled = waitForCancellation(cancelled);
+                run.canceled = waitForCancellation(canceled);
             }
             return run;
         });
@@ -714,7 +714,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, &recorder, diagnostics);
 
-        QVERIFY(outcome.cancelled);
+        QVERIFY(outcome.canceled);
         QVERIFY(calls.load() >= 1);
         for (const auto &step : p->steps()) {
             QVERIFY(!std::filesystem::exists(step.cacheFile));
@@ -740,15 +740,15 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
-        QVERIFY(!outcome.cancelled);
+        QVERIFY(!outcome.canceled);
         QCOMPARE(outcome.failed, 2);
         for (const auto &step : p->steps()) {
             QVERIFY(!std::filesystem::exists(step.cacheFile));
         }
     }
 
-    // A wavtool cancelled in the middle of the track leaves neither of its two files.
-    void a_cancelled_wavtool_call_removes_its_two_files() {
+    // A wavtool canceled in the middle of the track leaves neither of its two files.
+    void a_canceled_wavtool_call_removes_its_two_files() {
         const auto p = plan(3);
         QVERIFY(p.has_value());
         const auto synthTools = somewhere();
@@ -764,7 +764,7 @@ private Q_SLOTS:
                 std::ofstream(withSuffix(track, ".whd"), std::ios::binary) << std::string(44, 'H');
                 std::ofstream(withSuffix(track, ".dat"), std::ios::binary) << std::string(100, 'D');
             } else {
-                run.cancelled = true;
+                run.canceled = true;
             }
             return run;
         });
@@ -772,7 +772,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
-        QVERIFY(outcome.cancelled);
+        QVERIFY(outcome.canceled);
         QVERIFY(!outcome.rendered);
         QCOMPARE(appends.load(), 2);
         QVERIFY(!std::filesystem::exists(withSuffix(track, ".whd")));
@@ -788,7 +788,7 @@ private Q_SLOTS:
         std::atomic_int calls{0};
         std::atomic_bool killed{false};
         PollingRunner runner([&](const std::filesystem::path &program, const QStringList &arguments,
-                                 const std::function<bool()> &cancelled) {
+                                 const std::function<bool()> &canceled) {
             SynthToolRun run;
             run.started = true;
             if (program != synthTools.resampler) {
@@ -800,7 +800,7 @@ private Q_SLOTS:
                 return run;
             }
             for (int i = 0; i < 30; ++i) {
-                if (cancelled()) {
+                if (canceled()) {
                     killed = true;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -816,7 +816,7 @@ private Q_SLOTS:
 
         QCOMPARE(calls.load(), 3);
         QVERIFY(!killed.load());
-        QVERIFY(!outcome.cancelled);
+        QVERIFY(!outcome.canceled);
         QCOMPARE(outcome.failed, 1);
         int fragments = 0;
         for (const auto &step : p->steps()) {
@@ -878,7 +878,7 @@ private Q_SLOTS:
     }
 
     // A note with $direct passes its sample to the wavtool. No resampler runs for it, and the
-    // file is never removed as a fragment, also not by a cancelled render.
+    // file is never removed as a fragment, also not by a canceled render.
     void a_direct_note_runs_no_resampler_and_keeps_its_file() {
         const auto p = directPlan();
         QVERIFY(p.has_value());

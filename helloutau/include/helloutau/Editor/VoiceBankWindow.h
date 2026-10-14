@@ -125,11 +125,11 @@ namespace hello::daw {
 
         /// Opens VoiceAliasRuleDialog for the selected entries and inserts a copy of each with the
         /// alias that the rule derives, as one undo step. Returns false if the dialog is
-        /// cancelled or the insertion fails.
+        /// canceled or the insertion fails.
         bool duplicateWithRule();
 
         /// Opens VoiceAliasRuleDialog for the selected entries and replaces their aliases with
-        /// those that the rule derives, as one undo step. Returns false if the dialog is cancelled
+        /// those that the rule derives, as one undo step. Returns false if the dialog is canceled
         /// or the change fails.
         bool renameAliases();
 
@@ -153,7 +153,7 @@ namespace hello::daw {
         /// encoding the user changes again in the new encoding, as one undo step. Folders without
         /// text files and folders whose \c oto.ini declares UTF-8 are not listed, and a message
         /// box replaces the dialog if no folder remains. Returns false if no folder remains, the
-        /// dialog is cancelled, no encoding is changed or a folder is not read.
+        /// dialog is canceled, no encoding is changed or a folder is not read.
         bool rereadCharsets();
 
         /// \overload for the folders and encodings of \a charsets , without the dialog.
@@ -178,7 +178,7 @@ namespace hello::daw {
         /// Opens VoiceBankTranscodingDialog for the folders of the voice bank, those of the tree
         /// and those not read, and makes the conversion chosen. A renaming is first confirmed in
         /// a message box. A message box replaces the dialog if no folder has text files or a name
-        /// that is not ASCII. Returns false if no folder remains, the dialog is cancelled, the
+        /// that is not ASCII. Returns false if no folder remains, the dialog is canceled, the
         /// renaming is declined or the conversion fails.
         bool convertEncodings();
 
@@ -193,7 +193,7 @@ namespace hello::daw {
         /// Opens GenerateFrequencyMapsDialog for the audio files of the voice bank, those of the
         /// folders not read included, and generates the frequency maps of the checked files as
         /// the overload does. Returns false if the voice bank has no audio files, the dialog is
-        /// cancelled or a map is not generated.
+        /// canceled or a map is not generated.
         bool generateFrequencyMaps();
 
         /// \overload for the audio files \a wavs , absolute paths, without the dialog.
@@ -211,7 +211,7 @@ namespace hello::daw {
         /// Opens RemoveFrequencyMapsDialog for the audio files of the voice bank, those of the
         /// folders not read included, and removes the frequency maps of the checked files as the
         /// overload does. Returns false if the voice bank has no audio files, the dialog is
-        /// cancelled or a map is not removed.
+        /// canceled or a map is not removed.
         bool removeFrequencyMaps();
 
         /// \overload for the audio files \a wavs , absolute paths, without the dialog.
@@ -234,7 +234,7 @@ namespace hello::daw {
         /// folders not read included, with the format in effect as the initial source format,
         /// and converts the maps of the checked files between the formats chosen, as the
         /// overload does. Returns false if the voice bank has no audio files, the dialog is
-        /// cancelled or a map is not converted.
+        /// canceled or a map is not converted.
         bool convertFrequencyMaps();
 
         /// \overload for the audio files \a wavs , absolute paths, from the format \a from to

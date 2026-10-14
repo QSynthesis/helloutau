@@ -133,7 +133,7 @@ namespace hello::daw {
                 });
             }
 
-            bool cancelled() override {
+            bool canceled() override {
                 return m_job.cancel.load();
             }
 
@@ -166,7 +166,7 @@ namespace hello::daw {
                 });
             }
 
-            bool cancelled() override {
+            bool canceled() override {
                 return m_cancel.load();
             }
 
@@ -197,7 +197,7 @@ namespace hello::daw {
         std::filesystem::path temporaryDirectory;
 
         // The render in progress, and the workers that have not yet finished, including those
-        // of cancelled renders
+        // of canceled renders
         std::shared_ptr<Job> job;
         QList<QPointer<QThread>> workers;
         // The threads of the plans and of the scans of the cache that have not yet finished,
@@ -647,7 +647,7 @@ namespace hello::daw {
             const auto outcome =
                 job->runner->render(plan, job->synthTools, &observer, job->diagnostics);
             job->failures = outcome.failures;
-            if (!outcome.rendered || outcome.cancelled || job->cancel.load()) {
+            if (!outcome.rendered || outcome.canceled || job->cancel.load()) {
                 return;
             }
             if (job->fileOnly) {
@@ -680,7 +680,7 @@ namespace hello::daw {
             setState(Rendering);
         }
 
-        // Whether a render cancelled before has yet to end: the synth tool calls under way, or a
+        // Whether a render canceled before has yet to end: the synth tool calls under way, or a
         // script, which ends within moments with the synth tools it started.
         bool rendersStill() {
             workers.removeAll(nullptr);
@@ -738,7 +738,7 @@ namespace hello::daw {
             return diagnosers->diagnose(context);
         }
 
-        // Plays the result of \a finished, unless it was cancelled or superseded meanwhile.
+        // Plays the result of \a finished, unless it was canceled or superseded meanwhile.
         void rendered(const std::shared_ptr<Job> &finished) {
             stdc_decl_t;
             if (finished != job) {

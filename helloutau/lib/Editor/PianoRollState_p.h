@@ -141,7 +141,7 @@ namespace hello::daw {
             using QLineEdit::QLineEdit;
 
             std::function<void()> committed;
-            std::function<void()> cancelled;
+            std::function<void()> canceled;
             std::function<void(bool forward)> tabbed;
 
         protected:

@@ -264,7 +264,7 @@ namespace hello::daw {
         utau::PluginResult file;
         file.read(std::string_view(result.data(), size_t(result.size())));
         if (file.isCancelled()) {
-            return Cancelled;
+            return Canceled;
         }
 
         const Text text(plugin.charset);

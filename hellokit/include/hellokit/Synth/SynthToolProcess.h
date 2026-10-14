@@ -78,9 +78,9 @@ namespace hello::kit {
         /// Whether the synth tool was killed because it exceeded the time limit.
         bool timedOut = false;
 
-        /// Whether the synth tool or the script was killed because the caller cancelled it. A
+        /// Whether the synth tool or the script was killed because the caller canceled it. A
         /// script is killed with the processes that it started.
-        bool cancelled = false;
+        bool canceled = false;
 
         /// All output of the synth tool on both streams, for the diagnostic on failure.
         QString output;
@@ -131,15 +131,15 @@ namespace hello::kit {
         /// \a program is used as given rather than searched for along \c PATH, so that the
         /// selected synth tool runs and not a program of the same name in an earlier directory.
         ///
-        /// \a cancelled, if given, is queried about every 100 milliseconds while the synth tool
-        /// runs. Once it returns true, the synth tool is killed and \c SynthToolRun::cancelled is
+        /// \a canceled, if given, is queried about every 100 milliseconds while the synth tool
+        /// runs. Once it returns true, the synth tool is killed and \c SynthToolRun::canceled is
         /// set. The output written before the kill is retained in \c SynthToolRun::output.
         ///
         /// \warning A killed or timed-out synth tool may leave a partially written output file. The
         ///          caller removes the file, because the next render would otherwise reuse it.
         virtual SynthToolRun run(const std::filesystem::path &program, const QStringList &arguments,
                                  DiagnosticList &diagnostics,
-                                 const std::function<bool()> &cancelled = {}) const;
+                                 const std::function<bool()> &canceled = {}) const;
 
         /// Returns the timestamped output collected by this process's log.
         QString outputLog() const;
@@ -151,9 +151,9 @@ namespace hello::kit {
         /// termination are handled in one place, and it takes a path rather than text so that
         /// no caller can pass an ad hoc command.
         ///
-        /// \a cancelled, if given, is queried about every 100 milliseconds while the script
+        /// \a canceled, if given, is queried about every 100 milliseconds while the script
         /// runs. Once it returns true, the script and every process it started are killed,
-        /// and \c SynthToolRun::cancelled is set. The time limit kills them all as well.
+        /// and \c SynthToolRun::canceled is set. The time limit kills them all as well.
         ///
         /// \note The visible console matches UTAU behavior and is intentional: the output of
         ///       the script is meant to be read by the user. Nothing is captured, so
@@ -164,7 +164,7 @@ namespace hello::kit {
         ///          commands. See \c ClassicSynthRunner, the only caller.
         virtual SynthToolRun runScript(const std::filesystem::path &script,
                                        DiagnosticList &diagnostics,
-                                       const std::function<bool()> &cancelled = {}) const;
+                                       const std::function<bool()> &canceled = {}) const;
 
     private:
         std::shared_ptr<SynthToolOutputLog> m_outputLog;

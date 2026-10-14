@@ -351,8 +351,8 @@ namespace hello::kit {
             outcome.direct += step.direct ? 1 : 0;
         }
 
-        if (observer && observer->cancelled()) {
-            outcome.cancelled = true;
+        if (observer && observer->canceled()) {
+            outcome.canceled = true;
             return outcome;
         }
 
@@ -382,14 +382,14 @@ namespace hello::kit {
         }
 
         const auto run = synthTool->runScript(
-            scriptPath, diagnostics, [observer] { return observer && observer->cancelled(); });
+            scriptPath, diagnostics, [observer] { return observer && observer->canceled(); });
 
         // The script was killed during one of its synth tool calls, and the resampler of that call
         // may have written part of its fragment. The script runs the notes in track order. That
         // fragment is therefore the last fragment that this run created or rewrote, and it is
         // removed. If the kill occurred during a wavtool call or before the resampler created its
         // file, the removed fragment is complete, and the next render resamples one note again.
-        if (run.cancelled || run.timedOut) {
+        if (run.canceled || run.timedOut) {
             for (int i = int(plan.steps().size()) - 1; i >= 0; --i) {
                 const auto &step = plan.steps().at(i);
                 std::error_code timeError;
@@ -402,8 +402,8 @@ namespace hello::kit {
             }
         }
 
-        if (run.cancelled) {
-            outcome.cancelled = true;
+        if (run.canceled) {
+            outcome.canceled = true;
             return outcome;
         }
 

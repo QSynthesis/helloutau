@@ -230,7 +230,7 @@ namespace hello::kit::edit {
         if (discarded) {
             if (commit) {
                 diagnostics.push_back(errorOf(EditSession::tr(
-                    "The modification was not applied because one of its steps was cancelled.")));
+                    "The modification was not applied because one of its steps was canceled.")));
             }
         } else {
             committed = read || !introducedViolations(diagnostics);

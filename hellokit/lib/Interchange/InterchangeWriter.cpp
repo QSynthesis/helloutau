@@ -26,7 +26,7 @@ namespace hello::kit {
                            .selectExport(*this, project, result.diagnostics);
         if (!request) {
             // See InterchangeReader::read() for the reason the diagnostics determine this.
-            result.cancelled = !hasError(result.diagnostics.mid(mark));
+            result.canceled = !hasError(result.diagnostics.mid(mark));
             return result;
         }
 

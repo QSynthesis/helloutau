@@ -49,9 +49,9 @@ namespace hello::daw {
                                 int count, const Paths &paths, const kit::VoiceBank *voiceBank);
 
         enum Outcome {
-            Applied,   ///< the modifications form one undo step
-            Cancelled, ///< the file contains no note section
-            Failed,    ///< the modifications were rolled back, see the diagnostics
+            Applied,  ///< the modifications form one undo step
+            Canceled, ///< the file contains no note section
+            Failed,   ///< the modifications were rolled back, see the diagnostics
         };
 
         /// Applies \a result , the file written back by \a plugin , to the \a count notes of

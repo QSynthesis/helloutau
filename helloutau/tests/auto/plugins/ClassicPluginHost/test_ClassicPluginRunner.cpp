@@ -85,7 +85,7 @@ private Q_SLOTS:
         QVERIFY(finished.wait(20000));
         QVERIFY(!runner.isRunning());
         QVERIFY(!runner.processId());
-        QVERIFY(!runner.isCancelled());
+        QVERIFY(!runner.isCanceled());
         QCOMPARE(runner.result(), QByteArray("[#0000]\r\nLyric=z\r\n"));
         QVERIFY(!runner.isUnchanged());
 
@@ -109,7 +109,7 @@ private Q_SLOTS:
 
     // Cancellation terminates the program immediately, together with the processes started by
     // it. The background process started by the program never writes its file.
-    void cancelling_ends_what_the_program_started() {
+    void canceling_ends_what_the_program_started() {
 #ifdef Q_OS_WINDOWS
         const auto p = plugin("waiting", "start \"\" /b cmd /c \"ping -n 3 127.0.0.1 >nul & "
                                          "echo x> \"%~dp0late.txt\"\"\r\n"
@@ -130,7 +130,7 @@ private Q_SLOTS:
         runner.cancel();
         QVERIFY(timer.elapsed() < 5000);
         QCOMPARE(finished.count(), 1);
-        QVERIFY(runner.isCancelled());
+        QVERIFY(runner.isCanceled());
         QVERIFY(runner.result().isEmpty());
 
         QTest::qWait(3500);

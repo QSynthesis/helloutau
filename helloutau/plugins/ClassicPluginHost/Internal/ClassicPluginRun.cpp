@@ -113,7 +113,7 @@ namespace hello::daw {
             if (runner.isRunning()) {
                 runner.cancel();
             }
-            return !runner.isCancelled();
+            return !runner.isCanceled();
         }
 
     }

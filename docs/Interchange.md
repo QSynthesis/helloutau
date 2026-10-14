@@ -188,7 +188,7 @@ struct ImportLimits {
 ```cpp
 struct ImportResult {
     std::optional<Project> project;   // 为空表示未导入
-    bool cancelled = false;           // 为空的原因是用户取消，而非出错
+    bool canceled = false;           // 为空的原因是用户取消，而非出错
     QList<Diagnostic> diagnostics;
 };
 ```

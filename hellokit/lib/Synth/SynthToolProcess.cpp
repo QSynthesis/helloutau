@@ -221,7 +221,7 @@ namespace hello::kit {
 
     SynthToolRun SynthToolProcess::run(const std::filesystem::path &program,
                                        const QStringList &arguments, DiagnosticList &diagnostics,
-                                       const std::function<bool()> &cancelled) const {
+                                       const std::function<bool()> &canceled) const {
         SynthToolRun result;
 
         // args[0] is the full path, as UTAU passes it, because a synth tool may locate its
@@ -280,7 +280,7 @@ namespace hello::kit {
             if (exchanged || process.errorCode() != std::errc::timed_out) {
                 break;
             }
-            if (cancelled && cancelled()) {
+            if (canceled && canceled()) {
                 stopped = true;
                 break;
             }
@@ -298,7 +298,7 @@ namespace hello::kit {
         m_outputLog->record(program, result.output);
 
         if (stopped) {
-            result.cancelled = true;
+            result.canceled = true;
             return result;
         }
         if (timedOut) {
@@ -316,7 +316,7 @@ namespace hello::kit {
 
     SynthToolRun SynthToolProcess::runScript(const std::filesystem::path &script,
                                              DiagnosticList &diagnostics,
-                                             const std::function<bool()> &cancelled) const {
+                                             const std::function<bool()> &canceled) const {
         SynthToolRun result;
 
         stdc::Popen process;
@@ -351,9 +351,9 @@ namespace hello::kit {
         const auto deadline =
             std::chrono::steady_clock::now() + std::chrono::milliseconds(std::max(0, timeout));
         while (!process.wait(PollInterval)) {
-            if (cancelled && cancelled()) {
+            if (canceled && canceled()) {
                 killTree(process);
-                result.cancelled = true;
+                result.canceled = true;
                 return result;
             }
             if (timeout >= 0 && std::chrono::steady_clock::now() >= deadline) {

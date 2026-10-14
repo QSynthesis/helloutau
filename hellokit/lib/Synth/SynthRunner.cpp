@@ -33,7 +33,7 @@ namespace hello::kit {
     void SynthObserver::progressed(int, int) {
     }
 
-    bool SynthObserver::cancelled() {
+    bool SynthObserver::canceled() {
         return false;
     }
 

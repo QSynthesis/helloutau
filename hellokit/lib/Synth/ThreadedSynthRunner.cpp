@@ -152,9 +152,9 @@ namespace hello::kit {
                 observer->progressed(done, 2 * total);
             }
         };
-        const auto cancelled = [&] {
+        const auto canceled = [&] {
             const QMutexLocker locked(&lock);
-            return observer && observer->cancelled();
+            return observer && observer->canceled();
         };
 
         // Shared by all threads and by the subsequent wavtool calls, which is why it must be
@@ -195,7 +195,7 @@ namespace hello::kit {
 
                     // A killed resampler may have written part of the fragment, which the next
                     // render would reuse as complete.
-                    if (run.cancelled || run.timedOut) {
+                    if (run.canceled || run.timedOut) {
                         std::error_code removeError;
                         fs::remove(steps.at(i).cacheFile, removeError);
                     }
@@ -209,10 +209,10 @@ namespace hello::kit {
                 });
             }
 
-            // Queried while the pool runs, so that a cancelled render starts no further notes and
+            // Queried while the pool runs, so that a canceled render starts no further notes and
             // kills the running calls.
             while (!pool.waitForDone(50)) {
-                if (cancelled()) {
+                if (canceled()) {
                     stopped.store(true);
                     aborted.store(true);
                 }
@@ -225,7 +225,7 @@ namespace hello::kit {
         }
 
         if (stopped.load() && !stopOnFirstFailure) {
-            outcome.cancelled = true;
+            outcome.canceled = true;
             return outcome;
         }
 
@@ -299,22 +299,22 @@ namespace hello::kit {
         std::optional<SynthToolRun> lastRun;
 
         // These calls append to a single file and therefore run sequentially on one thread. The
-        // header and the data of a cancelled render are removed.
+        // header and the data of a canceled render are removed.
         for (const auto &step : steps) {
-            if (cancelled()) {
+            if (canceled()) {
                 fs::remove(header, error);
                 fs::remove(data, error);
-                outcome.cancelled = true;
+                outcome.canceled = true;
                 return outcome;
             }
             if (!step.resamples() || fs::exists(step.cacheFile)) {
                 const auto before = writtenSize();
                 const auto run = synthTool->run(synthTools.wavtool, step.wavtoolArguments,
-                                                diagnostics, cancelled);
-                if (run.cancelled) {
+                                                diagnostics, canceled);
+                if (run.canceled) {
                     fs::remove(header, error);
                     fs::remove(data, error);
-                    outcome.cancelled = true;
+                    outcome.canceled = true;
                     return outcome;
                 }
                 if (!run.started) {

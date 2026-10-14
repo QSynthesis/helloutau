@@ -146,7 +146,7 @@ namespace hello::daw {
         void checkNow(QWidget *parent, const QString &source);
 
     Q_SIGNALS:
-        /// Emitted when a check ends, whether it succeeded, failed or was cancelled.
+        /// Emitted when a check ends, whether it succeeded, failed or was canceled.
         void finished();
 
     private:

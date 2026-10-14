@@ -174,7 +174,7 @@ namespace hello::daw {
         /// to the user.
         ///
         /// \return the window that shows the file, or \c nullptr if the file was not opened or
-        ///         the user cancelled the question to save
+        ///         the user canceled the question to save
         ProjectWindow *openFile(const std::filesystem::path &path, ProjectWindow *from = nullptr);
 
         /// Opens \a paths, the first as openFile() does with \a from and the others in windows of

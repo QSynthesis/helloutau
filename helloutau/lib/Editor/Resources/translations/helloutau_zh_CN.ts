@@ -3982,7 +3982,7 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>正在读取音频文件...</translation>
     </message>
     <message>
-        <source>The reading of the audio files was cancelled, and no file is processed.</source>
+        <source>The reading of the audio files was canceled, and no file is processed.</source>
         <translation>已取消读取音频文件，不处理任何文件。</translation>
     </message>
     <message>
@@ -5663,7 +5663,7 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>超出 %1 到 %2 的范围</translation>
     </message>
     <message>
-        <source>The modification was not applied because one of its steps was cancelled.</source>
+        <source>The modification was not applied because one of its steps was canceled.</source>
         <translation>修改未应用，因为其中一个步骤已取消。</translation>
     </message>
 </context>

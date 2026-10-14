@@ -34,7 +34,7 @@ namespace hello::kit {
 
         /// Whether the render stopped on request. Not a failure, and not to be reported as a
         /// failure.
-        bool cancelled = false;
+        bool canceled = false;
 
         /// \name Note counts by outcome
         /// @{
@@ -73,7 +73,7 @@ namespace hello::kit {
 
         /// Queried between notes. Returning true stops the render once the running calls
         /// finish, and the outcome reports cancellation rather than failure.
-        virtual bool cancelled();
+        virtual bool canceled();
     };
 
     /// Executes a plan.

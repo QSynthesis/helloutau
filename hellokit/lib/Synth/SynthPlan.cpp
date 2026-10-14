@@ -297,7 +297,7 @@ namespace hello::kit {
                            (params.empty() ? 0 : params.front().first.correctPreUttr);
 
         for (size_t i = 0; i < params.size(); ++i) {
-            if (observer && observer->cancelled()) {
+            if (observer && observer->canceled()) {
                 return std::nullopt;
             }
             auto [resampler, wavtool] = params[i];

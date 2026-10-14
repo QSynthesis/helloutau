@@ -86,7 +86,7 @@ private Q_SLOTS:
             PresetSelector selector(requestOf({1}), 2);
             const auto result = reader.read("a.fixed", &selector);
             QVERIFY(!result.project);
-            QVERIFY(!result.cancelled);
+            QVERIFY(!result.canceled);
             QVERIFY(kit::hasError(result.diagnostics));
             QVERIFY(!reader.received);
         }

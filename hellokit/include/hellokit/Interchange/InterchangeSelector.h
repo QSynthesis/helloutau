@@ -34,7 +34,7 @@ namespace hello::kit {
     public:
         virtual ~InterchangeSelector();
 
-        /// \return the import request, or \c std::nullopt if the user cancelled. Cancellation
+        /// \return the import request, or \c std::nullopt if the user canceled. Cancellation
         ///         is not an error and must not be reported as one.
         /// \note \c std::nullopt has two meanings, distinguished by \a diagnostics . With an
         ///       \c Error recorded, the user could not be asked at all, for example because the

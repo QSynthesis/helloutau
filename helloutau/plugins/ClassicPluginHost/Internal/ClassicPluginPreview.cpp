@@ -223,7 +223,7 @@ namespace hello::daw {
                              [this, request, context](Playback::State state) {
                                  if (state == Playback::Stopped) {
                                      QTimer::singleShot(0, context, [this, request] {
-                                         finish(request, Server::Cancelled);
+                                         finish(request, Server::Canceled);
                                      });
                                  }
                              });
@@ -351,7 +351,7 @@ namespace hello::daw {
                 server.reply(Server::Failed,
                              ClassicPluginPreviewText::tr("The notes could not be rendered."));
             } else {
-                server.reply(rendered ? Server::Done : Server::Cancelled);
+                server.reply(rendered ? Server::Done : Server::Canceled);
             }
             removeOutput(request);
         }

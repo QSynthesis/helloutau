@@ -57,7 +57,7 @@ namespace {
         mutable QList<QStringList> calls;
 
         SynthToolRun run(const fs::path &, const QStringList &arguments, DiagnosticList &,
-                         const std::function<bool()> &cancelled) const override {
+                         const std::function<bool()> &canceled) const override {
             {
                 const QMutexLocker locker(&mutex);
                 calls.push_back(arguments);
@@ -67,8 +67,8 @@ namespace {
             if (!starts) {
                 return out;
             }
-            if (cancelled && cancelled()) {
-                out.cancelled = true;
+            if (canceled && canceled()) {
+                out.canceled = true;
                 return out;
             }
             const fs::path wav(arguments.at(0).toStdU16String());
@@ -244,8 +244,8 @@ private Q_SLOTS:
         QVERIFY(!outcome.failures.at(0).run->started);
     }
 
-    // Once cancelled, no further audio file is started.
-    void a_cancelled_generation_starts_nothing_more() {
+    // Once canceled, no further audio file is started.
+    void a_canceled_generation_starts_nothing_more() {
         const QList<fs::path> wavs{write("a.wav"), write("b.wav"), write("c.wav")};
         const SidecarFormat format;
         FrequencyMapGenerator generator;

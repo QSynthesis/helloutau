@@ -318,9 +318,9 @@ private Q_SLOTS:
         QCOMPARE(highest.load(), 6);
 
         DiagnosticList none;
-        const auto cancelled = Processor::inspectFiles(files, 0, none, {}, [] { return true; });
-        QCOMPARE(cancelled.size(), 6);
-        QVERIFY(std::none_of(cancelled.cbegin(), cancelled.cend(),
+        const auto canceled = Processor::inspectFiles(files, 0, none, {}, [] { return true; });
+        QCOMPARE(canceled.size(), 6);
+        QVERIFY(std::none_of(canceled.cbegin(), canceled.cend(),
                              [](const auto &inspection) { return inspection.has_value(); }));
         QVERIFY(none.isEmpty());
     }

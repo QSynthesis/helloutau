@@ -31,7 +31,7 @@ namespace hello::daw {
     ///
     /// A render runs on a worker thread with the synth tools of the settings, never those the
     /// project names, by \c temp.bat in a console as UTAU renders, or by several threads.
-    /// Cancelling it kills the script with the synth tools it started, see
+    /// Canceling it kills the script with the synth tools it started, see
     /// kit::SynthToolProcess::runScript(), or lets the running synth tool calls end. The track file
     /// is then read, converted to the sample rate of the output device, and played. position() maps
     /// the playback position to the track, see kit::SynthPlan::startTime().
@@ -97,7 +97,7 @@ namespace hello::daw {
         ///
         /// \return whether rendering started. The reason is in \a diagnostics otherwise, such as
         ///         a document without a voice bank, synth tools that are not set, or a render
-        ///         cancelled before that has not ended. The reasons found in the plan, such as
+        ///         canceled before that has not ended. The reasons found in the plan, such as
         ///         a range without notes, are reported by failed().
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
                   const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);

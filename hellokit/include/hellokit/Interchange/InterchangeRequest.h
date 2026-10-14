@@ -71,13 +71,13 @@ namespace hello::kit {
     /// message box.
     struct ImportResult {
         std::optional<Project> project;
-        bool cancelled = false;
+        bool canceled = false;
         DiagnosticList diagnostics;
     };
 
     struct ExportResult {
         bool written = false;
-        bool cancelled = false;
+        bool canceled = false;
         DiagnosticList diagnostics;
     };
 

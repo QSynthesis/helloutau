@@ -43,7 +43,7 @@ namespace hello::kit {
             // distinguish. An error recorded by the selector indicates that the user could not be
             // asked, which is a failure. No recorded error indicates that the user declined, which
             // is not a failure.
-            result.cancelled = !hasError(result.diagnostics.mid(mark));
+            result.canceled = !hasError(result.diagnostics.mid(mark));
             return result;
         }
 

@@ -177,7 +177,7 @@ namespace hello::kit {
     // no list and the diagnostics keep the order of the files.
     QList<std::optional<AudioFileProcessor::Inspection>> AudioFileProcessor::inspectFiles(
         const QList<std::filesystem::path> &files, int threadCount, DiagnosticList &diagnostics,
-        const std::function<void(int)> &progress, const std::function<bool()> &cancelled) {
+        const std::function<void(int)> &progress, const std::function<bool()> &canceled) {
         QList<std::optional<Inspection>> inspections(files.size());
         std::vector<DiagnosticList> found(files.size());
         std::atomic<int> done = 0;
@@ -187,7 +187,7 @@ namespace hello::kit {
                                                    : std::max(1, QThread::idealThreadCount()));
             for (qsizetype i = 0; i < files.size(); ++i) {
                 pool.start([&, i] {
-                    if (cancelled && cancelled()) {
+                    if (canceled && canceled()) {
                         return;
                     }
                     inspections[i] = inspect(files.at(i), found[i]);

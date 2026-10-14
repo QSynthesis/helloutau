@@ -67,7 +67,7 @@ namespace {
         mutable std::atomic<int> ended = 0;
         mutable QList<fs::path> caches;
         mutable std::atomic<bool> waitForCancel = false;
-        // Runs on until released, cancelled or not, as a script does
+        // Runs on until released, canceled or not, as a script does
         mutable std::atomic<bool> hold = false;
         // The frames of the track file
         quint32 frames = 4410;
@@ -88,8 +88,8 @@ namespace {
                 QThread::msleep(5);
             }
             while (waitForCancel.load()) {
-                if (observer->cancelled()) {
-                    outcome.cancelled = true;
+                if (observer->canceled()) {
+                    outcome.canceled = true;
                     ++ended;
                     return outcome;
                 }
@@ -773,9 +773,9 @@ private Q_SLOTS:
         playback.stop();
     }
 
-    // A render that goes on after it was cancelled, as a script does in its console, has to
+    // A render that goes on after it was canceled, as a script does in its console, has to
     // end before the next can start, which would write the same files.
-    void a_render_cancelled_ends_before_the_next() {
+    void a_render_canceled_ends_before_the_next() {
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
@@ -877,7 +877,7 @@ private Q_SLOTS:
     }
 
     // stopAndWait() returns after the render has ended, also a render that runs on after it was
-    // cancelled, so that the temporary directory can be replaced afterwards.
+    // canceled, so that the temporary directory can be replaced afterwards.
     void stop_and_wait_waits_for_the_render() {
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
@@ -902,7 +902,7 @@ private Q_SLOTS:
         playback.setTemporaryDirectory(temporaryOf(dir) / "other");
     }
 
-    // The destructor waits for a render that runs on after it was cancelled.
+    // The destructor waits for a render that runs on after it was canceled.
     void the_destructor_waits_for_the_render() {
         QTemporaryDir dir;
         const auto document = singingDocument(dir);

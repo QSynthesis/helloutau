@@ -38,7 +38,7 @@ namespace {
     constexpr char writeLater[] = "--write-later";
 
     /// The argument that makes it print the argument that follows and then hang, for the case of
-    /// a cancelled synth tool.
+    /// a canceled synth tool.
     constexpr char printThenSleep[] = "--print-then-sleep";
 
     /// The argument that makes it sleep for the number of milliseconds that follows and succeed.
@@ -199,11 +199,11 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // A cancelled script ends at once with the synth tool it started, which would otherwise write
+    // A canceled script ends at once with the synth tool it started, which would otherwise write
     // its second file a second later. A kill of the script alone leaves the synth tool running, as
-    // Popen.kill() of Python does. The script is cancelled once the synth tool runs, which writes
+    // Popen.kill() of Python does. The script is canceled once the synth tool runs, which writes
     // its first file. The console of the script shows briefly.
-    void a_cancelled_script_ends_with_its_synth_tools() {
+    void a_canceled_script_ends_with_its_synth_tools() {
         QTemporaryDir dir;
         const auto started = dir.filePath(QStringLiteral("started"));
         const auto marker = dir.filePath(QStringLiteral("written"));
@@ -222,50 +222,50 @@ private Q_SLOTS:
         }
         QFile::setPermissions(script, QFile::permissions(script) | QFile::ExeOwner);
 
-        // Cancelled once the synth tool runs, or after five seconds without it
+        // Canceled once the synth tool runs, or after five seconds without it
         QElapsedTimer elapsed;
         elapsed.start();
-        qint64 cancelledAt = -1;
+        qint64 canceledAt = -1;
         SynthToolProcess synthTool;
         DiagnosticList diagnostics;
         const auto result = synthTool.runScript(
             std::filesystem::path(script.toStdU16String()), diagnostics,
-            [&elapsed, &cancelledAt, &started] {
-                if (cancelledAt < 0 && (QFile::exists(started) || elapsed.elapsed() > 5000)) {
-                    cancelledAt = elapsed.elapsed();
+            [&elapsed, &canceledAt, &started] {
+                if (canceledAt < 0 && (QFile::exists(started) || elapsed.elapsed() > 5000)) {
+                    canceledAt = elapsed.elapsed();
                 }
-                return cancelledAt >= 0;
+                return canceledAt >= 0;
             });
         QVERIFY(QFile::exists(started));
         QVERIFY(result.started);
-        QVERIFY(result.cancelled);
-        QVERIFY2(elapsed.elapsed() - cancelledAt < 500,
-                 qPrintable(QString::number(elapsed.elapsed() - cancelledAt)));
+        QVERIFY(result.canceled);
+        QVERIFY2(elapsed.elapsed() - canceledAt < 500,
+                 qPrintable(QString::number(elapsed.elapsed() - canceledAt)));
         QTest::qWait(1500);
         QVERIFY(!QFile::exists(marker));
     }
 
-    // A cancelled synth tool is killed within about one poll interval. The output written before
+    // A canceled synth tool is killed within about one poll interval. The output written before
     // the kill is kept, in the result and in the log, and the cancellation is no error.
-    void a_cancelled_synth_tool_is_killed_and_keeps_its_output() {
+    void a_canceled_synth_tool_is_killed_and_keeps_its_output() {
         QElapsedTimer elapsed;
         elapsed.start();
-        qint64 cancelledAt = -1;
+        qint64 canceledAt = -1;
         SynthToolProcess synthTool;
         DiagnosticList diagnostics;
         const auto result = synthTool.run(
             self(), {QLatin1String(printThenSleep), QStringLiteral("partial")}, diagnostics, [&] {
-                if (cancelledAt < 0 && elapsed.elapsed() > 300) {
-                    cancelledAt = elapsed.elapsed();
+                if (canceledAt < 0 && elapsed.elapsed() > 300) {
+                    canceledAt = elapsed.elapsed();
                 }
-                return cancelledAt >= 0;
+                return canceledAt >= 0;
             });
         QVERIFY(result.started);
-        QVERIFY(result.cancelled);
+        QVERIFY(result.canceled);
         QVERIFY(!result.timedOut);
         QVERIFY(diagnostics.isEmpty());
-        QVERIFY2(elapsed.elapsed() - cancelledAt < 500,
-                 qPrintable(QString::number(elapsed.elapsed() - cancelledAt)));
+        QVERIFY2(elapsed.elapsed() - canceledAt < 500,
+                 qPrintable(QString::number(elapsed.elapsed() - canceledAt)));
         QCOMPARE(result.output.trimmed(), QStringLiteral("partial"));
         QVERIFY(synthTool.outputLog().contains(QStringLiteral("partial")));
     }

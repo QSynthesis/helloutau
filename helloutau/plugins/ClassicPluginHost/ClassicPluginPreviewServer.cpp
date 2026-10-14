@@ -26,8 +26,8 @@ namespace hello::daw {
                 case ClassicPluginPreviewServer::Done:
                     object.insert(QLatin1String("result"), QLatin1String("done"));
                     break;
-                case ClassicPluginPreviewServer::Cancelled:
-                    object.insert(QLatin1String("result"), QLatin1String("cancelled"));
+                case ClassicPluginPreviewServer::Canceled:
+                    object.insert(QLatin1String("result"), QLatin1String("canceled"));
                     break;
                 case ClassicPluginPreviewServer::Failed:
                     object.insert(QLatin1String("result"), QLatin1String("failed"));

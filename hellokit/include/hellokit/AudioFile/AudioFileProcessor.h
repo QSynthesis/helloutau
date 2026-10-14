@@ -116,7 +116,7 @@ namespace hello::kit {
         ///
         /// \param progress called on a reading thread with the number of files read so far, or
         ///        empty
-        /// \param cancelled queried on the reading threads before each file, or empty. Once it
+        /// \param canceled queried on the reading threads before each file, or empty. Once it
         ///        returns true, no further file is read.
         /// \return the properties in the order of \a files, \c std::nullopt for a file that
         ///         cannot be read or is not read after a cancellation. The reasons are appended
@@ -124,7 +124,7 @@ namespace hello::kit {
         static QList<std::optional<Inspection>>
             inspectFiles(const QList<std::filesystem::path> &files, int threadCount,
                          DiagnosticList &diagnostics, const std::function<void(int)> &progress = {},
-                         const std::function<bool()> &cancelled = {});
+                         const std::function<bool()> &canceled = {});
 
         /// Returns the WAVE file of \a bytes processed by \a options. The samples are processed
         /// in the order of the channel mix, the removal of the DC offset, the sample rate

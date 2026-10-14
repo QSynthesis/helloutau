@@ -353,7 +353,7 @@ private Q_SLOTS:
 
         const auto result = importOf(path);
         QVERIFY(!result.project.has_value());
-        QVERIFY(!result.cancelled);
+        QVERIFY(!result.canceled);
         QVERIFY(hasError(result.diagnostics));
 
         std::error_code ignored;

@@ -288,7 +288,7 @@ namespace hello::daw {
             stdc_impl_t;
             impl.finishEditing(true);
         };
-        impl.editor->cancelled = [this] {
+        impl.editor->canceled = [this] {
             stdc_impl_t;
             impl.finishEditing(false);
         };

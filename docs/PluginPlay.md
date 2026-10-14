@@ -64,7 +64,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
   ```
 
   `modify`、`output` 未给出时为 `null`。`/nodeletecache` 与 `/debug` 不传递，因为缓存与批处理由宿主管理。
-- **回复**：`{"result": "done"}`、`{"result": "cancelled"}` 或 `{"result": "failed", "message": "..."}`。
+- **回复**：`{"result": "done"}`、`{"result": "canceled"}` 或 `{"result": "failed", "message": "..."}`。
 - **进程的存续**：宿主在试听对话框关闭后才回复（`play` 为假时在渲染结束后回复），plugin-play 在收到回复或管道断开后才退出，不设超时。试听对话框存在期间 plugin-play 因此一直在运行，插件可以据此判断试听是否结束。反过来，plugin-play 的进程被插件结束、管道断开时，宿主停止渲染与播放并关闭试听对话框。
 - **前台窗口**：Windows 只允许前台进程设置前台窗口。plugin-play 由前台的插件启动，连上管道后以 `GetNamedPipeServerProcessId` 取得宿主的进程号并调用 `AllowSetForegroundWindow`，宿主因此能把试听对话框与错误窗口提到最前，而不只在任务栏闪烁。宿主收到请求时记下当时的前台窗口（通常是插件的窗口），这些窗口关闭后把前台还给它（作者 2026-10-14 同意）。
 - 管道服务器只在插件运行期间存在，插件结束或被取消时关闭。同一时间只处理一个请求，前一个请求未回复时，后到的请求立即得到 `failed`。

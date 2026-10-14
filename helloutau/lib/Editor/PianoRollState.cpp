@@ -50,7 +50,7 @@ namespace hello::daw {
                 committed();
                 return;
             case Qt::Key_Escape:
-                cancelled();
+                canceled();
                 return;
             default:
                 QLineEdit::keyPressEvent(event);

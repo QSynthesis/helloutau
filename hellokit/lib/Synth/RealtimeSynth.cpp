@@ -155,10 +155,10 @@ namespace hello::kit {
                     resamplerRun = run;
                     // A killed resampler may have written part of the fragment, which the next
                     // render would reuse as complete.
-                    if (run.cancelled || run.timedOut) {
+                    if (run.canceled || run.timedOut) {
                         fs::remove(step.cacheFile, error);
                     }
-                    if (run.cancelled) {
+                    if (run.canceled) {
                         lock.lock();
                         fragments[step.cacheFile].state = Waiting;
                         changed.notify_all();

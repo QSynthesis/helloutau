@@ -1700,9 +1700,9 @@ namespace hello::daw {
             progress.setWindowModality(Qt::WindowModal);
             progress.setMinimumDuration(0);
             progress.setValue(0);
-            std::atomic<bool> cancelled = false;
+            std::atomic<bool> canceled = false;
             QObject::connect(&progress, &QProgressDialog::canceled,
-                             [&cancelled] { cancelled = true; });
+                             [&canceled] { canceled = true; });
 
             kit::DiagnosticList diagnostics;
             kit::FrequencyMapGenerator::Outcome outcome;
@@ -1719,7 +1719,7 @@ namespace hello::daw {
                             &progress, [&progress, done] { progress.setValue(done); },
                             Qt::QueuedConnection);
                     },
-                    [&cancelled] { return cancelled.load(); });
+                    [&canceled] { return canceled.load(); });
             });
             QObject::connect(worker, &QThread::finished, &loop, &QEventLoop::quit);
             worker->start();
@@ -1743,7 +1743,7 @@ namespace hello::daw {
                     : tr("%n frequency map(s) were generated.", nullptr, outcome.generated);
             decl.statusBar()->showMessage(done);
             reportGeneration(title, format, resampler, diagnostics, outcome.failures);
-            return !cancelled.load() && diagnostics.isEmpty();
+            return !canceled.load() && diagnostics.isEmpty();
         }
 
         // Sets the runs held in the log and its size limit, those of the render log unless the
@@ -3002,8 +3002,8 @@ namespace hello::daw {
             reading.setMinimumDuration(0);
             reading.setValue(0);
             reading.show();
-            std::atomic<bool> cancelled = false;
-            connect(&reading, &QProgressDialog::canceled, this, [&cancelled] { cancelled = true; });
+            std::atomic<bool> canceled = false;
+            connect(&reading, &QProgressDialog::canceled, this, [&canceled] { canceled = true; });
             const int threads = impl.editor->settings().tasks().threadCount();
             QEventLoop loop;
             QThread *worker = nullptr;
@@ -3019,7 +3019,7 @@ namespace hello::daw {
                                 &reading, [&reading, done] { reading.setValue(done); },
                                 Qt::QueuedConnection);
                         },
-                        [&cancelled] { return cancelled.load(); });
+                        [&canceled] { return canceled.load(); });
                 });
                 connect(worker, &QThread::finished, &loop, &QEventLoop::quit);
                 worker->start();
@@ -3028,9 +3028,9 @@ namespace hello::daw {
             worker->wait();
             delete worker;
             reading.reset();
-            if (cancelled.load()) {
+            if (canceled.load()) {
                 QMessageBox::warning(this, title,
-                                     tr("The reading of the audio files was cancelled, and no "
+                                     tr("The reading of the audio files was canceled, and no "
                                         "file is processed."));
                 return false;
             }

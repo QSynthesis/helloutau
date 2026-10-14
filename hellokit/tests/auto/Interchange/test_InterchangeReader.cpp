@@ -50,7 +50,7 @@ namespace {
         }
     };
 
-    class CancellingSelector : public InterchangeSelector {
+    class CancelingSelector : public InterchangeSelector {
     public:
         std::optional<ImportRequest> selectImport(const InterchangeReader &,
                                                   const InterchangeSource &, const ImportLimits &,
@@ -76,19 +76,19 @@ private Q_SLOTS:
         const auto result = reader.read("whatever.fake", nullptr);
 
         QVERIFY(result.project.has_value());
-        QVERIFY(!result.cancelled);
+        QVERIFY(!result.canceled);
         QVERIFY(reader.converted);
     }
 
     // Closing the selector is not an error and must not be reported as one. Otherwise the
     // editor would show a message box to a user who had just declined.
-    void cancelling_is_not_an_error() {
+    void canceling_is_not_an_error() {
         FakeReader reader;
-        CancellingSelector selector;
+        CancelingSelector selector;
         const auto result = reader.read("whatever.fake", &selector);
 
         QVERIFY(!result.project.has_value());
-        QVERIFY(result.cancelled);
+        QVERIFY(result.canceled);
         QVERIFY(!hasError(result.diagnostics));
         QVERIFY(!reader.converted);
     }
@@ -101,7 +101,7 @@ private Q_SLOTS:
         const auto result = reader.read("whatever.fake", nullptr);
 
         QVERIFY(!result.project.has_value());
-        QVERIFY(!result.cancelled);
+        QVERIFY(!result.canceled);
         QVERIFY(hasError(result.diagnostics));
     }
 };

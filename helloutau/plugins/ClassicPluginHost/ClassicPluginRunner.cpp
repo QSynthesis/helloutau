@@ -78,7 +78,7 @@ namespace hello::daw {
         QByteArray result;
 
         bool running = false;
-        bool cancelled = false;
+        bool canceled = false;
         bool unobservable = false;
 
 #ifdef Q_OS_WINDOWS
@@ -116,14 +116,14 @@ namespace hello::daw {
         // Frees the handles of the program.
         void release();
 
-        // Ends the run, and reads the result unless the run was cancelled.
+        // Ends the run, and reads the result unless the run was canceled.
         void end() {
             if (!running) {
                 return;
             }
             running = false;
             release();
-            if (!cancelled) {
+            if (!canceled) {
                 QFile in(file);
                 if (in.open(QIODevice::ReadOnly)) {
                     result = in.readAll();
@@ -296,7 +296,7 @@ namespace hello::daw {
         Q_ASSERT(!impl.running);
         impl.input = input;
         impl.result.clear();
-        impl.cancelled = false;
+        impl.canceled = false;
         impl.unobservable = false;
         QString reason;
         if (!impl.writeInput(&reason) || !impl.startProgram(plugin, &reason)) {
@@ -339,13 +339,13 @@ namespace hello::daw {
         if (!impl.running) {
             return;
         }
-        impl.cancelled = true;
+        impl.canceled = true;
         impl.kill();
         impl.end();
     }
 
-    bool ClassicPluginRunner::isCancelled() const {
-        return _impl->cancelled;
+    bool ClassicPluginRunner::isCanceled() const {
+        return _impl->canceled;
     }
 
     QByteArray ClassicPluginRunner::result() const {

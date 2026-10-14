@@ -332,8 +332,8 @@ namespace {
             std::error_code error;
             directoryExisted = fs::is_directory(directory, error);
             kit::SynthOutcome outcome;
-            if (observer->cancelled()) {
-                outcome.cancelled = true;
+            if (observer->canceled()) {
+                outcome.canceled = true;
                 return outcome;
             }
             writeSilence(plan.outputFile(), frames);
@@ -2479,9 +2479,9 @@ private Q_SLOTS:
         QCOMPARE(selected, QList<fs::path>{bank / "c.wav"});
     }
 
-    // The audio files are read in the background behind a progress dialog. Cancelling it reports
+    // The audio files are read in the background behind a progress dialog. Canceling it reports
     // an error in a message box and shows no processing dialog.
-    void a_cancelled_reading_processes_no_file() {
+    void a_canceled_reading_processes_no_file() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
         writeWave(bank / "a.wav", 100);
@@ -4154,7 +4154,7 @@ private Q_SLOTS:
         kit::DiagnosticList diagnostics;
         QVERIFY(project.save(path, diagnostics));
 
-        // The missing synth tools open Project Properties, which is cancelled.
+        // The missing synth tools open Project Properties, which is canceled.
         QTimer timer;
         timer.setInterval(10);
         QObject::connect(&timer, &QTimer::timeout, [] {

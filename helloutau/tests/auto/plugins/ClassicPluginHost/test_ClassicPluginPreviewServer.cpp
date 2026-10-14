@@ -186,9 +186,9 @@ private Q_SLOTS:
         QCOMPARE(lyricsOf(server.request->preview.project), lyricsOf(project()));
         QVERIFY(server.request->play);
         QVERIFY(!server.request->output);
-        server.server.reply(ClassicPluginPreviewServer::Cancelled);
+        server.server.reply(ClassicPluginPreviewServer::Canceled);
         QCOMPARE(replyOf(*socket).value(QLatin1String("result")).toString(),
-                 QStringLiteral("cancelled"));
+                 QStringLiteral("canceled"));
     }
 
     // An input file of notes other than those passed to the plugin, and a line that is not a

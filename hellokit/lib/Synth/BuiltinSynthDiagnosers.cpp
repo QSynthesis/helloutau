@@ -380,7 +380,7 @@ namespace hello::kit {
                                      break;
                              }
                              const bool exited = failure.run && failure.run->started &&
-                                                 !failure.run->timedOut && !failure.run->cancelled;
+                                                 !failure.run->timedOut && !failure.run->canceled;
                              return exited && failure.run->exitCode != 0 ? ExitCode : NoFragment;
                          }();
                          return std::optional<Key>(Key{kind, failure.program});

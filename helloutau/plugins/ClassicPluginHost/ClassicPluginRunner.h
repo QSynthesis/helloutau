@@ -65,8 +65,8 @@ namespace hello::daw {
         /// Terminates the program and every process started by it, and discards the result.
         void cancel();
 
-        /// Returns whether the run was cancelled.
-        bool isCancelled() const;
+        /// Returns whether the run was canceled.
+        bool isCanceled() const;
 
         /// Returns the file as left by the program, read when the run ended, or an empty array
         /// before the run ends.
@@ -76,7 +76,7 @@ namespace hello::daw {
         bool isUnchanged() const;
 
     Q_SIGNALS:
-        /// Emitted when the program ends, when the run is cancelled, or when the user confirms
+        /// Emitted when the program ends, when the run is canceled, or when the user confirms
         /// that the plugin is done.
         void finished();
 

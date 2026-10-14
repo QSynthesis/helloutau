@@ -168,11 +168,11 @@ private:
         }
     };
 
-    static SynthToolRun killedBy(bool cancelled) {
+    static SynthToolRun killedBy(bool canceled) {
         SynthToolRun run;
         run.started = true;
-        run.cancelled = cancelled;
-        run.timedOut = !cancelled;
+        run.canceled = canceled;
+        run.timedOut = !canceled;
         return run;
     }
 
@@ -755,19 +755,19 @@ private Q_SLOTS:
 
     // A killed script may have killed a resampler in the middle of its fragment. The notes run
     // in track order, so the fragment in doubt is the last one that the script created or
-    // rewrote, which is removed, whether the script was cancelled or timed out.
+    // rewrote, which is removed, whether the script was canceled or timed out.
     void the_last_fragment_written_by_a_killed_script_is_removed() {
-        for (const bool cancelled : {true, false}) {
+        for (const bool canceled : {true, false}) {
             const auto p = planOfNotes(3);
             QVERIFY(p.has_value());
             std::filesystem::create_directories(p->cacheDirectory());
             ScriptRunner runner;
             runner.written = {p->steps().at(0).cacheFile, p->steps().at(1).cacheFile};
-            runner.ending = killedBy(cancelled);
+            runner.ending = killedBy(canceled);
 
             DiagnosticList diagnostics;
             const auto outcome = runner.render(*p, synthTools(), nullptr, diagnostics);
-            QCOMPARE(outcome.cancelled, cancelled);
+            QCOMPARE(outcome.canceled, canceled);
             QCOMPARE(existing(*p), (QList<bool>{true, false, false}));
             for (const auto &step : p->steps()) {
                 std::filesystem::remove(step.cacheFile);

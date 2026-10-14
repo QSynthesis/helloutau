@@ -65,13 +65,13 @@ namespace hello::kit {
         ///
         /// \param progress called after each audio file with the number of audio files done, on
         ///        a thread of the generation, or empty
-        /// \param cancelled queried on the threads of the generation while resamplers run, or
+        /// \param canceled queried on the threads of the generation while resamplers run, or
         ///        empty. Once it returns true, the running resamplers are killed and no further
         ///        audio file is started.
         Outcome generate(const FrequencyFormat &format, const std::filesystem::path &resampler,
                          const QList<std::filesystem::path> &wavs, DiagnosticList &diagnostics,
                          const std::function<void(int)> &progress = {},
-                         const std::function<bool()> &cancelled = {}) const;
+                         const std::function<bool()> &canceled = {}) const;
     };
 
 }

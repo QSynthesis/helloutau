@@ -100,16 +100,16 @@ namespace {
         Record &m_record;
     };
 
-    // Writes part of a fragment and then blocks until the call is cancelled, as a resampler that
+    // Writes part of a fragment and then blocks until the call is canceled, as a resampler that
     // is killed while it writes. Records whether a cancellation ended the call.
     class BlockingStandIn : public SynthToolProcess {
     public:
-        explicit BlockingStandIn(std::atomic<int> &cancelledCalls, std::atomic<bool> &started)
-            : m_cancelledCalls(cancelledCalls), m_started(started) {
+        explicit BlockingStandIn(std::atomic<int> &canceledCalls, std::atomic<bool> &started)
+            : m_canceledCalls(canceledCalls), m_started(started) {
         }
 
         SynthToolRun run(const fs::path &, const QStringList &arguments, DiagnosticList &,
-                         const std::function<bool()> &cancelled) const override {
+                         const std::function<bool()> &canceled) const override {
             QFile file(arguments.at(1));
             if (file.open(QIODevice::WriteOnly)) {
                 file.write("RIFF part");
@@ -119,9 +119,9 @@ namespace {
             SynthToolRun run;
             run.started = true;
             for (int i = 0; i < 1000; ++i) {
-                if (cancelled()) {
-                    ++m_cancelledCalls;
-                    run.cancelled = true;
+                if (canceled()) {
+                    ++m_canceledCalls;
+                    run.canceled = true;
                     return run;
                 }
                 QThread::msleep(10);
@@ -130,7 +130,7 @@ namespace {
         }
 
     private:
-        std::atomic<int> &m_cancelledCalls;
+        std::atomic<int> &m_canceledCalls;
         std::atomic<bool> &m_started;
     };
 
@@ -393,11 +393,11 @@ private Q_SLOTS:
     void destruction_kills_the_running_resampler() {
         const auto plan = planOf(fiveNotes());
         QVERIFY(plan);
-        std::atomic<int> cancelledCalls{0};
+        std::atomic<int> canceledCalls{0};
         std::atomic<bool> started{false};
         auto rt =
             std::make_unique<RealtimeSynth>(SynthTools{"resampler.exe", "wavtool.exe"}, 1, [&] {
-                return std::make_unique<BlockingStandIn>(cancelledCalls, started);
+                return std::make_unique<BlockingStandIn>(canceledCalls, started);
             });
         rt->setPlan(*plan);
         QTRY_VERIFY_WITH_TIMEOUT(started.load(), 5000);
@@ -406,7 +406,7 @@ private Q_SLOTS:
         elapsed.start();
         rt.reset();
         QVERIFY2(elapsed.elapsed() < 2000, qPrintable(QString::number(elapsed.elapsed())));
-        QCOMPARE(cancelledCalls.load(), 1);
+        QCOMPARE(canceledCalls.load(), 1);
         for (const auto &step : plan->steps()) {
             QVERIFY(!fs::exists(step.cacheFile));
         }

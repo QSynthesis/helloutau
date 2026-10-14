@@ -44,9 +44,9 @@ namespace hello::daw {
         };
 
         enum Result {
-            Done,      ///< the preview was rendered, and played if requested
-            Cancelled, ///< the user cancelled the preview
-            Failed,    ///< the preview could not be rendered
+            Done,     ///< the preview was rendered, and played if requested
+            Canceled, ///< the user canceled the preview
+            Failed,   ///< the preview could not be rendered
         };
 
         /// Creates the server of the run of \a plugin on the \a count notes of \a project from

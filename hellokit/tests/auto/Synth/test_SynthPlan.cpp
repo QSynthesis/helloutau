@@ -123,7 +123,7 @@ private Q_SLOTS:
 
     // The observer receives the progress in notes of the range, and a cancellation ends the
     // plan without a reason.
-    void the_progress_is_reported_and_the_plan_cancelled() {
+    void the_progress_is_reported_and_the_plan_canceled() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
 
@@ -137,7 +137,7 @@ private Q_SLOTS:
                 reports.push_back({done, total});
             }
 
-            bool cancelled() override {
+            bool canceled() override {
                 return cancelAt >= 0 && reports.size() > cancelAt;
             }
         };
@@ -155,14 +155,14 @@ private Q_SLOTS:
                                        {2, 2}
         }));
 
-        // Cancelled after the first note
-        Recorder cancelling;
-        cancelling.cancelAt = 1;
-        QVERIFY(!SynthPlan::make(project, *voices, o, diagnostics, &cancelling).has_value());
+        // Canceled after the first note
+        Recorder canceling;
+        canceling.cancelAt = 1;
+        QVERIFY(!SynthPlan::make(project, *voices, o, diagnostics, &canceling).has_value());
         QVERIFY(diagnostics.isEmpty());
-        QCOMPARE(cancelling.reports, (QList<std::pair<int, int>>{
-                                         {0, 2},
-                                         {1, 2}
+        QCOMPARE(canceling.reports, (QList<std::pair<int, int>>{
+                                        {0, 2},
+                                        {1, 2}
         }));
     }
 

@@ -238,7 +238,7 @@ private Q_SLOTS:
         kit::DiagnosticList diagnostics;
         QCOMPARE(ClassicPluginExchange::apply(pluginOf(QStringLiteral("UTF-8")), notes, 2, 3, "",
                                               diagnostics),
-                 ClassicPluginExchange::Cancelled);
+                 ClassicPluginExchange::Canceled);
         QVERIFY(!session.canUndo());
     }
 

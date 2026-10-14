@@ -61,7 +61,7 @@ namespace hello::kit {
         FrequencyMapGenerator::generate(const FrequencyFormat &format, const fs::path &resampler,
                                         const QList<fs::path> &wavs, DiagnosticList &diagnostics,
                                         const std::function<void(int)> &progress,
-                                        const std::function<bool()> &cancelled) const {
+                                        const std::function<bool()> &canceled) const {
         const auto synthTool = process ? process : std::make_shared<SynthToolProcess>();
         Outcome outcome;
         // The rendered notes, which only make the resampler write the maps, removed with the
@@ -79,7 +79,7 @@ namespace hello::kit {
         std::atomic<bool> stopped = false;
         std::atomic<bool> unstarted = false;
         const auto stop = [&] {
-            if (!stopped.load() && cancelled && cancelled()) {
+            if (!stopped.load() && canceled && canceled()) {
                 stopped = true;
             }
             return stopped.load();
@@ -153,7 +153,7 @@ namespace hello::kit {
                         if (failure) {
                             outcome.failures.push_back(std::move(*failure));
                         }
-                        if (call.run.started && !call.run.cancelled) {
+                        if (call.run.started && !call.run.canceled) {
                             calls.push_back(std::move(call));
                         }
                     }
