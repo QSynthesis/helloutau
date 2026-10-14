@@ -635,6 +635,12 @@ namespace hello::daw {
         }
     }
 
+    void PianoRoll::clearSelection() {
+        stdc_impl_t;
+        impl.setSelection({});
+        impl.selectPoints({});
+    }
+
     QList<std::pair<int, int>> PianoRoll::selectedPoints() const {
         stdc_impl_t;
         QList<std::pair<int, int>> result;

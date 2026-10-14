@@ -132,6 +132,8 @@
                 category="Select" shortcut="Ctrl+]" />
         <action id="helloutau.select.selectAll" text="Select &amp;All" category="Select"
                 shortcut="Ctrl+A" />
+        <action id="helloutau.select.deselect" text="Desele&amp;ct" category="Select"
+                shortcut="Ctrl+Shift+A" />
 
         <!-- The tool bar of the project window, shown or hidden as the settings store it -->
         <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
@@ -274,6 +276,7 @@
             </menu>
             <menu id="helloutau.select">
                 <action id="helloutau.select.selectAll" />
+                <action id="helloutau.select.deselect" />
                 <separator />
                 <action id="helloutau.select.selectTool" />
                 <action id="helloutau.select.penTool" />

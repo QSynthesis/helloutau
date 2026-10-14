@@ -1570,6 +1570,8 @@ namespace hello::daw {
                 });
             });
             addCommand(QStringLiteral("helloutau.select.selectAll"), [this] { roll->selectAll(); });
+            addCommand(QStringLiteral("helloutau.select.deselect"),
+                       [this] { roll->clearSelection(); });
             addCommand(QStringLiteral("helloutau.view.goToStart"), [this] { goToStart(); });
             addCommand(QStringLiteral("helloutau.view.goToEnd"), [this] { goToEnd(); });
             addCommand(QStringLiteral("helloutau.view.goToFirstNote"), [this] { goToFirstNote(); });

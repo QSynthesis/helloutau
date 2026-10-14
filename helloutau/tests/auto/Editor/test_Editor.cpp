@@ -1378,6 +1378,7 @@ private Q_SLOTS:
             {QStringLiteral("helloutau.file.save"),           QStringLiteral("Ctrl+S")        },
             {QStringLiteral("helloutau.edit.undo"),           QStringLiteral("Ctrl+Z")        },
             {QStringLiteral("helloutau.select.selectAll"),    QStringLiteral("Ctrl+A")        },
+            {QStringLiteral("helloutau.select.deselect"),     QStringLiteral("Ctrl+Shift+A")  },
         };
         for (const auto &[id, keys] : expected) {
             const auto action = declaredActionOf(*e, window, id);
@@ -1395,6 +1396,36 @@ private Q_SLOTS:
                 owners.insert(key, action->text());
             }
         }
+    }
+
+    // Deselect, below Select All, clears the selection of the notes in the project window and
+    // that of the rows in the voice bank window, where Select All selects every row.
+    void both_windows_select_all_and_deselect() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "deselect.usth"));
+        QVERIFY(window);
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto deselect =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.select.deselect"));
+        QVERIFY(deselect);
+        roll->selectAll();
+        QVERIFY(!roll->selectedIndices().isEmpty());
+        deselect->trigger();
+        QVERIFY(roll->selectedIndices().isEmpty());
+
+        QTemporaryDir dir;
+        const auto bankWindow = e->openVoiceBank(voiceBank(dir));
+        QVERIFY(bankWindow);
+        const auto selectAll =
+            declaredActionOf(*e, bankWindow, QStringLiteral("helloutau.select.selectAll"));
+        const auto clear =
+            declaredActionOf(*e, bankWindow, QStringLiteral("helloutau.select.deselect"));
+        QVERIFY(selectAll && clear);
+        selectAll->trigger();
+        QCOMPARE(bankWindow->selectedRows().size(), bankWindow->entryModel()->rowCount());
+        QVERIFY(!bankWindow->selectedRows().isEmpty());
+        clear->trigger();
+        QVERIFY(bankWindow->selectedRows().isEmpty());
     }
 
     // Set Tempo sets the tempo of the first selected note, and Note Properties those of all.

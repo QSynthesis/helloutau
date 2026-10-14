@@ -52,6 +52,11 @@
                 shortcut="F3" />
         <action id="helloutau.edit.findPrevious" text="Find Pre&amp;vious" category="Edit"
                 shortcut="Shift+F3" />
+        <!-- The rows of the entry table -->
+        <action id="helloutau.select.selectAll" text="Select &amp;All" category="Select"
+                shortcut="Ctrl+A" />
+        <action id="helloutau.select.deselect" text="Desele&amp;ct" category="Select"
+                shortcut="Ctrl+Shift+A" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="Help"
                 shortcuts="Ctrl+Shift+P;F1" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
@@ -191,6 +196,9 @@
                 <action id="helloutau.edit.replace" />
                 <action id="helloutau.edit.findNext" />
                 <action id="helloutau.edit.findPrevious" />
+                <separator />
+                <action id="helloutau.select.selectAll" />
+                <action id="helloutau.select.deselect" />
                 <separator />
                 <action id="helloutau.voiceBank.insertEntry" />
                 <action id="helloutau.voiceBank.duplicateEntries" />

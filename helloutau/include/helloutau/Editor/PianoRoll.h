@@ -205,6 +205,9 @@ namespace hello::daw {
         void setSelectedIndices(const QList<int> &indices);
         void selectAll();
 
+        /// Deselects every note and every Mode2 point, as a click on a blank area does.
+        void clearSelection();
+
         /// Returns the first and the last index of the selected notes if they are one unbroken
         /// stretch, as a region requires, or \c std::nullopt otherwise.
         std::optional<std::pair<int, int>> selectedRange() const;

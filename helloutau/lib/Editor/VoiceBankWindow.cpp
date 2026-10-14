@@ -374,6 +374,10 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.includeAudio();
             });
+            addCommand(QStringLiteral("helloutau.select.selectAll"),
+                       [this] { table->selectAll(); });
+            addCommand(QStringLiteral("helloutau.select.deselect"),
+                       [this] { table->clearSelection(); });
             addCommand(QStringLiteral("helloutau.edit.delete"), [this] {
                 stdc_decl_t;
                 decl.removeEntries();

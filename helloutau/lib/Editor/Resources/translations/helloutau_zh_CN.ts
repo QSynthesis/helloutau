@@ -182,6 +182,10 @@
         <translation>关于 HelloUtau</translation>
     </message>
     <message>
+        <source>Desele&amp;ct</source>
+        <translation>取消选择(&amp;C)</translation>
+    </message>
+    <message>
         <source>Check for &amp;Updates...</source>
         <translation>检查更新(&amp;U)...</translation>
     </message>

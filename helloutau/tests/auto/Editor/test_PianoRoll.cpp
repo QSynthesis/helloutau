@@ -1597,6 +1597,22 @@ private Q_SLOTS:
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Move Pitch Points"));
     }
 
+    // Clearing the selection deselects the points as well as the notes.
+    void clearing_the_selection_deselects_the_points() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        roll.selectAll();
+        roll.clearSelection();
+        QVERIFY(roll.selectedIndices().isEmpty());
+
+        roll.setSelectedPoints({
+            {1, 0}
+        });
+        QCOMPARE(roll.selectedPoints().size(), 1);
+        roll.clearSelection();
+        QVERIFY(roll.selectedPoints().isEmpty());
+    }
+
     // Selected points move together by the same time, passing the others, and stay selected.
     void selected_points_move_together() {
         kit::ProjectSession session(bentNotes());
