@@ -386,8 +386,12 @@ namespace hello::daw {
             });
             addCommand(QStringLiteral("helloutau.select.selectAll"),
                        [this] { table->selectAll(); });
-            addCommand(QStringLiteral("helloutau.select.deselect"),
-                       [this] { table->clearSelection(); });
+            // The current row is cleared as well, so that no entry is shown in the waveform
+            // without a selection.
+            addCommand(QStringLiteral("helloutau.select.deselect"), [this] {
+                table->selectionModel()->clearCurrentIndex();
+                table->clearSelection();
+            });
             addCommand(QStringLiteral("helloutau.edit.delete"), [this] {
                 stdc_decl_t;
                 decl.removeEntries();

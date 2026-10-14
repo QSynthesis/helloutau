@@ -1424,11 +1424,17 @@ private Q_SLOTS:
             declaredActionOf(*e, bankWindow, QStringLiteral("helloutau.select.deselect"));
         QVERIFY(selectAll && clear);
         QVERIFY(declaredMenuOf(*e, bankWindow, QStringLiteral("helloutau.voiceBank.select")));
+        bankWindow->setCurrentRow(0);
+        QVERIFY(bankWindow->waveformView()->entry());
         selectAll->trigger();
         QCOMPARE(bankWindow->selectedRows().size(), bankWindow->entryModel()->rowCount());
         QVERIFY(!bankWindow->selectedRows().isEmpty());
+
+        // Without a selection there is no current row, and the waveform shows no entry.
         clear->trigger();
         QVERIFY(bankWindow->selectedRows().isEmpty());
+        QCOMPARE(bankWindow->currentRow(), -1);
+        QVERIFY(!bankWindow->waveformView()->entry());
     }
 
     // Set Tempo sets the tempo of the first selected note, and Note Properties those of all.
