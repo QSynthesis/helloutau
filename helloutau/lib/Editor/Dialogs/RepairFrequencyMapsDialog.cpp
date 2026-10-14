@@ -44,7 +44,7 @@ namespace hello::daw {
             font.setBold(true);
             title->setFont(font);
             auto action = new QLabel(
-                maps ? tr("A checked file is repaired in place if it is repairable and the "
+                maps ? tr("A checked file that is repairable is repaired in place, and the "
                           "resampler generates the maps that the repair drops again. Another "
                           "checked file is removed with the analysis caches of its audio files, "
                           "and the resampler generates them again.")

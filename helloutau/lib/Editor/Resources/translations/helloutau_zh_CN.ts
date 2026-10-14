@@ -2209,7 +2209,7 @@
         <translation>频率表</translation>
     </message>
     <message>
-        <source>A checked file is repaired in place if it is repairable and the resampler generates the maps that the repair drops again. Another checked file is removed with the analysis caches of its audio files, and the resampler generates them again.</source>
+        <source>A checked file that is repairable is repaired in place, and the resampler generates the maps that the repair drops again. Another checked file is removed with the analysis caches of its audio files, and the resampler generates them again.</source>
         <translation>勾选的文件可以修复时原地修复，修复中删去的频率表由重采样器重新生成。其余勾选的文件连同其音频文件的分析缓存一起删除，由重采样器重新生成。</translation>
     </message>
     <message>
