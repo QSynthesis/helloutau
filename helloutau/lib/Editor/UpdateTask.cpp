@@ -6,11 +6,10 @@
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 
+#include <hellokit/Config.h>
 #include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Update/SoftwareReleaseDownload.h>
 #include <hellokit/Update/SoftwareReleaseQuery.h>
-
-#include <helloutau/Config.h>
 
 #include "AppSettings.h"
 #include "PortableUpdate.h"
@@ -33,7 +32,7 @@ namespace hello::daw {
             m_settings.updates().setLastCheck(QDateTime::currentDateTimeUtc());
             const auto asset =
                 UpdateChecker::assetName(m_assetPrefix, release->version,
-                                         QStringLiteral(HELLOUTAU_TRIPLET), m_kind == Installed);
+                                         QStringLiteral(HELLOKIT_TRIPLET), m_kind == Installed);
             if (!UpdateChecker::offers(*release, m_current, asset)) {
                 setState(UpToDate);
                 return;

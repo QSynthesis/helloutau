@@ -39,6 +39,13 @@ endfunction()
 
 set(HELLOKIT_POST_CONFIGURE_COMMANDS _hellokit_common_configure_target)
 
+# Emit the build metadata of the repository, which the About dialog of the application reads.
+set(HELLOKIT_BUILD_INFO_HEADER_PATH ${HELLOKIT_INSTALL_NAME}/BuildInfo.h)
+set(HELLOKIT_BUILD_INFO_HEADER_PREFIX HELLOKIT)
+
+# Emit the definitions of qm_add_definition() in hellokit/CMakeLists.txt.
+set(HELLOKIT_CONFIG_HEADER_PATH ${HELLOKIT_INSTALL_NAME}/Config.h)
+
 # ----------------------------------
 # Include Build Helpers
 # ----------------------------------

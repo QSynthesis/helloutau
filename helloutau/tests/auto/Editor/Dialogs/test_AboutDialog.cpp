@@ -2,7 +2,8 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLabel>
 
-#include <helloutau/Config.h>
+#include <hellokit/Config.h>
+
 #include <helloutau/Editor/Dialogs/AboutDialog.h>
 
 using namespace hello::daw;
@@ -24,7 +25,7 @@ private Q_SLOTS:
         QVERIFY(label->text().contains(QStringLiteral("9.8.7")));
         QVERIFY(label->text().contains(QStringLiteral(QT_VERSION_STR)));
         QVERIFY(label->text().contains(QStringLiteral("Target platform: ") +
-                                       QStringLiteral(HELLOUTAU_TRIPLET)));
+                                       QStringLiteral(HELLOKIT_TRIPLET)));
     }
 };
 

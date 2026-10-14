@@ -69,10 +69,6 @@ endfunction()
 
 set(HELLOUTAU_POST_CONFIGURE_COMMANDS _helloutau_common_configure_target)
 
-# Emit build metadata for the About dialog.
-set(HELLOUTAU_BUILD_INFO_HEADER_PATH ${HELLOUTAU_INSTALL_NAME}/BuildInfo.h)
-set(HELLOUTAU_BUILD_INFO_HEADER_PREFIX HELLOUTAU)
-
 # Emit the definitions of qm_add_definition() in helloutau/CMakeLists.txt.
 set(HELLOUTAU_CONFIG_HEADER_PATH ${HELLOUTAU_INSTALL_NAME}/Config.h)
 

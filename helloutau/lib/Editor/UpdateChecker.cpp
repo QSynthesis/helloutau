@@ -22,8 +22,6 @@
 #  include <hellokit/Update/Windows/InnoSetup.h>
 #endif
 
-#include <helloutau/Config.h>
-
 #include "PortableUpdate.h"
 #include "UpdateDialog.h"
 #include "UpdateTask.h"

@@ -6,8 +6,8 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
 
-#include <helloutau/BuildInfo.h>
-#include <helloutau/Config.h>
+#include <hellokit/BuildInfo.h>
+#include <hellokit/Config.h>
 
 namespace hello::daw {
 
@@ -34,13 +34,13 @@ namespace hello::daw {
                           "Target platform: %10<br>"
                           "Built with Qt %9.</p>")
                            .arg(appName.toHtmlEscaped(), QApplication::applicationVersion(),
-                                QStringLiteral(HELLOUTAU_GIT_BRANCH),
-                                QStringLiteral(HELLOUTAU_GIT_LAST_COMMIT_HASH),
-                                QStringLiteral(HELLOUTAU_BUILD_TIME),
-                                QStringLiteral(HELLOUTAU_COMPILER_ARCH),
-                                QStringLiteral(HELLOUTAU_COMPILER_ID),
-                                QStringLiteral(HELLOUTAU_COMPILER_VERSION),
-                                QStringLiteral(QT_VERSION_STR), QStringLiteral(HELLOUTAU_TRIPLET)));
+                                QStringLiteral(HELLOKIT_GIT_BRANCH),
+                                QStringLiteral(HELLOKIT_GIT_LAST_COMMIT_HASH),
+                                QStringLiteral(HELLOKIT_BUILD_TIME),
+                                QStringLiteral(HELLOKIT_COMPILER_ARCH),
+                                QStringLiteral(HELLOKIT_COMPILER_ID),
+                                QStringLiteral(HELLOKIT_COMPILER_VERSION),
+                                QStringLiteral(QT_VERSION_STR), QStringLiteral(HELLOKIT_TRIPLET)));
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok, this);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);

@@ -16,14 +16,11 @@ include("conf.cmake")
 helloutau_init_buildsystem(HELLOUTAU)
 
 # The definitions of helloutau/Config.h, which helloutau_finish_buildsystem() generates. The
-# program sets them as the name, the version and the organization of the application, because
-# QCoreApplication finds a version by itself only on Windows and in a macOS bundle.
+# program sets them as the name and the organization of the application. The version and the
+# triplet of the build are in hellokit/Config.h, and the build metadata in hellokit/BuildInfo.h,
+# because the programs of hellokit read them as well.
 qm_add_definition(HELLOUTAU_APPLICATION_NAME "HelloUtau" STRING_LITERAL)
-qm_add_definition(HELLOUTAU_APPLICATION_VERSION ${PROJECT_VERSION} STRING_LITERAL)
 qm_add_definition(HELLOUTAU_ORGANIZATION_NAME "OpenVPI" STRING_LITERAL)
-
-# The triplet of the build, by which UpdateChecker selects the assets of a release
-qm_add_definition(HELLOUTAU_TRIPLET ${HELLO_TRIPLET} STRING_LITERAL)
 
 # The repositories of the releases and the identifiers of the assets and of the installer, which
 # UpdateChecker reads from share/helloutau/update beside the bin directory, in the build as in
