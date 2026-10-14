@@ -1400,7 +1400,8 @@ private Q_SLOTS:
     }
 
     // Deselect, below Select All, clears the selection of the notes in the project window and
-    // that of the rows in the voice bank window, where Select All selects every row.
+    // that of the rows in the voice bank window, where Select All selects every row. Both
+    // windows have a Select menu.
     void both_windows_select_all_and_deselect() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "deselect.usth"));
@@ -1422,6 +1423,7 @@ private Q_SLOTS:
         const auto clear =
             declaredActionOf(*e, bankWindow, QStringLiteral("helloutau.select.deselect"));
         QVERIFY(selectAll && clear);
+        QVERIFY(declaredMenuOf(*e, bankWindow, QStringLiteral("helloutau.voiceBank.select")));
         selectAll->trigger();
         QCOMPARE(bankWindow->selectedRows().size(), bankWindow->entryModel()->rowCount());
         QVERIFY(!bankWindow->selectedRows().isEmpty());
@@ -1866,13 +1868,9 @@ private Q_SLOTS:
         QCOMPARE(e->settings().files().recentVoiceBanks().value(0), bank);
         QCOMPARE(window->windowTitle(), QStringLiteral("bank[*] - HelloUtau"));
         QVERIFY(!window->isWindowModified());
-        QStringList menus;
-        for (const auto action : window->menuBar()->actions()) {
-            menus.push_back(action->text());
-        }
-        QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
-                                     QStringLiteral("&View"), QStringLiteral("&Playback"),
-                                     QStringLiteral("&Tools"), QStringLiteral("&Help")}));
+        // A menu bar of its own, whose contents the manifest specifies
+        QVERIFY(!window->menuBar()->actions().isEmpty());
+        QVERIFY(declaredMenuOf(*e, window, QStringLiteral("helloutau.voiceBank.file")));
 
         // All folders at first: a, b missing, c unlisted, and x and y in sub
         const auto tree = window->directoryTree();

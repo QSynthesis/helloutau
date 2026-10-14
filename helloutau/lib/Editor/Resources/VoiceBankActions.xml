@@ -165,6 +165,7 @@
         <menu id="helloutau.voiceBankMenu" topLevel="true" />
         <menu id="helloutau.voiceBank.file" text="&amp;File" />
         <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
+        <menu id="helloutau.voiceBank.select" text="&amp;Select" />
         <menu id="helloutau.voiceBank.view" text="&amp;View" />
         <menu id="helloutau.voiceBank.playback" text="&amp;Playback" />
         <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
@@ -199,9 +200,6 @@
                 <action id="helloutau.edit.findNext" />
                 <action id="helloutau.edit.findPrevious" />
                 <separator />
-                <action id="helloutau.select.selectAll" />
-                <action id="helloutau.select.deselect" />
-                <separator />
                 <action id="helloutau.voiceBank.insertEntry" />
                 <action id="helloutau.voiceBank.duplicateEntries" />
                 <action id="helloutau.voiceBank.duplicateWithRule" />
@@ -215,6 +213,10 @@
                 <action id="helloutau.voiceBank.rereadCharset" />
                 <action id="helloutau.voiceBank.rereadCharsets" />
                 <action id="helloutau.voiceBank.convertEncodings" />
+            </menu>
+            <menu id="helloutau.voiceBank.select">
+                <action id="helloutau.select.selectAll" />
+                <action id="helloutau.select.deselect" />
             </menu>
             <menu id="helloutau.voiceBank.view">
                 <action id="helloutau.voiceBank.showSpectrogram" />
