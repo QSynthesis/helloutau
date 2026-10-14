@@ -17,10 +17,11 @@ namespace hello::daw {
 
     namespace {
 
+        // The record is at hostData/ClassicPluginHost/playinplugin of plugin.json (docs/note.md).
+        const QLatin1String hostDataKey("hostData");
         const QLatin1String hostKey("ClassicPluginHost");
         const QLatin1String recordKey("playinplugin");
         const QLatin1String originalKey("original");
-        const QLatin1String transcribedKey("transcribed");
 
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
@@ -65,11 +66,35 @@ namespace hello::daw {
             if (!manifest) {
                 return std::nullopt;
             }
-            const auto record = manifest->value(hostKey).toObject().value(recordKey);
+            const auto record =
+                manifest->value(hostDataKey).toObject().value(hostKey).toObject().value(recordKey);
             if (!record.isObject()) {
                 return std::nullopt;
             }
             return record.toObject();
+        }
+
+        // Returns manifest with record as the record of the installation, or without a record if
+        // record is std::nullopt. An object of hostData that becomes empty is removed.
+        QJsonObject withRecord(QJsonObject manifest, const std::optional<QJsonObject> &record) {
+            auto hostData = manifest.value(hostDataKey).toObject();
+            auto host = hostData.value(hostKey).toObject();
+            if (record) {
+                host.insert(recordKey, *record);
+            } else {
+                host.remove(recordKey);
+            }
+            if (host.isEmpty()) {
+                hostData.remove(hostKey);
+            } else {
+                hostData.insert(hostKey, host);
+            }
+            if (hostData.isEmpty()) {
+                manifest.remove(hostDataKey);
+            } else {
+                manifest.insert(hostDataKey, hostData);
+            }
+            return manifest;
         }
 
         // Returns the plugin.json transcribed from the plugin.txt of folder, decoded in charset,
@@ -213,11 +238,7 @@ namespace hello::daw {
 
         QJsonObject record;
         record.insert(originalKey, keepsOriginal ? QJsonValue(originalName) : QJsonValue());
-        record.insert(transcribedKey, transcribed);
-        auto host = manifest->value(hostKey).toObject();
-        host.insert(recordKey, record);
-        manifest->insert(hostKey, host);
-        if (!writeManifest(folder, *manifest)) {
+        if (!writeManifest(folder, withRecord(*manifest, record))) {
             undo();
             fail(diagnostics, tr("The file \"%1\" cannot be written.").arg(manifestOf(folder)));
             return false;
@@ -258,21 +279,10 @@ namespace hello::daw {
             fail(diagnostics, tr("The file \"%1\" cannot be renamed.").arg(fileIn(folder, kept)));
             return false;
         }
-        if (record->value(transcribedKey).toBool()) {
-            if (!QFile::remove(manifestOf(folder))) {
-                fail(diagnostics, tr("The file \"%1\" cannot be removed.").arg(manifestOf(folder)));
-                return false;
-            }
-            return true;
-        }
-        auto host = manifest->value(hostKey).toObject();
-        host.remove(recordKey);
-        if (host.isEmpty()) {
-            manifest->remove(hostKey);
-        } else {
-            manifest->insert(hostKey, host);
-        }
-        if (!writeManifest(folder, *manifest)) {
+        // Only the record is removed. A plugin.json that the installation transcribed is kept,
+        // because the user or another native plugin may have changed it since, and it reads as
+        // the plugin.txt did (author's decision of 2026-10-15).
+        if (!writeManifest(folder, withRecord(*manifest, std::nullopt))) {
             fail(diagnostics, tr("The file \"%1\" cannot be written.").arg(manifestOf(folder)));
             return false;
         }

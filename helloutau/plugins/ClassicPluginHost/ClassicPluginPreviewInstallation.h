@@ -13,15 +13,15 @@
 namespace hello::daw {
 
     /// The preview program of a classic plugin: hello-plugin-play, deployed in the folder of the
-    /// plugin under the name playinplugin.exe, which plugins such as PitTrace start for a
-    /// preview. See the section on deployment in docs/PluginPlay.md.
+    /// plugin under the name playinplugin.exe, which some plugins start for a preview. See the
+    /// section on deployment in docs/PluginPlay.md.
     ///
     /// An installation keeps the playinplugin.exe of the plugin as playinplugin-original.exe,
-    /// which hello-plugin-play runs if HelloUtau does not run the plugin. It is recorded in the
-    /// key \c ClassicPluginHost of the plugin.json of the plugin (docs/note.md). A plugin with
-    /// only a plugin.txt receives a plugin.json transcribed from it, in an encoding that the
-    /// user confirms, because a plugin.json replaces plugin.txt. An installation either succeeds
-    /// or leaves the folder as it was.
+    /// which hello-plugin-play runs if HelloUtau does not run the plugin. It is recorded at
+    /// <tt>hostData/ClassicPluginHost/playinplugin</tt> of the plugin.json of the plugin
+    /// (docs/note.md). A plugin with only a plugin.txt receives a plugin.json transcribed from
+    /// it, in an encoding that the user confirms, because a plugin.json replaces plugin.txt. An
+    /// installation either succeeds or leaves the folder as it was.
     class CLASSICPLUGINHOST_EXPORT ClassicPluginPreviewInstallation {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ClassicPluginPreviewInstallation)
     public:
@@ -72,8 +72,9 @@ namespace hello::daw {
         static bool update(const std::filesystem::path &folder,
                            const std::filesystem::path &program, kit::DiagnosticList &diagnostics);
 
-        /// Removes the installation in \a folder and restores the program of the plugin and the
-        /// plugin.json as they were before the installation.
+        /// Removes the installation in \a folder and restores the program of the plugin. Only the
+        /// record is removed from plugin.json. A plugin.json that the installation transcribed is
+        /// kept, and reads as the plugin.txt.
         ///
         /// \return whether the removal succeeded. Otherwise \a diagnostics receives the reason.
         static bool remove(const std::filesystem::path &folder, kit::DiagnosticList &diagnostics);

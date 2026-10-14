@@ -51,7 +51,7 @@ private Q_SLOTS:
                    {"old.bat", "new.bat"}, "manifests");
         manifest(folder, R"({"name": "新しい", "execute": "new.bat", "shell": true, )"
                          R"("notes": "selection", "charset": "UTF-8", "ustversion": "1.10", )"
-                         R"("ClassicPluginHost": {"playinplugin": {"original": null}}})");
+                         R"("hostData": {"ClassicPluginHost": {"playinplugin": {"original": null}}}})");
         kit::DiagnosticList diagnostics;
         const auto read = ClassicPlugin::read(folder, diagnostics);
         QVERIFY(read);

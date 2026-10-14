@@ -46,6 +46,16 @@ namespace {
         return QJsonDocument::fromJson(read(folder / "plugin.json")).object();
     }
 
+    // Returns the record of the installation in manifest, hostData/ClassicPluginHost/playinplugin.
+    QJsonObject recordIn(const QJsonObject &manifest) {
+        return manifest.value(QLatin1String("hostData"))
+            .toObject()
+            .value(QLatin1String("ClassicPluginHost"))
+            .toObject()
+            .value(QLatin1String("playinplugin"))
+            .toObject();
+    }
+
     // A plugin folder as PitTrace is distributed: plugin.txt in Shift_JIS with ustversion=1.00,
     // the program, and the original playinplugin.exe beside it
     fs::path pitTrace(const QTemporaryDir &dir) {
@@ -90,13 +100,9 @@ private Q_SLOTS:
                  QStringLiteral("pittrace.exe"));
         QCOMPARE(manifest->value(QLatin1String("notes")).toString(), QStringLiteral("selection"));
         QVERIFY(!manifest->contains(QLatin1String("charset")));
-        const auto record = manifest->value(QLatin1String("ClassicPluginHost"))
-                                .toObject()
-                                .value(QLatin1String("playinplugin"))
-                                .toObject();
+        const auto record = recordIn(*manifest);
         QCOMPARE(record.value(QLatin1String("original")).toString(),
                  QStringLiteral("playinplugin-original.exe"));
-        QVERIFY(record.value(QLatin1String("transcribed")).toBool());
 
         const auto plugin = ClassicPlugin::read(folder, diagnostics);
         QVERIFY(plugin);
@@ -106,8 +112,9 @@ private Q_SLOTS:
         QCOMPARE(Installation::stateOf(folder, playPath), Installation::Installed);
     }
 
-    // A removal restores the original program and removes the transcribed plugin.json.
-    void a_removal_restores_the_folder() {
+    // A removal restores the original program and keeps the transcribed plugin.json without
+    // the record, which reads as the plugin.txt.
+    void a_removal_restores_the_program() {
         QTemporaryDir dir;
         const auto folder = pitTrace(dir);
         const auto playPath = program(dir);
@@ -117,8 +124,14 @@ private Q_SLOTS:
         QVERIFY(diagnostics.isEmpty());
         QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("the original"));
         QVERIFY(!fs::exists(folder / "playinplugin-original.exe"));
-        QVERIFY(!fs::exists(folder / "plugin.json"));
+        const auto manifest = manifestOf(folder);
+        QVERIFY(manifest);
+        QVERIFY(!manifest->contains(QLatin1String("hostData")));
         QCOMPARE(Installation::stateOf(folder, playPath), Installation::Absent);
+        const auto plugin = ClassicPlugin::read(folder, diagnostics);
+        QVERIFY(plugin);
+        QCOMPARE(plugin->name, QString::fromUtf8("テスト"));
+        QCOMPARE(plugin->ustVersion, QStringLiteral("1.00"));
     }
 
     // A plugin.json of the plugin keeps its other keys through the installation and the
@@ -136,19 +149,48 @@ private Q_SLOTS:
         auto manifest = manifestOf(folder);
         QVERIFY(manifest);
         QCOMPARE(manifest->value(QLatin1String("custom")).toInt(), 1);
-        const auto record = manifest->value(QLatin1String("ClassicPluginHost"))
-                                .toObject()
-                                .value(QLatin1String("playinplugin"))
-                                .toObject();
+        const auto record = recordIn(*manifest);
         QVERIFY(record.value(QLatin1String("original")).isNull());
-        QVERIFY(!record.value(QLatin1String("transcribed")).toBool());
 
         QVERIFY(Installation::remove(folder, diagnostics));
         QVERIFY(!fs::exists(folder / "playinplugin.exe"));
         manifest = manifestOf(folder);
         QVERIFY(manifest);
         QCOMPARE(manifest->value(QLatin1String("custom")).toInt(), 1);
-        QVERIFY(!manifest->contains(QLatin1String("ClassicPluginHost")));
+        QVERIFY(!manifest->contains(QLatin1String("hostData")));
+    }
+
+    // The removal keeps the changes of plugin.json since the installation, those of the user and
+    // the keys of another native plugin in hostData, and removes only the record.
+    void the_removal_keeps_the_other_changes() {
+        QTemporaryDir dir;
+        const auto folder = pitTrace(dir);
+        const auto playPath = program(dir);
+        kit::DiagnosticList diagnostics;
+        QVERIFY(Installation::install(folder, playPath, QStringLiteral("Shift_JIS"), diagnostics));
+        auto manifest = manifestOf(folder);
+        QVERIFY(manifest);
+        manifest->insert(QLatin1String("charset"), QStringLiteral("UTF-8"));
+        auto hostData = manifest->value(QLatin1String("hostData")).toObject();
+        hostData.insert(QLatin1String("Other"), QJsonObject{
+                                                    {QLatin1String("kept"), true}
+        });
+        manifest->insert(QLatin1String("hostData"), hostData);
+        write(folder / "plugin.json", QJsonDocument(*manifest).toJson());
+
+        QVERIFY(Installation::remove(folder, diagnostics));
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("the original"));
+        manifest = manifestOf(folder);
+        QVERIFY(manifest);
+        QCOMPARE(manifest->value(QLatin1String("charset")).toString(), QStringLiteral("UTF-8"));
+        hostData = manifest->value(QLatin1String("hostData")).toObject();
+        QVERIFY(!hostData.contains(QLatin1String("ClassicPluginHost")));
+        QVERIFY(hostData.value(QLatin1String("Other"))
+                    .toObject()
+                    .value(QLatin1String("kept"))
+                    .toBool());
+        QCOMPARE(Installation::stateOf(folder, playPath), Installation::Absent);
     }
 
     // A program of another version is outdated until it is updated.

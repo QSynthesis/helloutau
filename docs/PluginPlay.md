@@ -114,7 +114,8 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 - 设置的「Classic Plugins」页有「试听程序」一组，列出发现的插件，每行有安装、更新与移除，均须用户确认。文件的操作由 `ClassicPluginPreviewInstallation` 完成。
 - 程序为 `HelloUtau.exe` 旁的 `hello-plugin-play.exe`（安装规则与 `hello-updater` 相同，位于 `bin`），复制为插件文件夹中的 `playinplugin.exe`。原有的 `playinplugin.exe` 改名为 `playinplugin-original.exe` 保留，没有宿主时由 plugin-play 运行。
 - 没有 `plugin.json` 的插件，安装前把 `plugin.txt` 转写为 `plugin.json`（`name`、`execute`、`shell`、`notes`、`ustversion`，不写 `charset`，临时文件因此仍为本地编码），因为有 `plugin.json` 时不再读取 `plugin.txt`（[`note.md`](note.md)「插件」）。`plugin.txt` 的编码由用户在与打开 UST 时相同形式的对话框中选择：候选编码、无效字节序列的灰显与预选，以及按所选编码解码的全文（作者 2026-10-14 要求）。
-- 记录写入 `plugin.json` 的 `ClassicPluginHost` 键（note.md「插件」）。移除时按记录还原：转写来的 `plugin.json` 删除，原有的 `plugin.json` 只删除该键。安装中途失败时撤回已做的步骤。
+- 记录写入 `plugin.json` 的 `hostData/ClassicPluginHost/playinplugin`（note.md「插件」）。移除时还原原有程序，并只删去这条记录。`plugin.json` 一律保留，包括转写来的，以免丢失安装后用户或其他原生插件的修改。原先的做法是删除转写来的 `plugin.json`，作者 2026-10-15 指出会丢失这些修改，改为保留。
+- 安装中途失败时撤回已做的步骤。
 - 插件文件夹中的程序与当前的 `hello-plugin-play.exe` 内容不同时显示为旧版本，可以更新。
 - 「一键安装」只处理推荐的插件（`ClassicPluginPreviewInstallation::isRecommended()`），即本来就带 `playinplugin.exe`、以它试听的插件（作者 2026-10-15 要求）：
   - 未安装且文件夹中有 `playinplugin.exe` 的，安装；
@@ -128,7 +129,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 2. ~~**`hello-plugin-play`**~~：`hellokit/tools/plugin-play`，命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`，只在 Windows 上构建。测试 `hellokit/tests/auto/tools/plugin-play` 用 Python 运行程序：测试进程创建作业，在其中启动充当插件的进程，以 CPython 的 `_winapi` 创建以该进程命名的管道充当宿主，检查请求的内容、等待回复、管道关闭后退出，以及作业中没有宿主时以原样的参数运行原版（`plugin-play-original-stub` 充当原版）并返回其退出码。
 3. ~~**管道服务器与渲染入口**~~：`Playback` 的重载与 `ProjectWindow::playback()`。`ClassicPluginRunner::processId()` 提供插件进程的进程号，`ClassicPluginPreviewServer` 以它命名管道，每个连接读取一行请求，核对输入文件的音符数与选区起点，以 `ClassicPluginExchange::preview()` 叠加修改后发出 `requested()`，由接收方渲染并调用 `reply()`，连接在回复前关闭时发出 `abandoned()`。QtTest 以 `QLocalSocket` 模拟 plugin-play。
 4. ~~**试听对话框**~~：`Internal/ClassicPluginPreview`，在插件运行期间（`ClassicPluginRun.cpp` 的等待对话框之内）建立管道服务器与试听缓存，插件结束、应用结果之前停止渲染并删除缓存。合成工具不存在或不可信时显示错误窗口。`/noplay` 以 `Playback::renderTrack()` 的重载只渲染。其余请求显示试听对话框，渲染完成后自动播放，`/o:` 的文件为渲染结果的副本。作者已试用。
-5. ~~**部署**~~：见上节。`plugin.json` 的 `ustversion` 与 `ClassicPluginHost` 键，安装类 `ClassicPluginPreviewInstallation`（QtTest），设置页（作者已试用）。
+5. ~~**部署**~~：见上节。`plugin.json` 的 `ustversion` 与 `hostData` 键（2026-10-15 由根上的 `ClassicPluginHost` 键移入 `hostData`），安装类 `ClassicPluginPreviewInstallation`（QtTest），设置页（作者已试用）。
 6. ~~**验收**~~：作者以 PitTrace 试听，2026-10-14 通过。
 
 ## 不做的事
