@@ -120,6 +120,15 @@ namespace hello::daw {
         bool renderTrack(const kit::ProjectDocument &document, const std::filesystem::path &file,
                          const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
 
+        /// \overload for notes \a range of \a project , or all of them, a variant of the project
+        /// of \a document as for play(), whose fragments are written into \a cacheDirectory .
+        /// No audio output device is required.
+        bool renderTrack(const kit::Project &project, const kit::ProjectDocument &document,
+                         const std::filesystem::path &cacheDirectory,
+                         std::optional<std::pair<int, int>> range,
+                         const std::filesystem::path &file, const kit::SynthTools &synthTools,
+                         kit::DiagnosticList &diagnostics);
+
         /// Plays the track as it is rendered, from \a fromTime in milliseconds from the start of
         /// the track, or from the start: the realtime mode of docs/Widgets.md. The notes that
         /// sound at that time are heard from there on, and those prepare() rendered are kept.

@@ -338,6 +338,37 @@ private Q_SLOTS:
         QVERIFY(playback.lastRenderFile().empty());
     }
 
+    // Notes of a variant of the project are rendered into a file without playing, as for a
+    // preview with /noplay, into the cache of the caller's choice.
+    void notes_of_a_variant_are_rendered_into_a_file() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        const auto runner = std::make_shared<SilentRunner>();
+        playback.setRunner(runner);
+        QSignalSpy rendered(&playback, &Playback::trackRendered);
+        QSignalSpy states(&playback, &Playback::stateChanged);
+
+        auto project = document->session()->snapshot();
+        auto &notes = project.tracks.first().notes;
+        notes.push_back(notes.first());
+        const auto cache = temporaryOf(dir) / "plugin";
+        const auto file = temporaryOf(dir) / "preview.wav";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.renderTrack(project, *document, cache, std::make_pair(1, 2), file,
+                                     someSynthTools(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
+        QCOMPARE(rendered.first().first().value<fs::path>(), file);
+        QVERIFY(fs::is_regular_file(file));
+        QCOMPARE(runner->stepCounts, QList<int>{2});
+        QCOMPARE(runner->caches, QList<fs::path>{cache});
+        QVERIFY(!fs::exists(*playback.cacheDirectoryFor(*document)));
+        for (const auto &state : states) {
+            QVERIFY(state.first().value<Playback::State>() != Playback::Playing);
+        }
+    }
+
     // The failures of a render that wrote no track reach failed() with their probable causes.
     void the_failures_of_a_failed_render_are_diagnosed() {
         QTemporaryDir dir;

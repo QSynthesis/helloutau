@@ -286,13 +286,15 @@ namespace hello::daw {
             return input;
         }
 
-        // Starts the render of both overloads of play(): notes range of project, with the voice
+        // Starts the render of play() and renderTrack(): notes range of project, with the voice
         // bank and the project folder of document, into cacheDirectory, or into the render cache
-        // of document if cacheDirectory is std::nullopt.
-        bool play(const kit::Project &project, const kit::ProjectDocument &document,
-                  const std::optional<std::filesystem::path> &cacheDirectory,
-                  std::optional<std::pair<int, int>> range, const kit::SynthTools &tools,
-                  kit::DiagnosticList &diagnostics) {
+        // of document if cacheDirectory is std::nullopt. The track file is file, which is only
+        // written, or else the track file of the temporary directory, which is played.
+        bool render(const kit::Project &project, const kit::ProjectDocument &document,
+                    const std::optional<std::filesystem::path> &cacheDirectory,
+                    std::optional<std::pair<int, int>> range,
+                    const std::optional<std::filesystem::path> &file, const kit::SynthTools &tools,
+                    kit::DiagnosticList &diagnostics) {
             stdc_decl_t;
             decl.stop();
             if (rendersStill()) {
@@ -313,8 +315,9 @@ namespace hello::daw {
                 fail(diagnostics, Playback::tr("The project has no voice bank to sing with."));
                 return false;
             }
-            const int deviceRate = AudioEngine::instance()->sampleRate();
-            if (deviceRate <= 0) {
+            // A track that is only written requires no device.
+            const int deviceRate = file ? 0 : AudioEngine::instance()->sampleRate();
+            if (!file && deviceRate <= 0) {
                 fail(diagnostics, Playback::tr("There is no audio output device."));
                 return false;
             }
@@ -329,13 +332,17 @@ namespace hello::daw {
             job->input.options.projectDirectory = projectDirectoryOf(document);
             job->input.options.resampler = tools.resampler;
             synthTools = tools;
-            job->input.options.outputFile = temporaryDirectory / OutputFileName;
+            job->input.options.outputFile = file ? *file : temporaryDirectory / OutputFileName;
             job->input.options.range = range;
-            // The same notes as the last render play again without the synth tools.
-            job->keptKey = kept ? kept->key : QString();
+            if (file) {
+                job->fileOnly = true;
+            } else {
+                // The same notes as the last render play again without the synth tools.
+                job->keptKey = kept ? kept->key : QString();
+                job->deviceRate = deviceRate;
+            }
             job->synthTools = tools;
             job->runner = runner;
-            job->deviceRate = deviceRate;
             start(job);
             return true;
         }
@@ -901,8 +908,8 @@ namespace hello::daw {
                         std::optional<std::pair<int, int>> range, const kit::SynthTools &synthTools,
                         kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
-        return impl.play(document.session()->snapshot(), document, std::nullopt, range, synthTools,
-                         diagnostics);
+        return impl.render(document.session()->snapshot(), document, std::nullopt, range,
+                           std::nullopt, synthTools, diagnostics);
     }
 
     bool Playback::play(const kit::Project &project, const kit::ProjectDocument &document,
@@ -910,49 +917,25 @@ namespace hello::daw {
                         std::optional<std::pair<int, int>> range, const kit::SynthTools &synthTools,
                         kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
-        return impl.play(project, document, cacheDirectory, range, synthTools, diagnostics);
+        return impl.render(project, document, cacheDirectory, range, std::nullopt, synthTools,
+                           diagnostics);
     }
 
     bool Playback::renderTrack(const kit::ProjectDocument &document,
                                const std::filesystem::path &file, const kit::SynthTools &synthTools,
                                kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
-        stop();
-        if (impl.rendersStill()) {
-            fail(diagnostics, tr("The previous render has not ended yet. Closing its console "
-                                 "window stops it."));
-            return false;
-        }
-        if (synthTools.resampler.empty() || synthTools.wavtool.empty()) {
-            fail(diagnostics,
-                 tr("Set the wavtool and the resampler in the project properties first."));
-            return false;
-        }
-        if (!impl.hasTemporaryDirectory(diagnostics)) {
-            return false;
-        }
-        const auto bank = document.voiceBank();
-        if (!bank) {
-            fail(diagnostics, tr("The project has no voice bank to sing with."));
-            return false;
-        }
-        const auto cache = cacheDirectoryFor(document);
-        if (!cache) {
-            fail(diagnostics, tr("No folder can be created for the render cache."));
-            return false;
-        }
-        auto job = std::make_shared<Job>();
-        job->input = {document.session()->snapshot(), bank, {}};
-        job->input.options.cacheDirectory = *cache;
-        job->input.options.projectDirectory = projectDirectoryOf(document);
-        job->input.options.resampler = synthTools.resampler;
-        impl.synthTools = synthTools;
-        job->input.options.outputFile = file;
-        job->synthTools = synthTools;
-        job->runner = impl.runner;
-        job->fileOnly = true;
-        impl.start(job);
-        return true;
+        return impl.render(document.session()->snapshot(), document, std::nullopt, std::nullopt,
+                           file, synthTools, diagnostics);
+    }
+
+    bool Playback::renderTrack(const kit::Project &project, const kit::ProjectDocument &document,
+                               const std::filesystem::path &cacheDirectory,
+                               std::optional<std::pair<int, int>> range,
+                               const std::filesystem::path &file, const kit::SynthTools &synthTools,
+                               kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        return impl.render(project, document, cacheDirectory, range, file, synthTools, diagnostics);
     }
 
     bool Playback::preview(const kit::ProjectDocument &document, std::optional<double> fromTime,
