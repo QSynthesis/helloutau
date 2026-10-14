@@ -65,9 +65,11 @@ namespace hello::kit {
                 return table;
             }
 
-            // A map that read() rejects is damaged and is written again by the resampler.
-            QList<MapFileDamage> checkMapFiles(const std::filesystem::path &directory,
-                                               const QList<std::filesystem::path> &wavs) const override {
+            // A map that is not complete is damaged, regardless of the sample rate that read()
+            // requires as well, and is written again by the resampler.
+            QList<MapFileDamage>
+                checkMapFiles(const std::filesystem::path &directory,
+                              const QList<std::filesystem::path> &wavs) const override {
                 QList<MapFileDamage> damages;
                 for (const auto &wav : wavs) {
                     const auto name = *sidecarNameOf(wav);
@@ -79,7 +81,8 @@ namespace hello::kit {
                     const auto bytes = contentsOf(directory / name, ignored);
                     if (!bytes || !isComplete(*bytes)) {
                         damages.push_back(
-                            {name, tr("The file is no frequency map of the format, or it is cut short."),
+                            {name,
+                             tr("The file is no frequency map of the format, or it is cut short."),
                              false});
                     }
                 }

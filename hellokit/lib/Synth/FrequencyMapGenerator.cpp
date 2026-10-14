@@ -84,7 +84,7 @@ namespace hello::kit {
             }
             return stopped.load();
         };
-        // Returns whether each audio file of indices has a map, queried by folder.
+        // Returns whether each audio file of indices has a map, by its index, queried by folder.
         const auto mapsOf = [&format, &wavs](const QList<qsizetype> &indices) {
             std::map<fs::path, QList<qsizetype>> byFolder;
             for (const auto i : indices) {

@@ -14,7 +14,8 @@ namespace hello::daw {
 
     namespace {
 
-        // Returns the path of name in folder relative to root, with native separators.
+        // Returns the path of name in folder relative to root, or the whole path if it has no path
+        // relative to root, with native separators.
         QString displayed(const fs::path &root, const fs::path &folder, const fs::path &name) {
             const auto relative = (folder / name).lexically_relative(root);
             const auto path = relative.empty() ? folder / name : relative;

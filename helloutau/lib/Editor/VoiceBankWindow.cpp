@@ -1568,7 +1568,7 @@ namespace hello::daw {
             MapsAndCaches, // The missing maps and caches of every audio file, after a repair
         };
 
-        // Generates the files of generation for wavs in a progress dialog that cancels the
+        // Generates the files that generation names for wavs in a progress dialog that cancels the
         // generation, and shows the map of the current row again. Returns whether the run
         // completed without a cancel and without a diagnostic.
         bool generate(const QString &title, const kit::FrequencyFormat &format,

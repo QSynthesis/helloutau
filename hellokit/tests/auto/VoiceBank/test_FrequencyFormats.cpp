@@ -87,7 +87,7 @@ namespace {
     };
 
     // A format of Cached whose check reports damages, and whose repair writes "repaired", or
-    // removes the map if dropping, as a repair drops a map that is cut short
+    // removes the map if dropping, because a repair drops a map that is cut short
     class Damaged : public Cached {
     public:
         QList<MapFileDamage> damages;
@@ -562,9 +562,9 @@ private Q_SLOTS:
         QVERIFY(!damages.at(0).description.isEmpty());
     }
 
-    // The existing maps come first, a shared file once with all of its audio files, and the
-    // caches follow by cache. A damage is attached to its file. A missing shared file is listed,
-    // and a missing sidecar file is not.
+    // The existing maps come first, and a shared file is listed once with all of its audio files.
+    // The caches follow by cache. The damage of a file is attached to the file. A missing shared
+    // file is listed, and a missing sidecar file is not.
     void the_map_files_are_listed_with_their_damages() {
         QDir(m_dir.path()).mkdir(QStringLiteral("l"));
         const auto directory = pathOf("l");

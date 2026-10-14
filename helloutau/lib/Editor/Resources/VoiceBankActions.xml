@@ -63,7 +63,8 @@
 
         <!-- Every folder of the voice bank read again, whatever the stamps of its files, as the
              refresh of UTAU -->
-        <action id="helloutau.voiceBank.reloadAll" text="Re&amp;load All from Disk" category="File" />
+        <action id="helloutau.voiceBank.reloadAll" text="Re&amp;load All from Disk"
+                category="File" />
         <!-- An entry for an audio file of the folder, whose alias the table then edits -->
         <action id="helloutau.voiceBank.insertEntry" text="&amp;Insert Entry..." category="Edit"
                 shortcut="Ins" />

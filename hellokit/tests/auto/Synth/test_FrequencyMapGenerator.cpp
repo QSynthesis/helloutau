@@ -83,8 +83,9 @@ namespace {
         }
     };
 
-    // A format whose maps cannot be read until the stand-in has received total calls, as
-    // desc.mrq cannot be read while another moresampler locks it to write an entry
+    // A format whose maps cannot be read until the stand-in has received the number of calls
+    // passed to the constructor, because desc.mrq cannot be read while another moresampler locks
+    // it to write an entry
     class LockedFormat : public SidecarFormat {
     public:
         LockedFormat(const StandIn &standIn, int total) : m_standIn(standIn), m_total(total) {

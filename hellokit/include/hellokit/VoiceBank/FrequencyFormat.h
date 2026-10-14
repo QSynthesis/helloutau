@@ -93,8 +93,8 @@ namespace hello::kit {
             bool editedByHand = true;
         };
 
-        /// A damaged file that checkMapFiles() detects: a file that holds maps, or a cache file
-        /// of analysisCaches().
+        /// The damage of a file that checkMapFiles() detects, a file that holds maps or a cache
+        /// file of analysisCaches().
         struct MapFileDamage {
             /// The name of the file in the directory
             std::filesystem::path path;

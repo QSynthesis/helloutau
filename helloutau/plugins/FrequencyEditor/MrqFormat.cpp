@@ -186,7 +186,7 @@ namespace hello::daw {
             return QList<FileChange>();
         }
         // desc.mrq is removed once no entry remains, and moresampler creates it again
-        // (docs/FrequencyMaps.md). The complete entries beyond the count are entries as well.
+        // (docs/FrequencyMaps.md). The complete entries beyond the count are included.
         const auto found = scan(*bytes);
         const bool remaining =
             found && std::any_of(found->entries.cbegin(), found->entries.cend(),
