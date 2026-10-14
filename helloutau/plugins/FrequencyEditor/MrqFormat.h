@@ -89,8 +89,7 @@ namespace hello::daw {
         // whether any name was zeroed
         static bool zeroNames(QByteArray &bytes, const QSet<QString> &names);
 
-        // The name and the position of the data of each entry, up to the first entry that is
-        // cut short
+        // The name and the position of the data of each entry, up to the first incomplete entry
         static QList<std::pair<QString, qsizetype>> entriesOf(const QByteArray &bytes);
 
         // The name and the position of the data of the entry of wav, or none

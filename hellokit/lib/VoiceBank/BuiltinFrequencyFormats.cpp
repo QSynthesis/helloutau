@@ -82,7 +82,7 @@ namespace hello::kit {
                     if (!bytes || !isComplete(*bytes)) {
                         damages.push_back(
                             {name,
-                             tr("The file is no frequency map of the format, or it is cut short."),
+                             tr("The file is no frequency map of the format, or it is incomplete."),
                              false});
                     }
                 }

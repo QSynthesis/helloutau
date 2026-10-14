@@ -235,7 +235,7 @@ namespace hello::kit {
         static std::optional<QByteArray> contentsOf(const std::filesystem::path &path,
                                                     DiagnosticList &diagnostics);
 
-        /// Reports \a path in \a diagnostics as no map of its format or a map cut short, and
+        /// Reports \a path in \a diagnostics as no map of its format or an incomplete map, and
         /// returns \c std::nullopt.
         static std::optional<FrequencyMap> damaged(const std::filesystem::path &path,
                                                    DiagnosticList &diagnostics);

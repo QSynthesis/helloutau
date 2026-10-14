@@ -97,7 +97,7 @@ namespace hello::daw {
             const auto bytes = contentsOf(directory / name, ignored);
             if (!bytes || !isComplete(*bytes)) {
                 damages.push_back(
-                    {name, tr("The file is no frequency map of the format, or it is cut short."),
+                    {name, tr("The file is no frequency map of the format, or it is incomplete."),
                      false});
             }
         }

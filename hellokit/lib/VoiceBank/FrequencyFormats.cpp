@@ -80,7 +80,7 @@ namespace hello::kit {
     std::optional<FrequencyMap> FrequencyFormat::damaged(const std::filesystem::path &path,
                                                          DiagnosticList &diagnostics) {
         diagnostics.push_back({DiagnosticSeverity::Error,
-                               tr("\"%1\" is no frequency map of its format, or it is cut short.")
+                               tr("\"%1\" is no frequency map of its format, or it is incomplete.")
                                    .arg(QString::fromStdU16String(path.u16string()))});
         return std::nullopt;
     }
@@ -381,7 +381,7 @@ namespace hello::kit {
             if (file.damage && file.damage->repairable) {
                 const auto changes = format.changesRepairing(directory, file.path, diagnostics);
                 if (changes && execute(directory, *changes, diagnostics)) {
-                    // A repair may drop a map that is cut short.
+                    // A repair may drop an incomplete map.
                     const auto found = format.mapsExist(directory, file.wavs);
                     for (qsizetype i = 0; i < file.wavs.size(); ++i) {
                         if (!found.value(i)) {

@@ -134,7 +134,7 @@ namespace hello::daw {
             if (!at) {
                 continue;
             }
-            // The int32 size precedes the data. An entry cut short is not written again.
+            // The int32 size precedes the data. An incomplete entry is not written again.
             kit::BinaryStream entry(*bytes, at->second - 4);
             const auto size = entry.read<qint32>();
             const auto data = size ? entry.readBytes(*size) : std::nullopt;

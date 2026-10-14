@@ -377,7 +377,7 @@ private Q_SLOTS:
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // An entry cut short at the end damages the file even if the count matches the number of
+    // An incomplete entry at the end damages the file even if the count matches the number of
     // complete entries.
     // The repair removes the entry, and the LLSM file of its audio file is reported, since the
     // audio file has no entry after the repair.

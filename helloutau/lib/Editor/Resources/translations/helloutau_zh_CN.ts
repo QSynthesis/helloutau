@@ -3993,7 +3993,7 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>无法读取「%1」。</translation>
     </message>
     <message>
-        <source>&quot;%1&quot; is no frequency map of its format, or it is cut short.</source>
+        <source>&quot;%1&quot; is no frequency map of its format, or it is incomplete.</source>
         <translation>「%1」不是该格式的频率表，或文件不完整。</translation>
     </message>
     <message>
@@ -4058,7 +4058,7 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>frq (resampler)</translation>
     </message>
     <message>
-        <source>The file is no frequency map of the format, or it is cut short.</source>
+        <source>The file is no frequency map of the format, or it is incomplete.</source>
         <translation>此文件不是该格式的频率表，或文件不完整。</translation>
     </message>
     <message>

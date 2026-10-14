@@ -113,7 +113,7 @@ private Q_SLOTS:
         QCOMPARE(audio->duration(), 1000.0 / 44100);
     }
 
-    // A file cut short keeps the audio it has.
+    // A file shorter than its data chunk is read up to its end.
     void a_file_shorter_than_its_data_is_read_to_its_end() {
         QByteArray data;
         appendU16(data, 16384);

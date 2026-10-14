@@ -87,7 +87,7 @@ namespace {
     };
 
     // A format of Cached whose check reports damages, and whose repair writes "repaired", or
-    // removes the map if dropping, because a repair drops a map that is cut short
+    // removes the map if dropping, because a repair drops an incomplete map
     class Damaged : public Cached {
     public:
         QList<MapFileDamage> damages;
