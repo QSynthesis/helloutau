@@ -7,7 +7,8 @@
 #include <QtCore/QThread>
 #include <QtTest/QTest>
 
-#include <helloutau/Audio/SampleRateConversion.h>
+#include <hellokit/AudioFile/WaveAudio.h>
+
 #include <helloutau/Audio/StreamSource.h>
 
 using namespace hello::daw;
@@ -52,7 +53,7 @@ private Q_SLOTS:
             QCOMPARE(frame[0], frame[1]);
             heard.push_back(frame[0]);
         }
-        const auto whole = SampleRateConversion::converted(tone, 1, 44100, 48000);
+        const auto whole = hello::kit::WaveAudio::resampled(tone, 1, 44100, 48000);
         QCOMPARE(heard.size(), whole.size());
         double error = 0;
         for (size_t i = 0; i < heard.size(); ++i) {

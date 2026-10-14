@@ -2,8 +2,8 @@
 
 #include <cmath>
 
+#include <hellokit/AudioFile/WaveAudio.h>
 #include <hellokit/Support/BinaryStream.h>
-#include <hellokit/Support/WaveAudio.h>
 
 namespace hello::daw {
 

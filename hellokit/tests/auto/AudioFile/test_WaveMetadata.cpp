@@ -4,7 +4,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
-#include <hellokit/VoiceBank/WaveMetadata.h>
+#include <hellokit/AudioFile/WaveMetadata.h>
 
 using namespace hello::kit;
 namespace fs = std::filesystem;

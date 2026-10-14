@@ -2,7 +2,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
-#include <hellokit/Support/WaveAudio.h>
+#include <hellokit/AudioFile/WaveAudio.h>
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyMapConverter.h>

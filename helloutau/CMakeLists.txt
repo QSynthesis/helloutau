@@ -56,7 +56,8 @@ list(TRANSFORM HELLOUTAU_LANGUAGES
 qt_add_translations(
     TARGETS HelloUtauEditor
     SOURCE_TARGETS
-        HelloKitDocument HelloKitEdit HelloKitEditBase HelloKitInterchange HelloKitSupport
+        HelloKitAudioFile HelloKitDocument HelloKitEdit HelloKitEditBase HelloKitInterchange
+        HelloKitSupport
         HelloKitSynth HelloKitUpdate HelloKitVoiceBank HelloUtauAudio HelloUtauEditor HelloUtauTheme
         HelloUtauWidgets
     TS_FILES ${_ts_files}

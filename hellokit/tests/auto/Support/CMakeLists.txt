@@ -8,7 +8,6 @@ add_auto_test(test_OrderedObjectRegistryKeeper.cpp HelloKitSupport)
 add_auto_test(test_ExitLauncher.cpp HelloKitSupport)
 add_auto_test(test_TemporaryStorage.cpp HelloKitSupport)
 add_auto_test(test_TranslationLoader.cpp HelloKitSupport)
-add_auto_test(test_WaveAudio.cpp HelloKitSupport)
 
 # The test writes its archives with libzip, including archives that a conforming archiver never
 # writes.

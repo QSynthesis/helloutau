@@ -15,9 +15,9 @@
 
 #include <stdcorelib/pimpl.h>
 
+#include <hellokit/AudioFile/WaveAudio.h>
 #include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
-#include <hellokit/Support/WaveAudio.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
@@ -28,7 +28,6 @@
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/BufferSource.h>
-#include <helloutau/Audio/SampleRateConversion.h>
 #include <helloutau/Audio/StreamSource.h>
 
 namespace hello::daw {
@@ -598,9 +597,8 @@ namespace hello::daw {
             if (!audio) {
                 return;
             }
-            job->samples =
-                std::make_shared<const std::vector<float>>(SampleRateConversion::converted(
-                    audio->samples, audio->channels, audio->sampleRate, job->deviceRate));
+            job->samples = std::make_shared<const std::vector<float>>(kit::WaveAudio::resampled(
+                audio->samples, audio->channels, audio->sampleRate, job->deviceRate));
             job->channels = audio->channels;
             job->startTime = plan.startTime();
             job->rendered = true;
@@ -1092,9 +1090,8 @@ namespace hello::daw {
         // The device may have changed while paused, as after the loss of the device.
         const int deviceRate = AudioEngine::instance()->sampleRate();
         if (deviceRate > 0 && deviceRate != rendered.deviceRate) {
-            rendered.samples =
-                std::make_shared<const std::vector<float>>(SampleRateConversion::converted(
-                    *rendered.samples, rendered.channels, rendered.deviceRate, deviceRate));
+            rendered.samples = std::make_shared<const std::vector<float>>(kit::WaveAudio::resampled(
+                *rendered.samples, rendered.channels, rendered.deviceRate, deviceRate));
             rendered.deviceRate = deviceRate;
         }
         const auto first =

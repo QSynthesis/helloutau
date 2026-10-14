@@ -8,7 +8,7 @@
 #include <QtGui/QColor>
 #include <QtWidgets/QAbstractScrollArea>
 
-#include <hellokit/Support/WaveAudio.h>
+#include <hellokit/AudioFile/WaveAudio.h>
 #include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/VoiceBank/FrequencyMap.h>
 #include <hellokit/VoiceBank/VoiceBank.h>

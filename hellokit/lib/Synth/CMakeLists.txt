@@ -9,7 +9,7 @@ qm_find_qt(Core)
 
 hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
-    LINKS stdutau::stdutau stdcorelib::stdcorelib HelloKitSupport HelloKitDocument
+    LINKS stdutau::stdutau stdcorelib::stdcorelib HelloKitSupport HelloKitAudioFile HelloKitDocument
           HelloKitVoiceBank
     QT_LINKS Core
     INCLUDE_PRIVATE ../../include/hellokit/Synth/** **

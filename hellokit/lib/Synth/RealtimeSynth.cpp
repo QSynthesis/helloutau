@@ -11,7 +11,7 @@
 
 #include <stdcorelib/pimpl.h>
 
-#include <hellokit/Support/WaveAudio.h>
+#include <hellokit/AudioFile/WaveAudio.h>
 
 #include <hellokit/Synth/WavtoolMixer.h>
 

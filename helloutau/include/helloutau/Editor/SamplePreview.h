@@ -8,8 +8,8 @@
 #include <QtCore/QMap>
 #include <QtCore/QObject>
 
+#include <hellokit/AudioFile/WaveAudio.h>
 #include <hellokit/Support/Diagnostic.h>
-#include <hellokit/Support/WaveAudio.h>
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 

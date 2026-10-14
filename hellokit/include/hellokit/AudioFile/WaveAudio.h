@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_SUPPORT_WAVEAUDIO_H
-#define HELLOKIT_SUPPORT_WAVEAUDIO_H
+#ifndef HELLOKIT_AUDIOFILE_WAVEAUDIO_H
+#define HELLOKIT_AUDIOFILE_WAVEAUDIO_H
 
 #include <filesystem>
 #include <optional>
@@ -9,7 +9,8 @@
 #include <QtCore/QCoreApplication>
 
 #include <hellokit/Support/Diagnostic.h>
-#include <hellokit/Support/HelloKitSupportGlobal.h>
+
+#include <hellokit/AudioFile/HelloKitAudioFileGlobal.h>
 
 namespace hello::kit {
 
@@ -22,7 +23,7 @@ namespace hello::kit {
     /// https://learn.microsoft.com/en-us/windows/win32/api/mmreg/ns-mmreg-waveformatextensible).
     /// The wavtool writes 16-bit PCM at 44100 Hz, and other synth tools and the recordings of
     /// voice banks use other sample formats.
-    struct HELLOKIT_SUPPORT_EXPORT WaveAudio {
+    struct HELLOKIT_AUDIOFILE_EXPORT WaveAudio {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::WaveAudio)
     public:
         int sampleRate = 0;
@@ -37,6 +38,16 @@ namespace hello::kit {
 
         /// The duration in milliseconds.
         double duration() const;
+
+        /// Returns the audio converted to the sample rate \a sampleRate, which must be positive,
+        /// as the static overload converts the samples. The other members are kept.
+        WaveAudio resampled(int sampleRate) const;
+
+        /// Converts \a samples, interleaved by \a channels, from \a sourceRate to \a targetRate
+        /// with r8brain-free-src, each channel separately. The result has the same duration,
+        /// rounded to whole frames, and no delay. Both rates must be positive.
+        static std::vector<float> resampled(const std::vector<float> &samples, int channels,
+                                            int sourceRate, int targetRate);
 
         /// Reads the WAVE file at \a path.
         ///
@@ -55,4 +66,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_SUPPORT_WAVEAUDIO_H
+#endif // HELLOKIT_AUDIOFILE_WAVEAUDIO_H

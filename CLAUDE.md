@@ -53,7 +53,7 @@ Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package
 
 **MIDI 的解析使用 `wolf-midi`**（去除 Qt 依赖的 `QMidiFile`，vcpkg 端口），同样传入 `-Dwolf-midi_DIR=`，**私有依赖**，不出现在公开头文件中。不要自行实现 MIDI 解析。
 
-**采样率转换使用 r8brain-free-src 6.5**（MIT 许可），由 DiffScope 仓库的 vcpkg 端口（`scripts/vcpkg/ports/r8brain-free-src`）构建为静态库，传入 `-Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src`，是 `HelloUtauAudio` 的**私有依赖**。其头文件会引入 `windows.h`，因此该子库定义 `NOMINMAX`。
+**采样率转换使用 r8brain-free-src 6.5**（MIT 许可），由 DiffScope 仓库的 vcpkg 端口（`scripts/vcpkg/ports/r8brain-free-src`）构建为静态库，传入 `-Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src`，是 `HelloKitAudioFile`（`kit::WaveAudio::resampled()`）与 `HelloUtauAudio`（`StreamSource` 的流式转换）的**私有依赖**。其头文件会引入 `windows.h`，因此这两个子库定义 `NOMINMAX`。
 
 **zip 的解压使用 libzip**（BSD 许可，vcpkg 端口，动态链接），传入 `-Dlibzip_DIR=<prefix>/share/libzip`，是 `HelloKitSupport` 的**私有依赖**（`kit::ZipExtractor`）。动态版 libzip 的包配置不查找 zlib，因此在 Windows 上另需 `-DZLIB_DIR=<prefix>/share/zlib`，以便把 zlib 的 DLL 复制到程序旁。它以 `ZIP_FL_ENC_RAW` 给出条目名的原始字节，因此代码页的解码仍按本仓库的规则进行。不要使用 Qt 的 `QZipReader`：它是私有接口，按本机代码页解码条目名，`extractAll()` 也不检查路径。
 

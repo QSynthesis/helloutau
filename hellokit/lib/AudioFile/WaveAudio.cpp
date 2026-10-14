@@ -1,13 +1,19 @@
 #include "WaveAudio.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <limits>
 
+#include <r8brain-free-src/CDSPResampler.h>
+
 namespace hello::kit {
 
     namespace {
+
+        // The block in which the resampler takes its input, in samples
+        constexpr int resamplerBlock = 4096;
 
         // The format tags of WAVEFORMATEX, and the tag that defers to a subformat
         constexpr quint16 FormatPcm = 0x0001;
@@ -74,6 +80,40 @@ namespace hello::kit {
 
     double WaveAudio::duration() const {
         return sampleRate > 0 ? double(frameCount()) * 1000 / sampleRate : 0;
+    }
+
+    WaveAudio WaveAudio::resampled(int sampleRate) const {
+        auto result = *this;
+        result.samples = resampled(samples, channels, this->sampleRate, sampleRate);
+        result.sampleRate = sampleRate;
+        return result;
+    }
+
+    // oneshot() of r8brain-free-src removes the latency of the filter, so that the result is
+    // aligned in time with the input.
+    std::vector<float> WaveAudio::resampled(const std::vector<float> &samples, int channels,
+                                            int sourceRate, int targetRate) {
+        Q_ASSERT(sourceRate > 0 && targetRate > 0);
+        if (sourceRate == targetRate || channels < 1 || samples.empty()) {
+            return samples;
+        }
+        const qsizetype frames = qsizetype(samples.size()) / channels;
+        const auto outFrames = qsizetype(std::llround(double(frames) * targetRate / sourceRate));
+        std::vector<float> result(size_t(outFrames * channels));
+
+        std::vector<float> input(static_cast<size_t>(frames));
+        std::vector<float> output(static_cast<size_t>(outFrames));
+        r8b::CDSPResampler24 resampler(sourceRate, targetRate, resamplerBlock);
+        for (int channel = 0; channel < channels; ++channel) {
+            for (qsizetype i = 0; i < frames; ++i) {
+                input[size_t(i)] = samples[size_t(i * channels + channel)];
+            }
+            resampler.oneshot(input.data(), int(frames), output.data(), int(outFrames));
+            for (qsizetype i = 0; i < outFrames; ++i) {
+                result[size_t(i * channels + channel)] = output[size_t(i)];
+            }
+        }
+        return result;
     }
 
     std::optional<WaveAudio> WaveAudio::read(const std::filesystem::path &path,

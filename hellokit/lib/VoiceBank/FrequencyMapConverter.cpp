@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include <hellokit/Support/WaveAudio.h>
+#include <hellokit/AudioFile/WaveAudio.h>
 
 #include "FrequencyFormats.h"
 

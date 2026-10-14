@@ -29,10 +29,10 @@
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
+#include <hellokit/AudioFile/WaveAudio.h>
 #include <hellokit/Document/TempoMap.h>
 #include <hellokit/Document/UstDocument.h>
 #include <hellokit/Support/TextCodec.h>
-#include <hellokit/Support/WaveAudio.h>
 #include <hellokit/Synth/PitchCurve.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>

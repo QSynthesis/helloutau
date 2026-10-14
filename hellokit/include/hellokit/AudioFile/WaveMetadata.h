@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_VOICEBANK_WAVEMETADATA_H
-#define HELLOKIT_VOICEBANK_WAVEMETADATA_H
+#ifndef HELLOKIT_AUDIOFILE_WAVEMETADATA_H
+#define HELLOKIT_AUDIOFILE_WAVEMETADATA_H
 
 #include <filesystem>
 #include <optional>
@@ -11,7 +11,7 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
+#include <hellokit/AudioFile/HelloKitAudioFileGlobal.h>
 
 namespace hello::kit {
 
@@ -27,7 +27,7 @@ namespace hello::kit {
     /// Removing the metadata leaves the RIFF header, the \c fmt chunk and the \c data chunk, in
     /// that order, with the sizes written anew. The samples are unchanged, and so is every
     /// frequency map made from them.
-    class HELLOKIT_VOICEBANK_EXPORT WaveMetadata {
+    class HELLOKIT_AUDIOFILE_EXPORT WaveMetadata {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::WaveMetadata)
     public:
         /// The metadata of a file.
@@ -70,4 +70,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_VOICEBANK_WAVEMETADATA_H
+#endif // HELLOKIT_AUDIOFILE_WAVEMETADATA_H
