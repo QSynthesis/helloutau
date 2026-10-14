@@ -282,6 +282,13 @@ int wmain(int argc, wchar_t *argv[]) {
         return Success;
     }
     if (const auto pipe = connectToHost()) {
+        // This program was started by the plugin, the foreground process, and may therefore
+        // pass the right to set the foreground window to the host, so that the preview dialog
+        // of the host appears in front instead of flashing in the taskbar.
+        ULONG host = 0;
+        if (GetNamedPipeServerProcessId(*pipe, &host)) {
+            AllowSetForegroundWindow(host);
+        }
         sendRequest(*pipe, message(parse(std::vector<std::wstring>(argv + 1, argv + argc))));
         CloseHandle(*pipe);
         return Success;

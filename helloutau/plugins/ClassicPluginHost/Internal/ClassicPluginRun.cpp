@@ -26,6 +26,8 @@
 #include <ClassicPluginHost/ClassicPluginExchange.h>
 #include <ClassicPluginHost/ClassicPluginRunner.h>
 
+#include "ClassicPluginPreview.h"
+
 namespace hello::daw {
 
     namespace {
@@ -156,8 +158,16 @@ namespace hello::daw {
             QMessageBox::critical(window, plugin.name, error);
             return;
         }
-        if (!waitFor(window, plugin, runner) || runner.isUnchanged()) {
-            return;
+        {
+            // The previews through hello-plugin-play while the plugin runs. A plugin whose
+            // process cannot be observed has none. The previews end before the result applies.
+            ClassicPluginPreview preview(window, plugin, project, first, count);
+            if (const auto processId = runner.processId()) {
+                preview.start(*processId);
+            }
+            if (!waitFor(window, plugin, runner) || runner.isUnchanged()) {
+                return;
+            }
         }
 
         kit::DiagnosticList diagnostics;

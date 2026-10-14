@@ -66,6 +66,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
   `modify`、`output` 未给出时为 `null`。`/nodeletecache` 与 `/debug` 不传递，因为缓存与批处理由宿主管理。
 - **回复**：`{"result": "done"}`、`{"result": "cancelled"}` 或 `{"result": "failed", "message": "..."}`。
 - **进程的存续**：宿主在试听对话框关闭后才回复（`play` 为假时在渲染结束后回复），plugin-play 在收到回复或管道断开后才退出，不设超时。试听对话框存在期间 plugin-play 因此一直在运行，插件可以据此判断试听是否结束。反过来，plugin-play 的进程被插件结束、管道断开时，宿主停止渲染与播放并关闭试听对话框。
+- **前台窗口**：Windows 只允许前台进程设置前台窗口。plugin-play 由前台的插件启动，连上管道后以 `GetNamedPipeServerProcessId` 取得宿主的进程号并调用 `AllowSetForegroundWindow`，宿主因此能把试听对话框与错误窗口提到最前，而不只在任务栏闪烁。宿主收到请求时记下当时的前台窗口（通常是插件的窗口），这些窗口关闭后把前台还给它（作者 2026-10-14 同意）。
 - 管道服务器只在插件运行期间存在，插件结束或被取消时关闭。同一时间只处理一个请求，前一个请求未回复时，后到的请求立即得到 `failed`。
 
 ## 没有宿主时
@@ -99,6 +100,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 ### 已按约定确定的做法（作者可推翻）
 
 - 试听对话框在渲染时显示进度与「取消」，渲染完成后自动播放，提供「停止」「重播」与「关闭」。播放结束后对话框保持打开，关闭后才回复。
+- 试听沿用项目窗口的播放头。播放头按文档的时间轴显示，插件插入或删除音符时与音符对不上，播放仍按渲染出的音频结束（作者 2026-10-14 决定保持）。
 - 试听对话框是插件等待对话框（`ClassicPluginRun.cpp` 的 `waitFor()`）的子窗口。等待对话框以 `exec()` 运行事件循环，管道服务器与试听对话框因此不需要另开线程。
 
 ## 宿主一侧的接口
@@ -118,7 +120,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 1. ~~**叠加修改**~~：`ClassicPluginExchange::preview()`，以临时会话复用 `apply()`，无须拆出合并逻辑。QtTest。
 2. ~~**`hello-plugin-play`**~~：`hellokit/tools/plugin-play`，命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`，只在 Windows 上构建。测试 `hellokit/tests/auto/tools/plugin-play` 用 Python 运行程序：测试进程创建作业，在其中启动充当插件的进程，以 CPython 的 `_winapi` 创建以该进程命名的管道充当宿主，检查请求的内容、等待回复、管道关闭后退出，以及作业中没有宿主时以原样的参数运行原版（`plugin-play-original-stub` 充当原版）并返回其退出码。
 3. ~~**管道服务器与渲染入口**~~：`Playback` 的重载与 `ProjectWindow::playback()`。`ClassicPluginRunner::processId()` 提供插件进程的进程号，`ClassicPluginPreviewServer` 以它命名管道，每个连接读取一行请求，核对输入文件的音符数与选区起点，以 `ClassicPluginExchange::preview()` 叠加修改后发出 `requested()`，由接收方渲染并调用 `reply()`，连接在回复前关闭时发出 `abandoned()`。QtTest 以 `QLocalSocket` 模拟 plugin-play。
-4. **试听对话框**：在插件运行中建立管道服务器与试听缓存，渲染进度、播放与取消，`/o:` 的写出，以及合成工具不可信时的错误窗口。由作者试用。
+4. **试听对话框**：`Internal/ClassicPluginPreview`，在插件运行期间（`ClassicPluginRun.cpp` 的等待对话框之内）建立管道服务器与试听缓存，插件结束、应用结果之前停止渲染并删除缓存。合成工具不存在或不可信时显示错误窗口。`/noplay` 以 `Playback::renderTrack()` 的重载只渲染。其余请求显示试听对话框，渲染完成后自动播放，`/o:` 的文件为渲染结果的副本。已实现，待作者试用。
 5. **部署**：见上节，推后。
 6. **验收**：作者以 PitTrace 试听。
 

@@ -85,6 +85,49 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::ClassicPluginPreview</name>
+    <message>
+        <source>Set an existing wavtool and resampler in the project properties first.</source>
+        <translation>请先在工程属性中指定存在的合成器与重采样器。</translation>
+    </message>
+    <message>
+        <source>The synth tools of the project are not trusted. Play the project once and trust them, then preview again.</source>
+        <translation>工程中的合成工具尚未信任。请先播放一次工程并信任这些合成工具，再进行试听。</translation>
+    </message>
+    <message>
+        <source>Preview of %1</source>
+        <translation>%1 的试听</translation>
+    </message>
+    <message>
+        <source>Play &amp;Again</source>
+        <translation>重播(&amp;A)</translation>
+    </message>
+    <message>
+        <source>&amp;Stop</source>
+        <translation>停止(&amp;S)</translation>
+    </message>
+    <message>
+        <source>Rendering...</source>
+        <translation>正在渲染...</translation>
+    </message>
+    <message>
+        <source>Playing...</source>
+        <translation>正在播放...</translation>
+    </message>
+    <message>
+        <source>The notes could not be rendered.</source>
+        <translation>无法渲染这些音符。</translation>
+    </message>
+    <message>
+        <source>Stopped.</source>
+        <translation>已停止。</translation>
+    </message>
+    <message>
+        <source>The render was stopped.</source>
+        <translation>渲染已停止。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::ClassicPluginPreviewServer</name>
     <message>
         <source>Another preview of the plugin is in progress.</source>
