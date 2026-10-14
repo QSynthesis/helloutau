@@ -49,10 +49,6 @@ namespace hello::daw {
         /// plugin.json, because the folder has none.
         static bool transcribes(const std::filesystem::path &folder);
 
-        /// Returns the name in the plugin.txt of \a folder decoded in \a charset , by which the
-        /// user judges the encoding, or an empty string if the file states no name.
-        static QString nameIn(const std::filesystem::path &folder, const QString &charset);
-
         /// Installs \a program in \a folder . \a charset is the encoding of plugin.txt if
         /// transcribes() holds.
         ///

@@ -70,21 +70,13 @@ class test_ClassicPluginPreviewInstallation : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The name of plugin.txt decoded in the encoding that the user confirms
-    void the_name_is_decoded_in_the_encoding_given() {
-        QTemporaryDir dir;
-        const auto folder = pitTrace(dir);
-        QVERIFY(Installation::transcribes(folder));
-        QCOMPARE(Installation::nameIn(folder, QStringLiteral("Shift_JIS")),
-                 QString::fromUtf8("テスト"));
-    }
-
     // A plugin with only a plugin.txt receives a plugin.json transcribed from it, the original
     // program is kept, and the plugin reads as before.
     void an_installation_transcribes_plugin_txt_and_keeps_the_original() {
         QTemporaryDir dir;
         const auto folder = pitTrace(dir);
         const auto playPath = program(dir);
+        QVERIFY(Installation::transcribes(folder));
         kit::DiagnosticList diagnostics;
         QVERIFY(Installation::install(folder, playPath, QStringLiteral("Shift_JIS"), diagnostics));
         QVERIFY(diagnostics.isEmpty());

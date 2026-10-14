@@ -246,8 +246,8 @@
         <translation>经典插件</translation>
     </message>
     <message>
-        <source>The folders in which the plugins of UTAU are discovered.</source>
-        <translation>查找 UTAU 插件的文件夹。</translation>
+        <source>The folders in which the plugins of UTAU are discovered, and the preview program of the plugins.</source>
+        <translation>发现 UTAU 插件的文件夹，以及插件的试听程序。</translation>
     </message>
     <message>
         <source>Plugin folders</source>
@@ -258,8 +258,92 @@
         <translation>按以下顺序在这些文件夹中查找插件，不存在的文件夹会被跳过。第二个文件夹是「UTAU」页中 UTAU 文件夹下的 plugins 文件夹。</translation>
     </message>
     <message>
+        <source>Preview program</source>
+        <translation>试听程序</translation>
+    </message>
+    <message>
+        <source>Plugins such as PitTrace play their notes through the program playinplugin.exe in their folder. The preview program of HelloUtau replaces it, so that the notes are rendered and played in HelloUtau. The original program is kept, and still runs if UTAU runs the plugin.</source>
+        <translation>PitTrace 等插件通过其文件夹中的程序 playinplugin.exe 试听音符。HelloUtau 的试听程序替换该程序，使音符在 HelloUtau 中渲染与播放。原有的程序予以保留，由 UTAU 运行插件时仍使用它。</translation>
+    </message>
+    <message>
         <source>Open</source>
         <translation>打开</translation>
+    </message>
+    <message>
+        <source>Choose Encoding - %1</source>
+        <translation>选择编码 - %1</translation>
+    </message>
+    <message>
+        <source>(not valid in this encoding)</source>
+        <translation>（在此编码下无效）</translation>
+    </message>
+    <message>
+        <source>The plugin.txt of this plugin does not state its encoding. Choose the encoding in which its text is displayed correctly. For the installation, the file is transcribed into a plugin.json in UTF-8.</source>
+        <translation>该插件的 plugin.txt 没有声明编码。请选择使其文本正确显示的编码。安装时，该文件将转写为 UTF-8 的 plugin.json。</translation>
+    </message>
+    <message>
+        <source>The preview program hello-plugin-play.exe is not in the folder of HelloUtau.</source>
+        <translation>HelloUtau 的文件夹中没有试听程序 hello-plugin-play.exe。</translation>
+    </message>
+    <message>
+        <source>No plugin is found.</source>
+        <translation>未发现插件。</translation>
+    </message>
+    <message>
+        <source>Install All</source>
+        <translation>一键安装</translation>
+    </message>
+    <message>
+        <source>Installs the preview program in the plugins whose folder has a playinplugin.exe, and updates the older versions.</source>
+        <translation>在文件夹中有 playinplugin.exe 的插件中安装试听程序，并更新版本较旧的试听程序。</translation>
+    </message>
+    <message>
+        <source>Remove All</source>
+        <translation>一键卸载</translation>
+    </message>
+    <message>
+        <source>Removes the preview program from every plugin.</source>
+        <translation>从所有插件中移除试听程序。</translation>
+    </message>
+    <message>
+        <source>%1: %2</source>
+        <translation>%1：%2</translation>
+    </message>
+    <message>
+        <source>Remove the preview program of HelloUtau from every plugin, and restore their original programs?</source>
+        <translation>要从所有插件中移除 HelloUtau 的试听程序，并还原各插件原有的程序吗？</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未安装</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>已安装</translation>
+    </message>
+    <message>
+        <source>Installed, older version</source>
+        <translation>已安装，版本较旧</translation>
+    </message>
+    <message>
+        <source>Install</source>
+        <translation>安装</translation>
+    </message>
+    <message>
+        <source>Install the preview program of HelloUtau in the folder of the plugin?</source>
+        <translation>要在该插件的文件夹中安装 HelloUtau 的试听程序吗？</translation>
+    </message>
+    <message>
+        <source>Update</source>
+        <translation>更新</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+    <message>
+        <source>Remove the preview program of HelloUtau and restore the original program of the plugin?</source>
+        <translation>要移除 HelloUtau 的试听程序，并还原插件原有的程序吗？</translation>
     </message>
 </context>
 </TS>

@@ -150,12 +150,6 @@ namespace hello::daw {
         return !QFile::exists(manifestOf(folder));
     }
 
-    QString ClassicPluginPreviewInstallation::nameIn(const std::filesystem::path &folder,
-                                                     const QString &charset) {
-        const auto manifest = transcription(folder, charset);
-        return manifest ? manifest->value(QLatin1String("name")).toString() : QString();
-    }
-
     bool ClassicPluginPreviewInstallation::install(const std::filesystem::path &folder,
                                                    const std::filesystem::path &program,
                                                    const QString &charset,
