@@ -5,6 +5,7 @@
         <file>helloutau/resetEnvelope.svg</file>
         <file>helloutau/mode2.svg</file>
         <file>helloutau/pitchTool.svg</file>
+        <file>helloutau/playSpan.svg</file>
         <file>helloutau/selectTool.svg</file>
         <file>helloutau/showEnvelopes.svg</file>
         <file>helloutau/showParameters.svg</file>
@@ -17,7 +18,6 @@
         <file>intellij/redo.svg</file>
         <file>intellij/rerun.svg</file>
         <file>intellij/run.svg</file>
-        <file>intellij/runToCursor.svg</file>
         <file>intellij/search.svg</file>
         <file>intellij/stop.svg</file>
         <file>intellij/undo.svg</file>

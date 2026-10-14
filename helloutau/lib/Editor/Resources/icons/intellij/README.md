@@ -13,7 +13,6 @@
 | `stop.svg` | `run/stop.svg` | 停止 |
 | `rerun.svg` | `run/rerun.svg` | 重播 |
 | `freeze.svg` | `debugger/freeze.svg` | Mode2 转为 Mode1 |
-| `runToCursor.svg` | `run/runToCursor.svg` | 从偏移播放到 cutoff |
 | `lightning.svg` | `actions/lightning.svg` | 试合成 |
 
 最后三项在 IntelliJ 中没有含义相同的图标，按含义相近选取：雪花取「冻结」之义，即把计算出的曲线固定为数值。IntelliJ 中没有可用图形的命令，图标由本项目绘制，见 [`../helloutau/README.md`](../helloutau/README.md)。

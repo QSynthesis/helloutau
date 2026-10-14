@@ -31,7 +31,7 @@ namespace hello::daw {
             {"helloutau.playback.stop",            "intellij/stop.svg"              },
             {"helloutau.playback.replay",          "intellij/rerun.svg"             },
             {"helloutau.voiceBank.playAudio",      "intellij/run.svg"               },
-            {"helloutau.voiceBank.playSpan",       "intellij/runToCursor.svg"       },
+            {"helloutau.voiceBank.playSpan",       "helloutau/playSpan.svg"         },
             {"helloutau.voiceBank.synthesize",     "intellij/lightning.svg"         },
         };
         // The file of the checked states, if it differs. The project window shows the checked
