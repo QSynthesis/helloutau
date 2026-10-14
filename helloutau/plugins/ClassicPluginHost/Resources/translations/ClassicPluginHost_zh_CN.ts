@@ -303,7 +303,7 @@
     </message>
     <message>
         <source>Removes the preview program from every plugin.</source>
-        <translation>从所有插件中移除试听程序。</translation>
+        <translation>从所有插件中卸载试听程序。</translation>
     </message>
     <message>
         <source>%1: %2</source>
@@ -311,7 +311,7 @@
     </message>
     <message>
         <source>Remove the preview program of HelloUtau from every plugin, and restore their original programs?</source>
-        <translation>要从所有插件中移除 HelloUtau 的试听程序，并还原各插件原有的程序吗？</translation>
+        <translation>要从所有插件中卸载 HelloUtau 的试听程序，并还原各插件原有的程序吗？</translation>
     </message>
     <message>
         <source>Not installed, recommended</source>
@@ -361,11 +361,11 @@
     </message>
     <message>
         <source>Remove</source>
-        <translation>移除</translation>
+        <translation>卸载</translation>
     </message>
     <message>
         <source>Remove the preview program of HelloUtau and restore the original program of the plugin?</source>
-        <translation>要移除 HelloUtau 的试听程序，并还原插件原有的程序吗？</translation>
+        <translation>要卸载 HelloUtau 的试听程序，并还原插件原有的程序吗？</translation>
     </message>
 </context>
 </TS>
