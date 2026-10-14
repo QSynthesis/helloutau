@@ -151,8 +151,9 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 - **采用正式的技术写作文体。** 注释与文档是规范性文本而非叙述。每句陈述一项事实、约束或理由，不写铺垫、感想和修辞。
 - **不拟人。** 代码、文件、格式、程序和测试不作为有意志的主语：不写 says、tells、knows、asks、wants、means、cares、decides、promises、is told，也不写「它说」「它知道」「它不认」「它想要」。改用 returns、indicates、records、specifies、reports、detects、requires、rejects，或「返回」「表示」「记录」「规定」「报告」「拒绝」。用户、作者、调用方等真实行为主体可以作主语。
 - **用术语，不用描述性转述。** 写 invalid byte sequence，不写 bytes that do not decode。写 Basic Multilingual Plane、unpaired surrogate、reverse mapping、unrepresentable character，不写 the basic plane、half of one、the way back、what cannot be spelled。没有通用术语时，首次出现给出定义，之后始终沿用同一名称。
-- **标题、分组名和列表标签用名词或名词短语。** 写 Motivation、Behavior、Supported code pages、Rationale，不写 Why、What it does、What it holds、How it works。能用名词表达时，不用 what 引导的名词从句作主语或宾语：写 the requested encoding，不写 what the user asked for。
-- **条件用 if，where 只表示处所。** 不写 empty where there is none，写 empty if absent。不写 nothing where the file is missing，写 \c std::nullopt if the file is missing。不用 one 回指前文名词（such a one、the one it wants），直接重复该名词。
+- **标题、分组名和列表标签用名词或名词短语。** 写 Motivation、Rationale，不写 Why、How it works。**主语从句不可用**，写 the requested encoding，不写 what the user asked for。**宾语从句少用**，**定语从句不设限制**。
+- **条件用 if。** `where` 作关系副词时照常使用，作条件状语时写 `if`：不写 empty where there is none，写 empty if absent。
+- **`one` 回指只用于同一个句子。** 同句内正常，不必改写；回指更早句子的名词须直接重复该名词。
 - **不用口语短语。** 不写 whatever else、for good、as it stands、on its own、on the way out、at a glance、there and back、is given up on、the rest of why、and all 这类说法，改为准确的书面表达。
 - **句子完整。** 不写片段句、逗号粘连句（两个独立分句只用逗号连接）和反问句。不以 So、And so、Which is why、That is why、Hence 开头叙述因果，改为在同一句中用 because、therefore 表明。不对读者使用第二人称。
 - **函数说明以动词开头**（Returns、Decodes、Reads、Rejects）。`\return` 写明每种情况的返回值。布尔查询写 Returns whether …。
