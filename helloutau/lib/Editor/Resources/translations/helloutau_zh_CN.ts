@@ -1813,6 +1813,10 @@
         <translation>需要的处理</translation>
     </message>
     <message>
+        <source>Check Files to &amp;Process</source>
+        <translation>勾选需要处理的(&amp;P)</translation>
+    </message>
+    <message>
         <source>&amp;Remove the frequency maps and analysis caches of the processed files</source>
         <translation>删除所处理文件的频率表与分析缓存(&amp;R)</translation>
     </message>

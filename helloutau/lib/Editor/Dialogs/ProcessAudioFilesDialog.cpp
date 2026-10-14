@@ -9,14 +9,13 @@
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
-#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
-#include <helloutau/Widgets/CheckAllBox.h>
+#include <helloutau/Widgets/FileCheckList.h>
 
 namespace hello::daw {
 
@@ -24,11 +23,8 @@ namespace hello::daw {
 
         using Processor = kit::AudioFileProcessor;
 
-        enum Column {
-            FileColumn,
-            FormatColumn,
-            ChangeColumn,
-        };
+        // The column of the changes, after the file and the format
+        constexpr int changeColumn = 2;
 
         QString textOf(const std::filesystem::path &path) {
             return QString::fromStdU16String(path.u16string());
@@ -113,22 +109,17 @@ namespace hello::daw {
         auto processing = new QGroupBox(tr("Processing"));
         processing->setLayout(grid);
 
-        m_list = new QTreeWidget();
-        m_list->setRootIsDecorated(false);
-        m_list->setHeaderLabels({tr("File"), tr("Format"), tr("Changes")});
-        for (qsizetype i = 0; i < m_files.size(); ++i) {
-            const auto &file = m_files.at(i);
-            auto item = new QTreeWidgetItem(m_list);
+        // The rows are in the order of the files.
+        m_list = new FileCheckList({tr("File"), tr("Format"), tr("Changes")});
+        for (const auto &file : m_files) {
             const auto relative = file.path.lexically_relative(m_root);
-            item->setText(FileColumn, QDir::toNativeSeparators(
-                                          textOf(relative.empty() ? file.path : relative)));
-            item->setText(FormatColumn, formatOf(file.inspection));
-            item->setData(FileColumn, Qt::UserRole, int(i));
-            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            m_list->addRow(
+                {QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)),
+                 formatOf(file.inspection), QString()});
         }
-        m_list->header()->setSectionResizeMode(FileColumn, QHeaderView::ResizeToContents);
-        m_list->header()->setSectionResizeMode(FormatColumn, QHeaderView::ResizeToContents);
-        auto checkAll = new CheckAllBox(m_list, FileColumn);
+        m_checkFiles = m_list->addCheckButton(tr("Check Files to &Process"), [this](int row) {
+            return bool(m_files.at(row).inspection.changes(options()));
+        });
 
         m_removingMaps = new QCheckBox(
             tr("&Remove the frequency maps and analysis caches of the processed files"));
@@ -145,15 +136,21 @@ namespace hello::daw {
         m_summary = new QLabel();
         m_buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
+        // The files are on the left, where the list has the full height, and the options on the
+        // right.
+        auto right = new QVBoxLayout();
+        right->addWidget(processing);
+        right->addWidget(m_removingMaps);
+        right->addLayout(backupRow);
+        right->addStretch();
+        auto content = new QHBoxLayout();
+        content->addWidget(m_list, 3);
+        content->addLayout(right, 2);
         auto layout = new QVBoxLayout(this);
-        layout->addWidget(processing);
-        layout->addWidget(checkAll);
-        layout->addWidget(m_list, 1);
-        layout->addWidget(m_removingMaps);
-        layout->addLayout(backupRow);
+        layout->addLayout(content, 1);
         layout->addWidget(m_summary);
         layout->addWidget(m_buttons);
-        resize(720, 560);
+        resize(1000, 560);
 
         for (const auto box : {m_resampling, m_mono, m_sixteenBits, m_dithered, m_removingMetadata,
                                m_plainHeader, m_removingDcOffset, m_scalingPeak}) {
@@ -165,7 +162,7 @@ namespace hello::daw {
         }
         connect(m_peakLevel, &QDoubleSpinBox::valueChanged, this,
                 &ProcessAudioFilesDialog::refreshFiles);
-        connect(m_list, &QTreeWidget::itemChanged, this, [this] {
+        connect(m_list, &FileCheckList::checkedChanged, this, [this] {
             if (!m_applying) {
                 updateSummary();
             }
@@ -239,11 +236,8 @@ namespace hello::daw {
 
     QList<std::filesystem::path> ProcessAudioFilesDialog::checkedFiles() const {
         QList<std::filesystem::path> files;
-        for (int i = 0; i < m_list->topLevelItemCount(); ++i) {
-            const auto item = m_list->topLevelItem(i);
-            if (item->checkState(FileColumn) == Qt::Checked) {
-                files.push_back(m_files.at(item->data(FileColumn, Qt::UserRole).toInt()).path);
-            }
+        for (const int row : m_list->checkedRows()) {
+            files.push_back(m_files.at(row).path);
         }
         return files;
     }
@@ -261,7 +255,11 @@ namespace hello::daw {
     }
 
     QTreeWidget *ProcessAudioFilesDialog::fileList() const {
-        return m_list;
+        return m_list->tree();
+    }
+
+    QPushButton *ProcessAudioFilesDialog::checkFilesButton() const {
+        return m_checkFiles;
     }
 
     QLineEdit *ProcessAudioFilesDialog::backupFolderEdit() const {
@@ -281,13 +279,13 @@ namespace hello::daw {
         m_peakLevel->setEnabled(m_scalingPeak->isChecked());
         const auto current = options();
         m_applying = true;
-        for (int i = 0; i < m_list->topLevelItemCount(); ++i) {
-            const auto item = m_list->topLevelItem(i);
-            const auto changes = m_files.at(item->data(FileColumn, Qt::UserRole).toInt())
-                                     .inspection.changes(current);
-            item->setText(ChangeColumn, changesOf(changes));
-            item->setCheckState(FileColumn, changes ? Qt::Checked : Qt::Unchecked);
+        for (int row = 0; row < m_list->rowCount(); ++row) {
+            m_list->setText(row, changeColumn,
+                            changesOf(m_files.at(row).inspection.changes(current)));
         }
+        m_list->checkWhere([this, &current](int row) {
+            return bool(m_files.at(row).inspection.changes(current));
+        });
         m_applying = false;
         updateSummary();
     }

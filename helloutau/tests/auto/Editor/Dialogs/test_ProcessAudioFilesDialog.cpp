@@ -60,6 +60,20 @@ private Q_SLOTS:
         QVERIFY(!dialog.options().mono);
     }
 
+    // A button checks exactly the files that the options change, after the user has checked
+    // others.
+    void a_button_checks_the_files_to_process() {
+        ProcessAudioFilesDialog dialog(
+            {fileOf("a.wav", 44100, 1), fileOf("b.wav", 48000, 1), fileOf("c.wav", 44100, 2)},
+            "C:/bank", "C:/backup");
+        const auto list = dialog.fileList();
+        list->topLevelItem(0)->setCheckState(0, Qt::Checked);
+        list->topLevelItem(1)->setCheckState(0, Qt::Unchecked);
+        QCOMPARE(checkedOf(list), (QStringList{"a.wav", "c.wav"}));
+        dialog.checkFilesButton()->click();
+        QCOMPARE(checkedOf(list), (QStringList{"b.wav", "c.wav"}));
+    }
+
     // Processing requires a checked file, and a folder if the backup is checked. The maps are
     // removed and the files backed up by default.
     void the_processing_requires_a_file_and_a_folder() {
