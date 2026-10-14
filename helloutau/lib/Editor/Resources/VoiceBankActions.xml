@@ -140,7 +140,7 @@
                 category="Tools" />
         <!-- The frequency maps and their analysis caches of the audio files that the user
              checks, in the same format -->
-        <action id="helloutau.voiceBank.removeMaps" text="&amp;Delete Frequency Maps..."
+        <action id="helloutau.voiceBank.removeMaps" text="&amp;Remove Frequency Maps..."
                 category="Tools" />
         <!-- The damaged frequency maps and analysis caches, repaired in place or generated
              again -->

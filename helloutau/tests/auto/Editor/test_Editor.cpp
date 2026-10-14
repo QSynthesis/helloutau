@@ -3335,7 +3335,7 @@ private Q_SLOTS:
         handleNextDialog<RemoveFrequencyMapsDialog>([&checked](RemoveFrequencyMapsDialog *dialog) {
             checked = dialog->checkedFiles();
             dialog->fileList()->checkWhere([](int) { return true; });
-            dialog->deleteButton()->click();
+            dialog->removeButton()->click();
         });
         QVERIFY(window->removeFrequencyMaps());
         QCOMPARE(checked, QList<fs::path>{bank / "c.wav"});

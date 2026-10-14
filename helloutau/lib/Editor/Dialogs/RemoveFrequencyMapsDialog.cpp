@@ -24,10 +24,10 @@ namespace hello::daw {
                                                          const QStringList &cacheNames,
                                                          QWidget *parent)
         : QDialog(parent), m_files(std::move(files)) {
-        setWindowTitle(tr("Delete Frequency Maps"));
+        setWindowTitle(tr("Remove Frequency Maps"));
 
         auto format = new QLabel(tr("The frequency maps of the format %1 and their analysis "
-                                    "caches are deleted for the checked audio files.")
+                                    "caches are removed for the checked audio files.")
                                      .arg(formatName));
         format->setWordWrap(true);
 
@@ -55,13 +55,13 @@ namespace hello::daw {
         }
         m_checkMaps = m_list->addCheckButton(tr("Check Files with &Maps"),
                                              [this](int row) { return m_files.at(row).hasMap; });
-        // No file is checked without a selection, because the deletion cannot be undone.
+        // No file is checked without a selection, because the removal cannot be undone.
         m_list->checkWhere([this](int row) { return m_files.at(row).selected; });
 
         m_summary = new QLabel();
         m_summary->setWordWrap(true);
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Cancel);
-        m_delete = buttons->addButton(tr("&Delete"), QDialogButtonBox::AcceptRole);
+        m_remove = buttons->addButton(tr("&Remove"), QDialogButtonBox::AcceptRole);
 
         auto layout = new QVBoxLayout(this);
         layout->addWidget(format);
@@ -95,18 +95,18 @@ namespace hello::daw {
         return m_checkMaps;
     }
 
-    QPushButton *RemoveFrequencyMapsDialog::deleteButton() const {
-        return m_delete;
+    QPushButton *RemoveFrequencyMapsDialog::removeButton() const {
+        return m_remove;
     }
 
     void RemoveFrequencyMapsDialog::updateSummary() {
         const auto count = int(m_list->checkedRows().size());
         m_summary->setText(count > 0 ? tr("The frequency maps and the analysis caches of %n audio "
-                                          "file(s) will be deleted. The deletion cannot be "
+                                          "file(s) will be removed. The removal cannot be "
                                           "undone.",
                                           nullptr, count)
                                      : tr("No file is checked."));
-        m_delete->setEnabled(count > 0);
+        m_remove->setEnabled(count > 0);
     }
 
 }

@@ -2916,7 +2916,7 @@ namespace hello::daw {
 
     bool VoiceBankWindow::removeFrequencyMaps() {
         stdc_impl_t;
-        const auto title = tr("Delete Frequency Maps");
+        const auto title = tr("Remove Frequency Maps");
         const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
         const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
         if (!format) {
@@ -2940,7 +2940,7 @@ namespace hello::daw {
 
     bool VoiceBankWindow::removeFrequencyMaps(const QList<std::filesystem::path> &wavs) {
         stdc_impl_t;
-        const auto title = tr("Delete Frequency Maps");
+        const auto title = tr("Remove Frequency Maps");
         const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
         const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
         if (!format) {

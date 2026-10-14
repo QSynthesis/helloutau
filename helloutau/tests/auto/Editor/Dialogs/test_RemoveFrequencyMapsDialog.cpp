@@ -31,18 +31,18 @@ class test_RemoveFrequencyMapsDialog : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // Without a selection no file is checked, and the deletion is disabled.
+    // Without a selection no file is checked, and the removal is disabled.
     void no_file_is_checked_without_a_selection() {
         RemoveFrequencyMapsDialog dialog(filesOf(false), "C:/bank", "mrq", cacheNames);
         QVERIFY(dialog.checkedFiles().isEmpty());
-        QVERIFY(!dialog.deleteButton()->isEnabled());
+        QVERIFY(!dialog.removeButton()->isEnabled());
     }
 
     // With a selection, the selected files are checked.
     void the_selected_files_are_checked() {
         RemoveFrequencyMapsDialog dialog(filesOf(true), "C:/bank", "mrq", cacheNames);
         QCOMPARE(dialog.checkedFiles(), QList<fs::path>{fs::path("C:/bank/b.wav")});
-        QVERIFY(dialog.deleteButton()->isEnabled());
+        QVERIFY(dialog.removeButton()->isEnabled());
     }
 
     // A button checks exactly the files with a map, and the box checks every file.

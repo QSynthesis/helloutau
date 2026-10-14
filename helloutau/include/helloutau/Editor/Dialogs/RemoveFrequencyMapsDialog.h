@@ -16,14 +16,14 @@ namespace hello::daw {
 
     class FileCheckList;
 
-    /// A dialog in which the user checks the audio files whose frequency maps are deleted with
+    /// A dialog in which the user checks the audio files whose frequency maps are removed with
     /// their analysis caches. The files are listed with the presence of their maps in the format
     /// of the resampler of the settings, and of each analysis cache of the format in a column of
     /// its own.
     ///
     /// The selected files are checked initially, and no file if none is selected. A tri-state box
     /// checks or unchecks every file, and a button checks exactly the files with a map. The
-    /// delete button is enabled if a file is checked. The dialog changes no file.
+    /// remove button is enabled if a file is checked. The dialog changes no file.
     class HELLOUTAU_EDITOR_EXPORT RemoveFrequencyMapsDialog : public QDialog {
         Q_OBJECT
     public:
@@ -56,7 +56,7 @@ namespace hello::daw {
         /// Returns the button that checks exactly the files with a map
         QPushButton *checkMapsButton() const;
         /// Returns the button that accepts the dialog
-        QPushButton *deleteButton() const;
+        QPushButton *removeButton() const;
 
     private:
         QList<File> m_files;
@@ -64,9 +64,9 @@ namespace hello::daw {
         FileCheckList *m_list;
         QPushButton *m_checkMaps;
         QLabel *m_summary;
-        QPushButton *m_delete;
+        QPushButton *m_remove;
 
-        // Describes the deletion of the checked files and enables the delete button if any is
+        // Describes the removal of the checked files and enables the remove button if any is
         // checked
         void updateSummary();
     };

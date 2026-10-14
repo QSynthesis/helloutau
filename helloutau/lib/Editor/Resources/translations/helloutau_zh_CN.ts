@@ -162,10 +162,6 @@
         <translation>生成频率表(&amp;G)...</translation>
     </message>
     <message>
-        <source>&amp;Delete Frequency Maps...</source>
-        <translation>删除频率表(&amp;D)...</translation>
-    </message>
-    <message>
         <source>&amp;Convert Frequency Maps...</source>
         <translation>转换频率表(&amp;C)...</translation>
     </message>
@@ -276,6 +272,10 @@
     <message>
         <source>Pr&amp;ocess Audio Files...</source>
         <translation>处理音频文件(&amp;O)...</translation>
+    </message>
+    <message>
+        <source>&amp;Remove Frequency Maps...</source>
+        <translation>删除频率表(&amp;R)...</translation>
     </message>
     <message>
         <source>Re&amp;pair Frequency Maps...</source>
@@ -2372,11 +2372,11 @@
 <context>
     <name>hello::daw::RemoveFrequencyMapsDialog</name>
     <message>
-        <source>Delete Frequency Maps</source>
+        <source>Remove Frequency Maps</source>
         <translation>删除频率表</translation>
     </message>
     <message>
-        <source>The frequency maps of the format %1 and their analysis caches are deleted for the checked audio files.</source>
+        <source>The frequency maps of the format %1 and their analysis caches are removed for the checked audio files.</source>
         <translation>删除勾选的音频文件中格式 %1 的频率表及其分析缓存。</translation>
     </message>
     <message>
@@ -2392,11 +2392,11 @@
         <translation>勾选有频率表的项(&amp;M)</translation>
     </message>
     <message>
-        <source>&amp;Delete</source>
-        <translation>删除(&amp;D)</translation>
+        <source>&amp;Remove</source>
+        <translation>删除(&amp;R)</translation>
     </message>
     <message numerus="yes">
-        <source>The frequency maps and the analysis caches of %n audio file(s) will be deleted. The deletion cannot be undone.</source>
+        <source>The frequency maps and the analysis caches of %n audio file(s) will be removed. The removal cannot be undone.</source>
         <translation>
             <numerusform>将删除 %n 个音频文件的频率表与分析缓存。删除不能撤销。</numerusform>
         </translation>
@@ -3789,10 +3789,6 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <source>Generate Frequency Maps</source>
         <translation>生成频率表</translation>
     </message>
-    <message>
-        <source>Delete Frequency Maps</source>
-        <translation>删除频率表</translation>
-    </message>
     <message numerus="yes">
         <source>The frequency maps and analysis caches of %n audio file(s) were generated again.</source>
         <translation>
@@ -3972,6 +3968,10 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>
             <numerusform>其中 %n 个已按 %1 格式的帧间隔重新取帧。</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Remove Frequency Maps</source>
+        <translation>删除频率表</translation>
     </message>
     <message>
         <source>Process Audio Files</source>
