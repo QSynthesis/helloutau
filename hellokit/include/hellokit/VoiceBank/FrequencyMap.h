@@ -1,6 +1,7 @@
 #ifndef HELLOKIT_VOICEBANK_FREQUENCYMAP_H
 #define HELLOKIT_VOICEBANK_FREQUENCYMAP_H
 
+#include <cstddef>
 #include <optional>
 #include <vector>
 
@@ -41,6 +42,15 @@ namespace hello::kit {
         /// Returns the average frequency of the frames above 55 Hz on the pitch scale, in
         /// hertz, or the frequency of C4 if no frame is above 55 Hz.
         double pitchAverage() const;
+
+        /// Returns the map at \a count frames of \a hop samples from the start of an audio file
+        /// with the sample rate \a sampleRate. The frequency of a frame between two voiced frames
+        /// of this map is interpolated linearly in time, and the frequency of a frame next to an
+        /// unvoiced frame is that of the nearer frame, so that no frequency arises between a
+        /// voiced and an unvoiced frame. The amplitudes are interpolated if every frame has one. A
+        /// frame before the first or after the last frame has the values of that frame. The
+        /// average frequency is kept.
+        FrequencyMap resampled(double hop, int sampleRate, std::size_t count) const;
     };
 
 }

@@ -61,6 +61,13 @@ namespace hello::kit {
         return sidecarNameOf(wav);
     }
 
+    // resampler.exe of UTAU 0.4.19 writes a hop of 256 at 22050, 44100, 48000 and 96000 Hz,
+    // measured on 2026-10-14 (docs/FrequencyMaps.md).
+    double FrequencyFormat::hopOf(int sampleRate) const {
+        Q_UNUSED(sampleRate);
+        return 256;
+    }
+
     QList<FrequencyFormat::AnalysisCache> FrequencyFormat::analysisCaches() const {
         return {};
     }

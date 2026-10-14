@@ -19,10 +19,6 @@ namespace hello::daw {
 
         constexpr double framePeriod = 5.80498866213152;
 
-        double hopOf(qint32 sampleRate) {
-            return sampleRate * framePeriod / 1000;
-        }
-
     }
 
     QString DioFormat::id() const {
@@ -67,6 +63,10 @@ namespace hello::daw {
             table.frames.push_back(frame);
         }
         return table;
+    }
+
+    double DioFormat::hopOf(int sampleRate) const {
+        return sampleRate * framePeriod / 1000;
     }
 
     std::optional<std::filesystem::path>

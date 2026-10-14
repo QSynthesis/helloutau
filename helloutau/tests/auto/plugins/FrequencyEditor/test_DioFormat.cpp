@@ -71,6 +71,8 @@ private Q_SLOTS:
         QCOMPARE(caches.at(0).name, QStringLiteral("STAR"));
         QCOMPARE(caches.at(0).fileNameOf(pathOf("a.wav")), fs::path("a.star"));
         QCOMPARE(caches.at(1).fileNameOf("a.wav"), fs::path("a.platinum"));
+        QCOMPARE(dio.hopOf(44100), 256.0);
+        QCOMPARE(dio.hopOf(48000), 48000 * 5.80498866213152 / 1000);
     }
 
     // b.dio: the time of each frame as written, in seconds

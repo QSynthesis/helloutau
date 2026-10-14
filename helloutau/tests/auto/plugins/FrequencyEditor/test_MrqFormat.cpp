@@ -94,6 +94,7 @@ private Q_SLOTS:
         QCOMPARE(caches.size(), 1);
         QCOMPARE(caches.at(0).name, QStringLiteral("LLSM"));
         QCOMPARE(caches.at(0).fileNameOf(fs::path(u"あ.wav")), fs::path(u"あ.wav.llsm"));
+        QCOMPARE(mrq.hopOf(48000), 256.0);
     }
 
     // An entry of desc.mrq, found by case-insensitive name after a deleted entry

@@ -135,6 +135,12 @@ namespace hello::kit {
         virtual std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                                  DiagnosticList &diagnostics) const = 0;
 
+        /// Returns the hop in samples of the maps that the resampler of this format generates for
+        /// an audio file with the sample rate \a sampleRate. A map converted to this format is
+        /// resampled to this hop. The default implementation returns 256, the hop of the UTAU
+        /// resampler at every sample rate.
+        virtual double hopOf(int sampleRate) const;
+
         /// Returns the name of the sidecar file of the audio file \a wav, the file beside \a wav
         /// that holds its map alone, if the format keeps one; otherwise \c std::nullopt, which
         /// the default implementation returns. A file that holds the maps of several audio

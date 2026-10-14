@@ -68,6 +68,7 @@
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
 #include <helloutau/Audio/AudioEngine.h>
+#include <helloutau/Editor/Dialogs/ConvertFrequencyMapsDialog.h>
 #include <helloutau/Editor/Dialogs/RegionDialog.h>
 #include <helloutau/Editor/Dialogs/RepairFrequencyMapsDialog.h>
 #include <helloutau/Editor/Playback.h>
@@ -2981,6 +2982,45 @@ private Q_SLOTS:
         QCOMPARE(unchecked, QStringList{QStringLiteral("c_wav.frq")});
         QCOMPARE(standIn->calls.load(), 1);
         QCOMPARE(qsizetype(fs::file_size(bank / "a_wav.frq")), frq.size());
+    }
+
+    // The conversion writes the map of each audio file that has a map of the source format in the
+    // target format, resampled to the hop of the target format, and skips the other audio files.
+    void the_frequency_maps_are_converted() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 100);
+        const auto frq = completeFrq();
+        writeFile(bank / "a_wav.frq", frq.constData(), frq.size());
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+
+        const auto choose = [](QComboBox *box,
+                               const std::function<kit::FrequencyFormat *()> &format,
+                               const QString &id) {
+            for (int i = 0; i < box->count(); ++i) {
+                box->setCurrentIndex(i);
+                if (format()->id() == id) {
+                    return;
+                }
+            }
+            QFAIL("format not offered");
+        };
+        handleNextDialog<ConvertFrequencyMapsDialog>([&choose](ConvertFrequencyMapsDialog *dialog) {
+            choose(
+                dialog->sourceBox(), [dialog] { return dialog->sourceFormat(); },
+                QStringLiteral("frq"));
+            choose(
+                dialog->targetBox(), [dialog] { return dialog->targetFormat(); },
+                QStringLiteral("dio"));
+            dialog->accept();
+        });
+        QVERIFY(window->convertFrequencyMaps(VoiceBankWindow::AllConversion));
+        QVERIFY(fs::exists(bank / "a.dio"));
+        QVERIFY(!fs::exists(bank / "c.dio"));
+        QVERIFY(!fs::exists(bank / "sub" / "x.dio"));
+        QVERIFY(window->statusBar()->currentMessage().contains(QLatin1Char('1')));
     }
 
     // The output of the resampler during the generations is written into the log of the window,

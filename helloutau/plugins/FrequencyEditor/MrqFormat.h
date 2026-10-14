@@ -30,6 +30,9 @@ namespace hello::daw {
         std::optional<kit::FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                               kit::DiagnosticList &diagnostics) const override;
 
+        /// Returns 256, the hop of moresampler at 44100 and 48000 Hz.
+        double hopOf(int sampleRate) const override;
+
         /// \c desc.mrq for every audio file
         std::optional<std::filesystem::path>
             mapFileNameOf(const std::filesystem::path &wav) const override;

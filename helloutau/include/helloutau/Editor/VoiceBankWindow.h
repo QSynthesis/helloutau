@@ -220,6 +220,21 @@ namespace hello::daw {
         /// \return whether every checked file was repaired or generated again
         bool repairFrequencyMaps();
 
+        /// The audio files whose frequency maps convertFrequencyMaps() converts.
+        enum ConversionScope {
+            SelectedConversion, ///< The audio files of the selected rows
+            AllConversion,      ///< Every audio file
+        };
+
+        /// Converts the frequency maps of the audio files of \a scope from the format to the
+        /// format that the user chooses in a ConvertFrequencyMapsDialog, with
+        /// kit::FrequencyMapConverter, which replaces the maps of the target format and removes
+        /// their analysis caches. The source format is initially the format in effect. The audio
+        /// files of the folders not read are included. No undo restores the replaced maps.
+        ///
+        /// \return whether every map was converted
+        bool convertFrequencyMaps(ConversionScope scope);
+
         /// The generator of generateFrequencyMaps(), whose process a test replaces.
         kit::FrequencyMapGenerator &frequencyMapGenerator();
 

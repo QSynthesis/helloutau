@@ -56,6 +56,7 @@
 #include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
+#include <hellokit/VoiceBank/FrequencyMapConverter.h>
 #include <hellokit/VoiceBank/VoiceAliasRule.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 #include <hellokit/VoiceBank/WaveMetadata.h>
@@ -69,6 +70,7 @@
 #include "VoiceAliasRuleDialog.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
+#include "ConvertFrequencyMapsDialog.h"
 #include "DiagnosticBox.h"
 #include "Editor.h"
 #include "FindSupport_p.h"
@@ -413,6 +415,14 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.voiceBank.repairMaps"), [this] {
                 stdc_decl_t;
                 decl.repairFrequencyMaps();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.convertSelectedMaps"), [this] {
+                stdc_decl_t;
+                decl.convertFrequencyMaps(SelectedConversion);
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.convertAllMaps"), [this] {
+                stdc_decl_t;
+                decl.convertFrequencyMaps(AllConversion);
             });
             addCommand(QStringLiteral("helloutau.voiceBank.viewFrequencyMapLog"), [this] {
                 stdc_decl_t;
@@ -1562,6 +1572,20 @@ namespace hello::daw {
             return audio;
         }
 
+        // Returns the names of the audio files of the selected rows by folder, each name once
+        std::map<std::filesystem::path, QList<std::filesystem::path>>
+            selectedAudioByFolder() const {
+            std::map<std::filesystem::path, QList<std::filesystem::path>> audio;
+            for (const int row : selectedRows()) {
+                const auto path = audioPathOf(row);
+                auto &names = audio[path.parent_path()];
+                if (!names.contains(path.filename())) {
+                    names.push_back(path.filename());
+                }
+            }
+            return audio;
+        }
+
         enum Generation {
             MapsOnly,      // The missing maps
             CachesOnly,    // The analysis caches of every audio file
@@ -2614,18 +2638,8 @@ namespace hello::daw {
             return false;
         }
 
-        std::map<std::filesystem::path, QList<std::filesystem::path>> audio;
-        if (scope == SelectedFrequencyMaps) {
-            for (const int row : impl.selectedRows()) {
-                const auto path = impl.audioPathOf(row);
-                auto &names = audio[path.parent_path()];
-                if (!names.contains(path.filename())) {
-                    names.push_back(path.filename());
-                }
-            }
-        } else {
-            audio = impl.audioByFolder();
-        }
+        const auto audio =
+            scope == SelectedFrequencyMaps ? impl.selectedAudioByFolder() : impl.audioByFolder();
         QList<std::filesystem::path> wavs;
         for (const auto &[folder, names] : audio) {
             for (const auto &name : names) {
@@ -2732,6 +2746,69 @@ namespace hello::daw {
         }
         return impl.generate(title, *format, resampler, wavs, Impl::MapsAndCaches) &&
                diagnostics.isEmpty();
+    }
+
+    bool VoiceBankWindow::convertFrequencyMaps(ConversionScope scope) {
+        stdc_impl_t;
+        const auto title = tr("Convert Frequency Maps");
+        const auto audio =
+            scope == SelectedConversion ? impl.selectedAudioByFolder() : impl.audioByFolder();
+        int count = 0;
+        for (const auto &[folder, names] : audio) {
+            count += int(names.size());
+        }
+        if (count == 0) {
+            QMessageBox::information(this, title,
+                                     scope == SelectedConversion
+                                         ? tr("Select the entries whose audio files are to have "
+                                              "their frequency maps converted.")
+                                         : tr("The voice bank has no audio files."));
+            return false;
+        }
+
+        const auto &formats = impl.editor->frequencyFormats();
+        auto source = formats.format(impl.currentFrequencyFormat());
+        if (!source) {
+            source =
+                formats.formatForResampler(pathOf(impl.editor->settings().rendering().resampler()));
+        }
+        ConvertFrequencyMapsDialog dialog(formats.formats(), source, count, this);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+        const auto from = dialog.sourceFormat();
+        const auto to = dialog.targetFormat();
+
+        kit::DiagnosticList diagnostics;
+        kit::FrequencyMapConverter::Outcome outcome;
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        for (const auto &[folder, names] : audio) {
+            const auto done =
+                kit::FrequencyMapConverter::convert(*from, *to, folder, names, diagnostics);
+            outcome.converted += done.converted;
+            outcome.resampled += done.resampled;
+        }
+        QApplication::restoreOverrideCursor();
+
+        impl.model->refreshFrequencyMaps();
+        impl.frequencyShown = {};
+        impl.showFrequency();
+        if (outcome.converted == 0 && diagnostics.isEmpty()) {
+            QMessageBox::information(
+                this, title,
+                tr("No audio file has a frequency map of the format %1.").arg(from->name()));
+            return false;
+        }
+        auto message = tr("%n frequency map(s) were converted.", nullptr, outcome.converted);
+        if (outcome.resampled > 0) {
+            message +=
+                QLatin1Char(' ') + tr("%n of them were resampled to the hop of the format %1.",
+                                      nullptr, outcome.resampled)
+                                       .arg(to->name());
+        }
+        statusBar()->showMessage(message);
+        DiagnosticBox::report(this, title, diagnostics);
+        return diagnostics.isEmpty();
     }
 
     bool VoiceBankWindow::removeFrequencyMaps() {

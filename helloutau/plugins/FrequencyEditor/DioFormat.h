@@ -23,6 +23,10 @@ namespace hello::daw {
                               const QList<std::filesystem::path> &wavs) const override;
         std::optional<kit::FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                               kit::DiagnosticList &diagnostics) const override;
+
+        /// Returns the frame period of world4utau, 5.80498866213152 milliseconds, in samples.
+        double hopOf(int sampleRate) const override;
+
         std::optional<std::filesystem::path>
             sidecarNameOf(const std::filesystem::path &wav) const override;
 

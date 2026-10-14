@@ -311,6 +311,13 @@ private Q_SLOTS:
         QCOMPARE(caches.at(1).fileNameOf(fs::path(u"あ.wav")), fs::path(u"あ.wav.cache"));
     }
 
+    // frq has the hop of resampler.exe, 256 samples at every sample rate.
+    void the_hop_of_frq_is_256_samples() {
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        QCOMPARE(formats.format(QStringLiteral("frq"))->hopOf(48000), 256.0);
+    }
+
     // Removing the caches keeps the maps, and removing the maps removes their caches.
     void the_caches_are_removed_with_or_without_the_maps() {
         QDir(m_dir.path()).mkdir(QStringLiteral("c"));

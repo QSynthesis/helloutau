@@ -37,6 +37,14 @@ namespace hello::daw {
         return {QStringLiteral("moresampler*.exe")};
     }
 
+    // Every entry of the desc.mrq files that moresampler wrote in the examined voice banks has a
+    // hop of 256, including the entries of audio files at 48000 Hz, counted on 2026-10-14
+    // (docs/FrequencyMaps.md).
+    double MrqFormat::hopOf(int sampleRate) const {
+        Q_UNUSED(sampleRate);
+        return 256;
+    }
+
     QList<bool> MrqFormat::mapsExist(const std::filesystem::path &directory,
                                      const QList<std::filesystem::path> &wavs) const {
         kit::DiagnosticList ignored;

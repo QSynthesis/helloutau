@@ -282,6 +282,14 @@
         <translation>修复频率表(&amp;P)...</translation>
     </message>
     <message>
+        <source>Convert Frequency Maps of Selec&amp;tion...</source>
+        <translation>转换所选条目的频率表(&amp;T)...</translation>
+    </message>
+    <message>
+        <source>&amp;Convert All Frequency Maps...</source>
+        <translation>转换全部频率表(&amp;C)...</translation>
+    </message>
+    <message>
         <source>View Frequency Map &amp;Log...</source>
         <translation>查看频率表日志(&amp;L)...</translation>
     </message>
@@ -741,6 +749,27 @@
     <message>
         <source>(On)</source>
         <translation>（开启）</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::ConvertFrequencyMapsDialog</name>
+    <message>
+        <source>Convert Frequency Maps</source>
+        <translation>转换频率表</translation>
+    </message>
+    <message numerus="yes">
+        <source>The frequency maps of %n audio file(s) are converted. An audio file without a map of the source format is skipped. The maps of the target format are replaced, and their analysis caches are removed.</source>
+        <translation>
+            <numerusform>将转换 %n 个音频文件的频率表。没有源格式频率表的音频文件将被跳过。目标格式已有的频率表将被替换，其分析缓存将被删除。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>&amp;From:</source>
+        <translation>源格式(&amp;F)：</translation>
+    </message>
+    <message>
+        <source>&amp;To:</source>
+        <translation>目标格式(&amp;T)：</translation>
     </message>
 </context>
 <context>
@@ -3668,6 +3697,30 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>The voice bank has no frequency maps or analysis caches of the format %1.</source>
         <translation>音源中没有格式为 %1 的频率表或分析缓存。</translation>
+    </message>
+    <message>
+        <source>Convert Frequency Maps</source>
+        <translation>转换频率表</translation>
+    </message>
+    <message>
+        <source>Select the entries whose audio files are to have their frequency maps converted.</source>
+        <translation>请选择要转换频率表的音频文件所在的条目。</translation>
+    </message>
+    <message>
+        <source>No audio file has a frequency map of the format %1.</source>
+        <translation>没有音频文件具有 %1 格式的频率表。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n frequency map(s) were converted.</source>
+        <translation>
+            <numerusform>已转换 %n 个频率表。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n of them were resampled to the hop of the format %1.</source>
+        <translation>
+            <numerusform>其中 %n 个已按 %1 格式的帧间隔重新取帧。</numerusform>
+        </translation>
     </message>
     <message>
         <source>Delete All Frequency Maps</source>
