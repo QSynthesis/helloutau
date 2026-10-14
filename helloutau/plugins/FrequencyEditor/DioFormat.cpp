@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include <hellokit/Support/BinaryStream.h>
-#include <hellokit/Synth/WaveAudio.h>
+#include <hellokit/Support/WaveAudio.h>
 
 namespace hello::daw {
 

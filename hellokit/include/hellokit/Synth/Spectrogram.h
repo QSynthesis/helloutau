@@ -3,8 +3,9 @@
 
 #include <vector>
 
+#include <hellokit/Support/WaveAudio.h>
+
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
-#include <hellokit/Synth/WaveAudio.h>
 
 namespace hello::kit {
 

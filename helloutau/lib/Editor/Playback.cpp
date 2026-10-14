@@ -17,11 +17,11 @@
 
 #include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
+#include <hellokit/Support/WaveAudio.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/Synth/SynthPlan.h>
-#include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/Synth/WavtoolMixer.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 

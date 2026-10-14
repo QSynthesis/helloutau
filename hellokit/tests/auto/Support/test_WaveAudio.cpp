@@ -2,7 +2,7 @@
 
 #include <QtTest/QTest>
 
-#include <hellokit/Synth/WaveAudio.h>
+#include <hellokit/Support/WaveAudio.h>
 
 using namespace hello::kit;
 

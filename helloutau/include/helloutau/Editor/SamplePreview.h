@@ -9,8 +9,8 @@
 #include <QtCore/QObject>
 
 #include <hellokit/Support/Diagnostic.h>
+#include <hellokit/Support/WaveAudio.h>
 #include <hellokit/Synth/SynthToolProcess.h>
-#include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>

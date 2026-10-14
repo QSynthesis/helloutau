@@ -50,11 +50,11 @@
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Support/TextCodec.h>
+#include <hellokit/Support/WaveAudio.h>
 #include <hellokit/Synth/FrequencyMapGenerator.h>
 #include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/Synth/SynthToolProcess.h>
-#include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceAliasRule.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>

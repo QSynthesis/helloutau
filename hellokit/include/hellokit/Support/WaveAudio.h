@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_SYNTH_WAVEAUDIO_H
-#define HELLOKIT_SYNTH_WAVEAUDIO_H
+#ifndef HELLOKIT_SUPPORT_WAVEAUDIO_H
+#define HELLOKIT_SUPPORT_WAVEAUDIO_H
 
 #include <filesystem>
 #include <optional>
@@ -9,20 +9,20 @@
 #include <QtCore/QCoreApplication>
 
 #include <hellokit/Support/Diagnostic.h>
-
-#include <hellokit/Synth/HelloKitSynthGlobal.h>
+#include <hellokit/Support/HelloKitSupportGlobal.h>
 
 namespace hello::kit {
 
     /// The audio of a WAVE file, as floating-point samples.
     ///
-    /// Read to play a rendered track: the wavtool writes 16-bit PCM at 44100 Hz, and other
-    /// synth tools may write other sample formats. The formats read are integer PCM of 8, 16, 24
-    /// and 32 bits, IEEE floating point of 32 and 64 bits, and either as the subformat of
-    /// \c WAVE_FORMAT_EXTENSIBLE, as the Microsoft documentation of the WAVE format defines them
+    /// The formats read are integer PCM of 8, 16, 24 and 32 bits, IEEE floating point of 32 and
+    /// 64 bits, and either as the subformat of \c WAVE_FORMAT_EXTENSIBLE, as the Microsoft
+    /// documentation of the WAVE format defines them
     /// (https://learn.microsoft.com/en-us/windows/win32/multimedia/waveformatex and
     /// https://learn.microsoft.com/en-us/windows/win32/api/mmreg/ns-mmreg-waveformatextensible).
-    struct HELLOKIT_SYNTH_EXPORT WaveAudio {
+    /// The wavtool writes 16-bit PCM at 44100 Hz, and other synth tools and the recordings of
+    /// voice banks use other sample formats.
+    struct HELLOKIT_SUPPORT_EXPORT WaveAudio {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::WaveAudio)
     public:
         int sampleRate = 0;
@@ -55,4 +55,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_SYNTH_WAVEAUDIO_H
+#endif // HELLOKIT_SUPPORT_WAVEAUDIO_H

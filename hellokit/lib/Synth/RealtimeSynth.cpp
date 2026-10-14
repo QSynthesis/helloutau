@@ -11,7 +11,8 @@
 
 #include <stdcorelib/pimpl.h>
 
-#include <hellokit/Synth/WaveAudio.h>
+#include <hellokit/Support/WaveAudio.h>
+
 #include <hellokit/Synth/WavtoolMixer.h>
 
 namespace hello::kit {
