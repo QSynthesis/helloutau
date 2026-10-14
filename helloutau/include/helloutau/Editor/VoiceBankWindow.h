@@ -3,7 +3,6 @@
 
 #include <filesystem>
 #include <memory>
-#include <optional>
 
 #include <QtWidgets/QMainWindow>
 
@@ -220,10 +219,10 @@ namespace hello::daw {
         /// \return whether every checked file was repaired or generated again
         bool repairFrequencyMaps();
 
-        /// The audio files whose frequency maps convertFrequencyMaps() converts.
-        enum ConversionScope {
-            SelectedConversion, ///< The audio files of the selected rows
-            AllConversion,      ///< Every audio file
+        /// The audio files on which convertFrequencyMaps() and processAudioFiles() act.
+        enum AudioScope {
+            SelectedAudio, ///< The audio files of the selected rows
+            AllAudio,      ///< Every audio file
         };
 
         /// Converts the frequency maps of the audio files of \a scope from the format to the
@@ -233,7 +232,7 @@ namespace hello::daw {
         /// files of the folders not read are included. No undo restores the replaced maps.
         ///
         /// \return whether every map was converted
-        bool convertFrequencyMaps(ConversionScope scope);
+        bool convertFrequencyMaps(AudioScope scope);
 
         /// The generator of generateFrequencyMaps(), whose process a test replaces.
         kit::FrequencyMapGenerator &frequencyMapGenerator();
@@ -242,13 +241,16 @@ namespace hello::daw {
         /// the generator writes. A generation sets its runs and size from the settings.
         std::shared_ptr<kit::SynthToolOutputLog> frequencyMapLog() const;
 
-        /// Lists the audio files of the folders that contain metadata, see kit::WaveMetadata, in
-        /// a message box in which the user confirms writing them again without it. The files are
-        /// written at once, and no undo reverts the writing.
+        /// Processes the audio files of \a scope with kit::AudioFileProcessor, as the user
+        /// chooses the processing and the files in a ProcessAudioFilesDialog. Each original file
+        /// is first copied to the backup folder of the dialog under its path relative to the
+        /// voice bank, and a file whose copy fails is not processed. The frequency maps and the
+        /// analysis caches of the processed files are then removed in every format if the
+        /// dialog specifies so. The audio files of the folders not read are included. No undo
+        /// restores the files.
         ///
-        /// \return the number of files written, or \c std::nullopt if the user declined or no
-        ///         file carries metadata
-        std::optional<int> removeAudioMetadata();
+        /// \return whether every checked file was processed
+        bool processAudioFiles(AudioScope scope);
         /// @}
 
     protected:

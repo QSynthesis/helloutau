@@ -1,7 +1,6 @@
 #ifndef HELLOKIT_AUDIOFILE_WAVEMETADATA_H
 #define HELLOKIT_AUDIOFILE_WAVEMETADATA_H
 
-#include <filesystem>
 #include <optional>
 
 #include <QtCore/QByteArray>
@@ -17,7 +16,7 @@ namespace hello::kit {
 
     /// The parts of a WAVE file besides its format and its audio: the chunks that recording and
     /// editing programs add, such as \c LIST with \c INFO text, \c id3 , \c bext , \c cue ,
-    /// \c smpl and \c JUNK , and bytes after the last chunk. See the removal of audio metadata
+    /// \c smpl and \c JUNK , and bytes after the last chunk. See the processing of audio files
     /// in docs/VoiceBankEditor.md.
     ///
     /// A WAVE file is a RIFF file of chunks, each an identifier of four bytes, a little-endian
@@ -50,10 +49,6 @@ namespace hello::kit {
         ///         \c fmt and a \c data chunk, with the reason in \a diagnostics
         static std::optional<Report> find(QByteArrayView bytes, DiagnosticList &diagnostics);
 
-        /// \overload for the file at \a file, of which only the chunk headers are read.
-        static std::optional<Report> find(const std::filesystem::path &file,
-                                          DiagnosticList &diagnostics);
-
         /// Returns the WAVE file of \a bytes without its metadata. A \c data chunk that claims
         /// more bytes than the file holds keeps the bytes the file holds.
         ///
@@ -73,12 +68,6 @@ namespace hello::kit {
                                                  std::optional<QByteArrayView> format,
                                                  std::optional<QByteArrayView> data,
                                                  bool keepingMetadata, DiagnosticList &diagnostics);
-
-        /// Writes the WAVE file at \a file again without its metadata. The file is replaced only
-        /// once the new file is completely written.
-        ///
-        /// \return whether the file was written, with the reason in \a diagnostics otherwise
-        static bool strip(const std::filesystem::path &file, DiagnosticList &diagnostics);
     };
 
 }

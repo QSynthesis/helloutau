@@ -69,6 +69,7 @@
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Editor/Dialogs/ConvertFrequencyMapsDialog.h>
+#include <helloutau/Editor/Dialogs/ProcessAudioFilesDialog.h>
 #include <helloutau/Editor/Dialogs/RegionDialog.h>
 #include <helloutau/Editor/Dialogs/RepairFrequencyMapsDialog.h>
 #include <helloutau/Editor/Playback.h>
@@ -2341,33 +2342,56 @@ private Q_SLOTS:
         QVERIFY(!stop->isEnabled());
     }
 
-    // The audio files that carry metadata are listed, and written again without it once the
-    // user agrees.
-    void the_metadata_of_the_audio_files_is_removed() {
+    // The dialog lists the readable audio files with the files that the options change checked.
+    // The checked files are backed up under their paths in the voice bank, processed, and their
+    // frequency maps removed. The backup goes beside a folder of the chosen name that exists.
+    void the_audio_files_are_processed() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
         writeWave(bank / "a.wav", 100);
+        writeWave(bank / "c.wav", 100);
         writeWave(bank / "sub" / "x.wav", 100);
         {
             std::ofstream file(bank / "sub" / "x.wav", std::ios::binary | std::ios::app);
             file.write("LIST\x04\0\0\0abcd", 12);
         }
-        const auto size = [&bank] { return fs::file_size(bank / "sub" / "x.wav"); };
+        const auto frq = completeFrq();
+        writeFile(bank / "sub" / "x_wav.frq", frq.constData(), frq.size());
         const auto e = editor();
         const auto window = e->openVoiceBank(bank);
         QVERIFY(window);
 
-        answerMessageBox(QMessageBox::No);
-        QVERIFY(!window->removeAudioMetadata());
-        QCOMPARE(size(), std::uintmax_t(44 + 200 + 12));
-
-        answerMessageBox(QMessageBox::Yes);
-        QCOMPARE(window->removeAudioMetadata(), std::optional<int>(1));
-        QCOMPARE(size(), std::uintmax_t(44 + 200));
-        QCOMPARE(fs::file_size(bank / "a.wav"), std::uintmax_t(44 + 200));
-
-        answerMessageBox(QMessageBox::Ok);
-        QVERIFY(!window->removeAudioMetadata());
+        const auto chosen = pathIn(dir, "backup");
+        fs::create_directories(chosen);
+        const auto backup = pathIn(dir, "backup (1)");
+        QStringList checked;
+        handleNextDialog<ProcessAudioFilesDialog>(
+            [&checked, &chosen](ProcessAudioFilesDialog *dialog) {
+                auto options = dialog->options();
+                options.sampleRate.reset();
+                dialog->setOptions(options);
+                const auto list = dialog->fileList();
+                QCOMPARE(list->topLevelItemCount(), 3);
+                for (int i = 0; i < list->topLevelItemCount(); ++i) {
+                    const auto item = list->topLevelItem(i);
+                    if (item->checkState(0) == Qt::Checked) {
+                        checked.push_back(QDir::fromNativeSeparators(item->text(0)));
+                    }
+                }
+                QVERIFY(dialog->removesFrequencyMaps());
+                const auto edit = dialog->backupFolderEdit();
+                edit->setText(QString::fromStdU16String(chosen.u16string()));
+                dialog->accept();
+            });
+        QVERIFY(window->processAudioFiles(VoiceBankWindow::AllAudio));
+        // Only the metadata of x.wav differs from 1000 Hz, mono and 16 bits.
+        QCOMPARE(checked, QStringList{QStringLiteral("sub/x.wav")});
+        QCOMPARE(fs::file_size(bank / "sub" / "x.wav"), std::uintmax_t(44 + 200));
+        QVERIFY(fs::exists(backup / "sub" / "x.wav"));
+        QCOMPARE(fs::file_size(backup / "sub" / "x.wav"), std::uintmax_t(44 + 200 + 12));
+        QVERIFY(!fs::exists(backup / "a.wav"));
+        QVERIFY(fs::is_empty(chosen));
+        QVERIFY(!fs::exists(bank / "sub" / "x_wav.frq"));
     }
 
     // An alias that another entry of the same file has, as read, is marked.
@@ -3016,7 +3040,7 @@ private Q_SLOTS:
                 QStringLiteral("dio"));
             dialog->accept();
         });
-        QVERIFY(window->convertFrequencyMaps(VoiceBankWindow::AllConversion));
+        QVERIFY(window->convertFrequencyMaps(VoiceBankWindow::AllAudio));
         QVERIFY(fs::exists(bank / "a.dio"));
         QVERIFY(!fs::exists(bank / "c.dio"));
         QVERIFY(!fs::exists(bank / "sub" / "x.dio"));

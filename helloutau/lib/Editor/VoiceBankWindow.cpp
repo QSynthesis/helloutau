@@ -5,8 +5,10 @@
 #include <functional>
 #include <map>
 
+#include <QtCore/QDateTime>
 #include <QtCore/QDir>
 #include <QtCore/QEventLoop>
+#include <QtCore/QFile>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QHash>
 #include <QtCore/QSet>
@@ -46,8 +48,8 @@
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
 
+#include <hellokit/AudioFile/AudioFileProcessor.h>
 #include <hellokit/AudioFile/WaveAudio.h>
-#include <hellokit/AudioFile/WaveMetadata.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
@@ -76,6 +78,7 @@
 #include "FindSupport_p.h"
 #include "OtoWaveformView.h"
 #include "OutputLogDialog.h"
+#include "ProcessAudioFilesDialog.h"
 #include "RepairFrequencyMapsDialog.h"
 #include "SamplePreview.h"
 #include "VoiceBankDecodingDialog.h"
@@ -88,6 +91,22 @@ namespace hello::daw {
 
         QString textOf(const std::filesystem::path &path) {
             return QString::fromStdU16String(path.u16string());
+        }
+
+        // Returns folder if nothing exists there, otherwise the first of folder (1), folder (2)
+        // and so on at which nothing exists, so that a backup never writes into an existing
+        // folder
+        std::filesystem::path freeFolderOf(std::filesystem::path folder) {
+            if (!folder.has_filename()) {
+                folder = folder.parent_path();
+            }
+            std::error_code error;
+            auto candidate = folder;
+            for (int i = 1; std::filesystem::exists(candidate, error); ++i) {
+                candidate = folder;
+                candidate += QStringLiteral(" (%1)").arg(i).toStdU16String();
+            }
+            return candidate;
         }
 
         std::filesystem::path pathOf(const QString &text) {
@@ -418,20 +437,24 @@ namespace hello::daw {
             });
             addCommand(QStringLiteral("helloutau.voiceBank.convertSelectedMaps"), [this] {
                 stdc_decl_t;
-                decl.convertFrequencyMaps(SelectedConversion);
+                decl.convertFrequencyMaps(SelectedAudio);
             });
             addCommand(QStringLiteral("helloutau.voiceBank.convertAllMaps"), [this] {
                 stdc_decl_t;
-                decl.convertFrequencyMaps(AllConversion);
+                decl.convertFrequencyMaps(AllAudio);
             });
             addCommand(QStringLiteral("helloutau.voiceBank.viewFrequencyMapLog"), [this] {
                 stdc_decl_t;
                 OutputLogDialog dialog(generationLog, tr("Frequency Map Log"), &decl);
                 dialog.exec();
             });
-            addCommand(QStringLiteral("helloutau.voiceBank.removeMetadata"), [this] {
+            addCommand(QStringLiteral("helloutau.voiceBank.processSelectedAudio"), [this] {
                 stdc_decl_t;
-                decl.removeAudioMetadata();
+                decl.processAudioFiles(SelectedAudio);
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.processAllAudio"), [this] {
+                stdc_decl_t;
+                decl.processAudioFiles(AllAudio);
             });
             addCommand(QStringLiteral("helloutau.voiceBank.synthesize"), [this] { synthesize(); });
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] { preview->stop(); });
@@ -2748,18 +2771,18 @@ namespace hello::daw {
                diagnostics.isEmpty();
     }
 
-    bool VoiceBankWindow::convertFrequencyMaps(ConversionScope scope) {
+    bool VoiceBankWindow::convertFrequencyMaps(AudioScope scope) {
         stdc_impl_t;
         const auto title = tr("Convert Frequency Maps");
         const auto audio =
-            scope == SelectedConversion ? impl.selectedAudioByFolder() : impl.audioByFolder();
+            scope == SelectedAudio ? impl.selectedAudioByFolder() : impl.audioByFolder();
         int count = 0;
         for (const auto &[folder, names] : audio) {
             count += int(names.size());
         }
         if (count == 0) {
             QMessageBox::information(this, title,
-                                     scope == SelectedConversion
+                                     scope == SelectedAudio
                                          ? tr("Select the entries whose audio files are to have "
                                               "their frequency maps converted.")
                                          : tr("The voice bank has no audio files."));
@@ -2851,68 +2874,105 @@ namespace hello::daw {
         return impl.generationLog;
     }
 
-    std::optional<int> VoiceBankWindow::removeAudioMetadata() {
+    bool VoiceBankWindow::processAudioFiles(AudioScope scope) {
         stdc_impl_t;
-        // The audio files with metadata, of every folder in the tree
-        QList<std::pair<std::filesystem::path, kit::WaveMetadata::Report>> found;
-        QStringList lines;
-        kit::DiagnosticList unreadable;
-        {
-            QApplication::setOverrideCursor(Qt::WaitCursor);
-            const auto directories = kit::VoiceBankRef(impl.document->session()).directories();
-            for (int i = 0; i < directories.size(); ++i) {
-                const auto directory = directories.at(i).path();
-                for (const auto &name : impl.document->session()->audioFiles(directory)) {
-                    const auto path = impl.document->session()->audioPathOf(directory, name);
-                    const auto report = kit::WaveMetadata::find(path, unreadable);
-                    if (!report || report->isEmpty()) {
-                        continue;
-                    }
-                    QStringList parts;
-                    for (const auto &chunk : report->chunks) {
-                        parts.push_back(QString::fromLatin1(chunk).trimmed());
-                    }
-                    if (report->trailingBytes > 0) {
-                        parts.push_back(tr("%n bytes after the last chunk", nullptr,
-                                           int(report->trailingBytes)));
-                    }
-                    lines.push_back(QStringLiteral("%1: %2").arg(
-                        QDir::toNativeSeparators(textOf(directory / pathOf(name))),
-                        parts.join(QStringLiteral(", "))));
-                    found.push_back({path, *report});
+        const auto title = tr("Process Audio Files");
+        const auto audio =
+            scope == SelectedAudio ? impl.selectedAudioByFolder() : impl.audioByFolder();
+        QList<ProcessAudioFilesDialog::File> files;
+        kit::DiagnosticList diagnostics;
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        for (const auto &[folder, names] : audio) {
+            for (const auto &name : names) {
+                const auto path = folder / name;
+                if (const auto inspection = kit::AudioFileProcessor::inspect(path, diagnostics)) {
+                    files.push_back({path, *inspection});
                 }
             }
-            QApplication::restoreOverrideCursor();
         }
-        if (found.isEmpty()) {
-            QMessageBox::information(this, tr("Remove Audio Metadata"),
-                                     tr("No audio file of the voice bank carries metadata."));
-            return std::nullopt;
+        QApplication::restoreOverrideCursor();
+        if (files.isEmpty()) {
+            if (!diagnostics.isEmpty()) {
+                DiagnosticBox::report(this, title, diagnostics);
+            } else {
+                QMessageBox::information(this, title,
+                                         scope == SelectedAudio
+                                             ? tr("Select the entries whose audio files are to "
+                                                  "be processed.")
+                                             : tr("The voice bank has no audio files."));
+            }
+            return false;
         }
-        QMessageBox box(QMessageBox::Question, tr("Remove Audio Metadata"),
-                        tr("%n audio files carry chunks besides the format and the audio, such "
-                           "as the tags that recording programs write.\n\nWrite them again "
-                           "without these chunks? The audio stays the same. The files are "
-                           "written at once, and Undo does not bring the chunks back.",
-                           nullptr, int(found.size())),
-                        QMessageBox::Yes | QMessageBox::No, this);
-        box.setDefaultButton(QMessageBox::No);
-        box.setDetailedText(lines.join(QLatin1Char('\n')));
-        if (box.exec() != QMessageBox::Yes) {
-            return std::nullopt;
+
+        // Beside the voice bank, so that the backup is not read as a folder of the voice bank
+        const auto root = impl.document->rootPath();
+        auto backup = root.parent_path() / root.filename();
+        backup += QStringLiteral("-backup-%1")
+                      .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss")))
+                      .toStdU16String();
+        ProcessAudioFilesDialog dialog(std::move(files), root, backup, this);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
         }
-        kit::DiagnosticList diagnostics;
-        int written = 0;
-        for (const auto &[path, report] : std::as_const(found)) {
-            written += kit::WaveMetadata::strip(path, diagnostics) ? 1 : 0;
+        const auto checked = dialog.checkedFiles();
+        const auto options = dialog.options();
+        auto folder = dialog.backupFolder();
+        if (folder) {
+            folder = freeFolderOf(*folder);
         }
-        DiagnosticBox::report(this, tr("Remove Audio Metadata"), diagnostics);
-        statusBar()->showMessage(
-            tr("The metadata of %n audio files was removed.", nullptr, written));
+
+        QProgressDialog progress(tr("Processing audio files..."), tr("Cancel"), 0,
+                                 int(checked.size()), this);
+        progress.setWindowTitle(title);
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setMinimumDuration(0);
+        std::map<std::filesystem::path, QList<std::filesystem::path>> processed;
+        int count = 0;
+        for (qsizetype i = 0; i < checked.size() && !progress.wasCanceled(); ++i) {
+            const auto &file = checked.at(i);
+            progress.setValue(int(i));
+            progress.setLabelText(QDir::toNativeSeparators(textOf(file)));
+            if (folder) {
+                // A file outside the voice bank keeps only its name.
+                auto relative = file.lexically_relative(root);
+                if (relative.empty() || *relative.begin() == "..") {
+                    relative = file.filename();
+                }
+                const auto target = *folder / relative;
+                std::error_code error;
+                std::filesystem::create_directories(target.parent_path(), error);
+                if (error || !QFile::copy(textOf(file), textOf(target))) {
+                    diagnostics.push_back({kit::DiagnosticSeverity::Error,
+                                           tr("\"%1\" could not be backed up to \"%2\", and is "
+                                              "not processed.")
+                                               .arg(QDir::toNativeSeparators(textOf(file)),
+                                                    QDir::toNativeSeparators(textOf(target))),
+                                           std::nullopt});
+                    continue;
+                }
+            }
+            if (kit::AudioFileProcessor::process(file, options, diagnostics)) {
+                processed[file.parent_path()].push_back(file.filename());
+                ++count;
+            }
+        }
+        progress.setValue(int(checked.size()));
+
+        if (dialog.removesFrequencyMaps()) {
+            for (const auto &[path, names] : processed) {
+                for (const auto format : impl.editor->frequencyFormats().formats()) {
+                    kit::FrequencyFormats::removeMaps(*format, path, names, diagnostics);
+                }
+            }
+        }
         impl.readAudio.clear();
         impl.waveform->setAudio(nullptr);
+        impl.model->refreshFrequencyMaps();
+        impl.frequencyShown = {};
         impl.showCurrentEntry();
-        return written;
+        statusBar()->showMessage(tr("%n audio file(s) were processed.", nullptr, count));
+        DiagnosticBox::report(this, title, diagnostics);
+        return count == checked.size();
     }
 
     bool VoiceBankWindow::showEntryFor(int noteNum, const QString &lyric) {

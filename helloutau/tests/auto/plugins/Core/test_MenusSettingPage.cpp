@@ -232,9 +232,9 @@ private Q_SLOTS:
         const auto tools =
             childWithId(model, mainMenu, QStringLiteral("helloutau.voiceBank.tools"));
         QVERIFY(tools.isValid());
-        const auto removeMetadata = QStringLiteral("helloutau.voiceBank.removeMetadata");
-        QVERIFY(isDeclared(*e, Editor::VoiceBankWindowKind, removeMetadata));
-        const auto entry = childWithId(model, tools, removeMetadata);
+        const auto processAll = QStringLiteral("helloutau.voiceBank.processAllAudio");
+        QVERIFY(isDeclared(*e, Editor::VoiceBankWindowKind, processAll));
+        const auto entry = childWithId(model, tools, processAll);
         QVERIFY(entry.isValid());
         tree->setCurrentIndex(entry);
         page.removeCurrent();
@@ -250,7 +250,7 @@ private Q_SLOTS:
             return ids;
         };
         QVERIFY(!toolsOf(Editor::VoiceBankWindowKind, "helloutau.voiceBank.tools")
-                     .contains(removeMetadata));
+                     .contains(processAll));
         QVERIFY(toolsOf(Editor::ProjectWindowKind, "helloutau.tools")
                     .contains(QStringLiteral("helloutau.tools.clearCache")));
         QVERIFY(e->actionRegistry(Editor::ProjectWindowKind)->layoutChanges().isEmpty());

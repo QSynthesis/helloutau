@@ -158,6 +158,14 @@
         <translation>设置(&amp;S)...</translation>
     </message>
     <message>
+        <source>Pr&amp;ocess Audio Files of Selection...</source>
+        <translation>处理所选条目的音频文件(&amp;O)...</translation>
+    </message>
+    <message>
+        <source>Process &amp;All Audio Files...</source>
+        <translation>处理全部音频文件(&amp;A)...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
@@ -256,10 +264,6 @@
     <message>
         <source>Convert Encodin&amp;gs...</source>
         <translation>转换音源编码(&amp;G)...</translation>
-    </message>
-    <message>
-        <source>Remove Audio &amp;Metadata...</source>
-        <translation>移除音频元数据(&amp;M)...</translation>
     </message>
     <message>
         <source>&amp;Generate Missing Frequency Maps</source>
@@ -1678,6 +1682,157 @@
     <message>
         <source>The archive %1 does not contain the program %2.</source>
         <translation>压缩包 %1 中没有程序 %2。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::ProcessAudioFilesDialog</name>
+    <message>
+        <source>%1-bit float</source>
+        <translation>%1 位浮点</translation>
+    </message>
+    <message>
+        <source>%1-bit</source>
+        <translation>%1 位</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 Hz, %n channel(s), %2</source>
+        <translation>
+            <numerusform>%1 Hz，%n 声道，%2</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>sample rate</source>
+        <translation>采样率</translation>
+    </message>
+    <message>
+        <source>channels</source>
+        <translation>声道</translation>
+    </message>
+    <message>
+        <source>bit depth</source>
+        <translation>位深</translation>
+    </message>
+    <message>
+        <source>metadata</source>
+        <translation>元数据</translation>
+    </message>
+    <message>
+        <source>header</source>
+        <translation>文件头</translation>
+    </message>
+    <message>
+        <source>data size</source>
+        <translation>数据长度</translation>
+    </message>
+    <message>
+        <source>DC offset</source>
+        <translation>直流偏移</translation>
+    </message>
+    <message>
+        <source>peak level</source>
+        <translation>峰值</translation>
+    </message>
+    <message>
+        <source>No change</source>
+        <translation>无需处理</translation>
+    </message>
+    <message>
+        <source>, </source>
+        <translation>、</translation>
+    </message>
+    <message>
+        <source>Process Audio Files</source>
+        <translation>处理音频文件</translation>
+    </message>
+    <message>
+        <source>Convert the &amp;sample rate to</source>
+        <translation>转换采样率为(&amp;S)</translation>
+    </message>
+    <message>
+        <source>%1 Hz</source>
+        <translation>%1 Hz</translation>
+    </message>
+    <message>
+        <source>Make &amp;one channel from</source>
+        <translation>合为单声道，取(&amp;O)</translation>
+    </message>
+    <message>
+        <source>the average of the channels</source>
+        <translation>各声道的平均</translation>
+    </message>
+    <message>
+        <source>the left channel</source>
+        <translation>左声道</translation>
+    </message>
+    <message>
+        <source>the right channel</source>
+        <translation>右声道</translation>
+    </message>
+    <message>
+        <source>Write 16-bit &amp;integer samples</source>
+        <translation>写成 16 位整数样本(&amp;I)</translation>
+    </message>
+    <message>
+        <source>Add &amp;dither to rounded samples</source>
+        <translation>为舍入的样本加抖动(&amp;D)</translation>
+    </message>
+    <message>
+        <source>Remove &amp;metadata</source>
+        <translation>去除元数据(&amp;M)</translation>
+    </message>
+    <message>
+        <source>Write a &amp;plain header</source>
+        <translation>写成普通的文件头(&amp;P)</translation>
+    </message>
+    <message>
+        <source>Remove the D&amp;C offset</source>
+        <translation>去除直流偏移(&amp;C)</translation>
+    </message>
+    <message>
+        <source>Scale the pea&amp;k to</source>
+        <translation>调整峰值为(&amp;K)</translation>
+    </message>
+    <message>
+        <source> dBFS</source>
+        <translation> dBFS</translation>
+    </message>
+    <message>
+        <source>Processing</source>
+        <translation>处理</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <source>Format</source>
+        <translation>格式</translation>
+    </message>
+    <message>
+        <source>Changes</source>
+        <translation>需要的处理</translation>
+    </message>
+    <message>
+        <source>&amp;Remove the frequency maps and analysis caches of the processed files</source>
+        <translation>删除所处理文件的频率表与分析缓存(&amp;R)</translation>
+    </message>
+    <message>
+        <source>&amp;Back up the original files to</source>
+        <translation>将原文件备份到(&amp;B)</translation>
+    </message>
+    <message>
+        <source>Bro&amp;wse...</source>
+        <translation>浏览(&amp;W)...</translation>
+    </message>
+    <message>
+        <source>Backup Folder</source>
+        <translation>备份文件夹</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) will be processed.</source>
+        <translation>
+            <numerusform>将处理 %n 个文件。</numerusform>
+        </translation>
     </message>
 </context>
 <context>
@@ -3730,34 +3885,26 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <source>Delete the frequency maps of the format %1 of every audio file of the voice bank? The deletion cannot be undone.</source>
         <translation>要删除音源中全部音频文件的格式 %1 的频率表吗？删除不可撤销。</translation>
     </message>
-    <message numerus="yes">
-        <source>%n bytes after the last chunk</source>
-        <translation>
-            <numerusform>最后一个数据块之后的 %n 字节</numerusform>
-        </translation>
+    <message>
+        <source>Process Audio Files</source>
+        <translation>处理音频文件</translation>
     </message>
     <message>
-        <source>Remove Audio Metadata</source>
-        <translation>移除音频元数据</translation>
+        <source>Select the entries whose audio files are to be processed.</source>
+        <translation>请选择要处理的音频文件所在的条目。</translation>
     </message>
     <message>
-        <source>No audio file of the voice bank carries metadata.</source>
-        <translation>音源中没有带元数据的音频文件。</translation>
+        <source>Processing audio files...</source>
+        <translation>正在处理音频文件...</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; could not be backed up to &quot;%2&quot;, and is not processed.</source>
+        <translation>无法将「%1」备份到「%2」，未处理该文件。</translation>
     </message>
     <message numerus="yes">
-        <source>%n audio files carry chunks besides the format and the audio, such as the tags that recording programs write.
-
-Write them again without these chunks? The audio stays the same. The files are written at once, and Undo does not bring the chunks back.</source>
+        <source>%n audio file(s) were processed.</source>
         <translation>
-            <numerusform>%n 个音频文件除格式与音频数据外还含有其他数据块，例如录音程序写入的标签。
-
-是否去除这些数据块并重新写入？音频内容不变。文件会立即写入，撤销无法恢复这些数据块。</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>The metadata of %n audio files was removed.</source>
-        <translation>
-            <numerusform>已移除 %n 个音频文件的元数据。</numerusform>
+            <numerusform>已处理 %n 个音频文件。</numerusform>
         </translation>
     </message>
     <message>
@@ -3775,6 +3922,23 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>Save As</source>
         <translation>另存为</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::AudioFileProcessor</name>
+    <message>
+        <source>&quot;%1&quot; could not be read.</source>
+        <translation>无法读取「%1」。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n sample(s) beyond full scale were limited.</source>
+        <translation>
+            <numerusform>%n 个超出满幅的样本已被限幅。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; could not be written.</source>
+        <translation>无法写入「%1」。</translation>
     </message>
 </context>
 <context>
@@ -5308,14 +5472,6 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The file has no %1 chunk.</source>
         <translation>该文件没有 %1 块。</translation>
-    </message>
-    <message>
-        <source>&quot;%1&quot; could not be read.</source>
-        <translation>无法读取「%1」。</translation>
-    </message>
-    <message>
-        <source>&quot;%1&quot; could not be written.</source>
-        <translation>无法写入「%1」。</translation>
     </message>
 </context>
 <context>

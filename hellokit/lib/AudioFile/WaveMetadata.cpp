@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <functional>
 
-#include <QtCore/QFile>
-#include <QtCore/QSaveFile>
 #include <QtCore/QString>
 
 namespace hello::kit {
@@ -104,34 +102,11 @@ namespace hello::kit {
             };
         }
 
-        QString textOf(const std::filesystem::path &path) {
-            return QString::fromStdU16String(path.u16string());
-        }
-
     }
 
     std::optional<WaveMetadata::Report> WaveMetadata::find(QByteArrayView bytes,
                                                            DiagnosticList &diagnostics) {
         const auto layout = walk(readerOf(bytes), bytes.size(), diagnostics);
-        return layout ? std::optional(layout->report) : std::nullopt;
-    }
-
-    std::optional<WaveMetadata::Report> WaveMetadata::find(const std::filesystem::path &file,
-                                                           DiagnosticList &diagnostics) {
-        QFile in(textOf(file));
-        if (!in.open(QIODevice::ReadOnly)) {
-            fail(diagnostics, tr("\"%1\" could not be read.").arg(textOf(file)));
-            return std::nullopt;
-        }
-        const auto reader = [&in](qint64 offset, qint64 length) {
-            return in.seek(offset) ? in.read(length) : QByteArray();
-        };
-        DiagnosticList found;
-        const auto layout = walk(reader, in.size(), found);
-        for (auto &diagnostic : found) {
-            diagnostic.message = QStringLiteral("%1: %2").arg(textOf(file), diagnostic.message);
-            diagnostics.push_back(diagnostic);
-        }
         return layout ? std::optional(layout->report) : std::nullopt;
     }
 
@@ -175,30 +150,6 @@ namespace hello::kit {
         put32(out, quint32(body.size()));
         out.append(body);
         return out;
-    }
-
-    bool WaveMetadata::strip(const std::filesystem::path &file, DiagnosticList &diagnostics) {
-        QFile in(textOf(file));
-        if (!in.open(QIODevice::ReadOnly)) {
-            return fail(diagnostics, tr("\"%1\" could not be read.").arg(textOf(file)));
-        }
-        const auto bytes = in.readAll();
-        in.close();
-        DiagnosticList found;
-        const auto result = stripped(bytes, found);
-        if (!result) {
-            for (auto &diagnostic : found) {
-                diagnostic.message = QStringLiteral("%1: %2").arg(textOf(file), diagnostic.message);
-                diagnostics.push_back(diagnostic);
-            }
-            return false;
-        }
-        QSaveFile out(textOf(file));
-        if (!out.open(QIODevice::WriteOnly) || out.write(*result) != result->size() ||
-            !out.commit()) {
-            return fail(diagnostics, tr("\"%1\" could not be written.").arg(textOf(file)));
-        }
-        return true;
     }
 
 }

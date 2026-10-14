@@ -1,13 +1,8 @@
-#include <filesystem>
-
-#include <QtCore/QFile>
-#include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
 #include <hellokit/AudioFile/WaveMetadata.h>
 
 using namespace hello::kit;
-namespace fs = std::filesystem;
 
 namespace {
 
@@ -126,25 +121,6 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 3);
         QVERIFY(diagnostics.at(1).message.contains(QStringLiteral("data")));
         QVERIFY(diagnostics.at(2).message.contains(QStringLiteral("fmt")));
-    }
-
-    void a_file_is_rewritten_in_place() {
-        QTemporaryDir dir;
-        const auto path = fs::path(dir.path().toStdU16String()) / "a.wav";
-        {
-            QFile file(QString::fromStdU16String(path.u16string()));
-            QVERIFY(file.open(QIODevice::WriteOnly));
-            file.write(riff(chunk("fmt ", format) + chunk("data", audio) + chunk("LIST", "x")));
-        }
-        DiagnosticList diagnostics;
-        QCOMPARE(WaveMetadata::find(path, diagnostics)->chunks, QList<QByteArray>{"LIST"});
-        QVERIFY(WaveMetadata::strip(path, diagnostics));
-        QVERIFY(WaveMetadata::find(path, diagnostics)->isEmpty());
-        QVERIFY(diagnostics.isEmpty());
-
-        QVERIFY(!WaveMetadata::strip(path.parent_path() / "missing.wav", diagnostics));
-        QVERIFY(!WaveMetadata::find(path.parent_path() / "missing.wav", diagnostics));
-        QCOMPARE(diagnostics.size(), 2);
     }
 };
 
