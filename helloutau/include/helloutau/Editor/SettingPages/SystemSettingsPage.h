@@ -13,9 +13,10 @@ namespace hello::daw {
 
     class AppSettings;
 
-    /// The language of the interface, under Appearance & Behavior as the system settings of
-    /// JetBrains IDEs. A changed language takes effect at the next start, so applying it marks a
-    /// restart as required (kit::ExitLauncher::requireRestart()).
+    /// The language of the interface and the threads of the general tasks of the editor
+    /// (TaskSettings), under Appearance & Behavior as the system settings of JetBrains IDEs. A
+    /// changed language takes effect at the next start, so applying it marks a restart as
+    /// required (kit::ExitLauncher::requireRestart()).
     class HELLOUTAU_EDITOR_EXPORT SystemSettingsPage : public SettingPage {
         Q_OBJECT
     public:
@@ -27,6 +28,8 @@ namespace hello::daw {
         bool apply(QString *error) override;
 
         QComboBox *languageBox() const;
+        /// The box of TaskSettings::threadCount()
+        QComboBox *taskThreadsBox() const;
 
     protected:
         QWidget *createWidget() override;
@@ -34,6 +37,7 @@ namespace hello::daw {
     private:
         AppSettings &m_settings;
         QPointer<QComboBox> m_language;
+        QPointer<QComboBox> m_taskThreads;
     };
 
 }

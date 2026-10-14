@@ -267,6 +267,16 @@ namespace hello::daw {
         return impl.updates;
     }
 
+    TaskSettings &AppSettings::tasks() {
+        stdc_impl_t;
+        return impl.tasks;
+    }
+
+    const TaskSettings &AppSettings::tasks() const {
+        stdc_impl_t;
+        return impl.tasks;
+    }
+
     QJsonValue AppSettings::value(const QString &key) const {
         stdc_impl_t;
         const auto path = key.toStdString();

@@ -2978,25 +2978,72 @@ namespace hello::daw {
     bool VoiceBankWindow::processAudioFiles() {
         stdc_impl_t;
         const auto title = tr("Process Audio Files");
-        const auto selected = impl.selectedAudioPaths();
-        QList<ProcessAudioFilesDialog::File> files;
-        kit::DiagnosticList diagnostics;
-        QApplication::setOverrideCursor(Qt::WaitCursor);
+        QList<std::filesystem::path> paths;
         for (const auto &[folder, names] : impl.audioByFolder()) {
             for (const auto &name : names) {
-                const auto path = (folder / name).lexically_normal();
-                if (const auto inspection = kit::AudioFileProcessor::inspect(path, diagnostics)) {
-                    files.push_back({path, *inspection, selected.contains(path)});
-                }
+                paths.push_back((folder / name).lexically_normal());
             }
         }
-        QApplication::restoreOverrideCursor();
-        if (files.isEmpty()) {
-            if (!diagnostics.isEmpty()) {
-                DiagnosticBox::report(this, title, diagnostics);
-            } else {
-                QMessageBox::information(this, title, tr("The voice bank has no audio files."));
+        if (paths.isEmpty()) {
+            QMessageBox::information(this, title, tr("The voice bank has no audio files."));
+            return false;
+        }
+
+        // The properties of the files are read in the background, with the threads of
+        // TaskSettings::threadCount(), while a progress dialog cancels the reading.
+        kit::DiagnosticList diagnostics;
+        QList<std::optional<kit::AudioFileProcessor::Inspection>> inspections;
+        {
+            QProgressDialog reading(tr("Reading the audio files..."), tr("Cancel"), 0,
+                                    int(paths.size()), this);
+            reading.setWindowTitle(title);
+            reading.setWindowModality(Qt::WindowModal);
+            reading.setMinimumDuration(0);
+            reading.setValue(0);
+            reading.show();
+            std::atomic<bool> cancelled = false;
+            connect(&reading, &QProgressDialog::canceled, this, [&cancelled] { cancelled = true; });
+            const int threads = impl.editor->settings().tasks().threadCount();
+            QEventLoop loop;
+            QThread *worker = nullptr;
+            // Started once the event loop runs, so that a cancellation that comes first, such as
+            // a click on the dialog just shown, reads no file.
+            QTimer::singleShot(0, &loop, [&] {
+                worker = QThread::create([&] {
+                    inspections = kit::AudioFileProcessor::inspectFiles(
+                        paths, threads, diagnostics,
+                        [&reading](int done) {
+                            // Dropped with the dialog if it is gone
+                            QMetaObject::invokeMethod(
+                                &reading, [&reading, done] { reading.setValue(done); },
+                                Qt::QueuedConnection);
+                        },
+                        [&cancelled] { return cancelled.load(); });
+                });
+                connect(worker, &QThread::finished, &loop, &QEventLoop::quit);
+                worker->start();
+            });
+            loop.exec();
+            worker->wait();
+            delete worker;
+            reading.reset();
+            if (cancelled.load()) {
+                QMessageBox::warning(this, title,
+                                     tr("The reading of the audio files was cancelled, and no "
+                                        "file is processed."));
+                return false;
             }
+        }
+
+        const auto selected = impl.selectedAudioPaths();
+        QList<ProcessAudioFilesDialog::File> files;
+        for (qsizetype i = 0; i < paths.size(); ++i) {
+            if (const auto &inspection = inspections.at(i)) {
+                files.push_back({paths.at(i), *inspection, selected.contains(paths.at(i))});
+            }
+        }
+        if (files.isEmpty()) {
+            DiagnosticBox::report(this, title, diagnostics);
             return false;
         }
 

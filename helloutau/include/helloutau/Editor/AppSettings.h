@@ -14,6 +14,7 @@
 #include <helloutau/Editor/Settings/FrequencyMapSettings.h>
 #include <helloutau/Editor/Settings/PitchControlSettings.h>
 #include <helloutau/Editor/Settings/RenderingSettings.h>
+#include <helloutau/Editor/Settings/TaskSettings.h>
 #include <helloutau/Editor/Settings/UpdateSettings.h>
 #include <helloutau/Editor/Settings/UtauSettings.h>
 #include <helloutau/Editor/Settings/ViewSettings.h>
@@ -95,6 +96,8 @@ namespace hello::daw {
         const CommandPaletteSettings &commandPalette() const;
         UpdateSettings &updates();
         const UpdateSettings &updates() const;
+        TaskSettings &tasks();
+        const TaskSettings &tasks() const;
         /// @}
 
         /// \name Values by key

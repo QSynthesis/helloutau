@@ -95,6 +95,7 @@
 #include <helloutau/Editor/Dialogs/PitchControlDialog.h>
 #include <helloutau/Editor/Dialogs/VoiceBankDecodingDialog.h>
 #include <helloutau/Editor/SettingPages/FrequencyMapSettingPage.h>
+#include <helloutau/Editor/SettingPages/SystemSettingsPage.h>
 #include <helloutau/Editor/VoiceBankEntryModel.h>
 #include <helloutau/Editor/VoiceBankInfoPanel.h>
 #include <helloutau/Editor/VoiceBankWindow.h>
@@ -167,18 +168,24 @@ namespace {
     }
 
     // Passes the active modal dialog of type T to handle once the event loop runs, which is
-    // within the dialog that the code under test shows. If no dialog of type T is active, the
-    // active dialog is rejected and the test fails. A dialog that handle leaves open, as after a
-    // failed check, is rejected. Either way the test does not block on the dialog.
+    // within the dialog that the code under test shows. A progress dialog shown before it, such
+    // as that of a reading in the background, is waited for, and so is the moment without a
+    // dialog after it. If another dialog is active, it is rejected and the test fails. A dialog
+    // that handle leaves open, as after a failed check, is rejected. Either way the test does not
+    // block on the dialog.
     template <class T>
-    void handleNextDialog(std::function<void(T *)> handle) {
-        QTimer::singleShot(0, [handle = std::move(handle)] {
+    void handleNextDialog(std::function<void(T *)> handle, bool afterProgress = false) {
+        QTimer::singleShot(0, [handle = std::move(handle), afterProgress]() mutable {
             const auto widget = QApplication::activeModalWidget();
             if (const auto dialog = qobject_cast<T *>(widget)) {
                 handle(dialog);
                 if (dialog->isVisible()) {
                     dialog->reject();
                 }
+                return;
+            }
+            if (qobject_cast<QProgressDialog *>(widget) || (!widget && afterProgress)) {
+                handleNextDialog<T>(std::move(handle), true);
                 return;
             }
             if (const auto other = qobject_cast<QDialog *>(widget)) {
@@ -1239,6 +1246,30 @@ private Q_SLOTS:
     }
 
     // The language is chosen on System Settings from the system default, English and Simplified
+    // The system settings set the threads of the general tasks, apart from the threads of the
+    // rendering and of the frequency maps. A count that is not a number is refused.
+    void the_task_threads_are_set_on_the_system_page() {
+        const auto e = editor();
+        const auto restore = qScopeGuard([&e] { e->settings().tasks().setThreadCount(0); });
+        const auto page = qobject_cast<SystemSettingsPage *>(
+            e->settingCatalog()->page(QStringLiteral("editor.SystemSettings")));
+        QVERIFY(page);
+        QVERIFY(page->widget());
+        QVERIFY(!page->isModified());
+        page->taskThreadsBox()->setEditText(QStringLiteral("3"));
+        QVERIFY(page->isModified());
+        QString error;
+        QVERIFY(page->apply(&error));
+        QCOMPARE(e->settings().tasks().threadCount(), 3);
+        QCOMPARE(e->settings().frequencyMaps().threadCount(), 0);
+        QVERIFY(!page->isModified());
+
+        page->taskThreadsBox()->setEditText(QStringLiteral("many"));
+        QVERIFY(!page->apply(&error));
+        QVERIFY(!error.isEmpty());
+        QCOMPARE(e->settings().tasks().threadCount(), 3);
+    }
+
     // Chinese. A changed language is applied for the next start, and a restart is offered once
     // the dialog closes. If the restart is declined, nothing restarts.
     void the_language_is_chosen_for_the_next_start() {
@@ -2446,6 +2477,41 @@ private Q_SLOTS:
         });
         QVERIFY(!window->processAudioFiles());
         QCOMPARE(selected, QList<fs::path>{bank / "c.wav"});
+    }
+
+    // The audio files are read in the background behind a progress dialog. Cancelling it reports
+    // an error in a message box and shows no processing dialog.
+    void a_cancelled_reading_processes_no_file() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 100);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+
+        handleNextDialog<QProgressDialog>([](QProgressDialog *dialog) {
+            const auto cancel = dialog->findChild<QPushButton *>();
+            QVERIFY(cancel);
+            cancel->click();
+        });
+        // Closes every other dialog, so that a regression fails instead of blocking
+        QStringList dialogs;
+        QTimer closer;
+        closer.setInterval(10);
+        connect(&closer, &QTimer::timeout, [&dialogs] {
+            const auto widget = QApplication::activeModalWidget();
+            if (const auto box = qobject_cast<QMessageBox *>(widget)) {
+                dialogs.push_back(QStringLiteral("Message"));
+                box->reject();
+            } else if (const auto dialog = qobject_cast<QDialog *>(widget);
+                       dialog && !qobject_cast<QProgressDialog *>(dialog)) {
+                dialogs.push_back(QString::fromLatin1(dialog->metaObject()->className()));
+                dialog->reject();
+            }
+        });
+        closer.start();
+        QVERIFY(!window->processAudioFiles());
+        QCOMPARE(dialogs, QStringList{QStringLiteral("Message")});
     }
 
     // An alias that another entry of the same file has, as read, is marked.

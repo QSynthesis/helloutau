@@ -43,7 +43,8 @@ namespace hello::daw {
     ///      "commandPalette": {"recent": [...]},
     ///      "pitchControl": {"portamento": {...}, "vibrato": {...}, "vibratoPreset": ...},
     ///      "updates": {"mode": ..., "source": ..., "lastCheck": ..., "skippedVersion": ...,
-    ///                  "extractionThreads": ...}}
+    ///                  "extractionThreads": ...},
+    ///      "tasks": {"threads": ...}}
     class AppSettingsStore {
     public:
         /// Reads \a fileName, and normalizes the values of AppSettingsKeys.
@@ -91,7 +92,8 @@ namespace hello::daw {
         Impl(const QString &fileName, const AppSettings &settings)
             : store(fileName), utau(store), voiceBanks(settings, store), rendering(store),
               frequencyMaps(store), audio(store), appearance(store), view(store),
-              pitchControl(store), files(store), commandPalette(store), updates(store) {
+              pitchControl(store), files(store), commandPalette(store), updates(store),
+              tasks(store) {
         }
 
         AppSettingsStore store;
@@ -109,6 +111,7 @@ namespace hello::daw {
         FileSettings files;
         CommandPaletteSettings commandPalette;
         UpdateSettings updates;
+        TaskSettings tasks;
     };
 
 }

@@ -86,6 +86,25 @@ private Q_SLOTS:
         }
     }
 
+    // The thread count of the general tasks persists, independent of the other thread counts.
+    // The default is not written.
+    void the_task_thread_count_persists() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        QCOMPARE(AppSettings(file).tasks().threadCount(), 0);
+        {
+            AppSettings settings(file);
+            settings.tasks().setThreadCount(4);
+        }
+        {
+            AppSettings settings(file);
+            QCOMPARE(settings.tasks().threadCount(), 4);
+            QCOMPARE(settings.frequencyMaps().threadCount(), 0);
+            settings.tasks().setThreadCount(0);
+            QVERIFY(settings.value(QStringLiteral("tasks/threads")).isUndefined());
+        }
+    }
+
     // The extraction thread count of updates persists. The default is not written.
     void the_extraction_thread_count_persists() {
         QTemporaryDir dir;
@@ -209,9 +228,9 @@ private Q_SLOTS:
     void existing_recent_file_duplicates_are_hidden() {
         QTemporaryDir dir;
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
-        settings.setValue(QStringLiteral("files/recent"),
-                          QJsonArray{QStringLiteral("C:/songs/a.usth"),
-                                     QStringLiteral("C:/songs/a.usth")});
+        settings.setValue(
+            QStringLiteral("files/recent"),
+            QJsonArray{QStringLiteral("C:/songs/a.usth"), QStringLiteral("C:/songs/a.usth")});
         QCOMPARE(settings.files().recentFiles(),
                  (QList<std::filesystem::path>{std::filesystem::path(u"C:/songs/a.usth")}));
     }

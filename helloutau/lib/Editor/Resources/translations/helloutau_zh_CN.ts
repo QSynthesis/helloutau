@@ -2680,12 +2680,28 @@ Trust and use them for rendering?</source>
         <translation>系统设置</translation>
     </message>
     <message>
+        <source>The language of the interface and the threads of the general tasks.</source>
+        <translation>界面语言与通用任务的线程数。</translation>
+    </message>
+    <message>
         <source>Interface</source>
         <translation>界面</translation>
     </message>
     <message>
-        <source>The language of the interface.</source>
-        <translation>界面语言。</translation>
+        <source>Tasks</source>
+        <translation>任务</translation>
+    </message>
+    <message>
+        <source>Task &amp;threads:</source>
+        <translation>任务线程数(&amp;T)：</translation>
+    </message>
+    <message>
+        <source>The number of threads of the general tasks of the editor, such as reading the audio files of a voice bank before they are processed. The rendering and the frequency maps have threads of their own.</source>
+        <translation>编辑器通用任务同时使用的线程数，例如处理音源的音频文件之前读取这些文件。渲染与频率表另有各自的线程数。</translation>
+    </message>
+    <message>
+        <source>The number of task threads is a positive whole number, or Automatic.</source>
+        <translation>任务线程数须为正整数，或为「自动」。</translation>
     </message>
     <message>
         <source>&amp;Language:</source>
@@ -3950,6 +3966,14 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>Process Audio Files</source>
         <translation>处理音频文件</translation>
+    </message>
+    <message>
+        <source>Reading the audio files...</source>
+        <translation>正在读取音频文件...</translation>
+    </message>
+    <message>
+        <source>The reading of the audio files was cancelled, and no file is processed.</source>
+        <translation>已取消读取音频文件，不处理任何文件。</translation>
     </message>
     <message>
         <source>Processing audio files...</source>
