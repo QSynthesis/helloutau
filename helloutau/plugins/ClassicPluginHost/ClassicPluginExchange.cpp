@@ -263,7 +263,7 @@ namespace hello::daw {
                                                                 kit::DiagnosticList &diagnostics) {
         utau::PluginResult file;
         file.read(std::string_view(result.data(), size_t(result.size())));
-        if (file.isCancelled()) {
+        if (file.isCanceled()) {
             return Canceled;
         }
 

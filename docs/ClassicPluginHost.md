@@ -57,7 +57,7 @@
 
 1. **协议（stdutau `pluginfile.h`，`2004f8e`）**：一个文件一个类，插件与宿主共用（作者定），都在原始字节上工作。
    - `PluginInput`，传给插件的临时文件：插件读，宿主写。写出 `[#VERSION]`（`UST Version 1.20`）、`[#SETTING]`（Project、第一个段落所在的 Tempo（有 `[#PREV]` 时为它所在的曲速）、绝对 VoiceDir 与 CacheDir、Mode2）、`[#PREV]`、以轨道位置编号的音符（带只读的 `@` 条目）、`[#NEXT]`，CRLF。
-   - `PluginResult`，插件写回的结果：插件写，宿主读。数据是按出现顺序的段落列表（编号、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`），每段记录**出现过的条目**（`keys`）与其值（`note`），空值的条目保持空白，供宿主在原音符上逐条合并；没有音符段落即取消（`isCancelled()`）。`PluginResult(input)` 为全部不变的结果，`Section::assign()` 设置一个音符。
+   - `PluginResult`，插件写回的结果：插件写，宿主读。数据是按出现顺序的段落列表（编号、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`），每段记录**出现过的条目**（`keys`）与其值（`note`），空值的条目保持空白，供宿主在原音符上逐条合并；没有音符段落即取消（`isCanceled()`）。`PluginResult(input)` 为全部不变的结果，`Section::assign()` 设置一个音符。
 2. **ClassicPluginHost 插件**：
    - 名称（作者 2026-09-30 定）：目录与工程 `ClassicPluginHost`，插件类 `ClassicPluginHostPlugin`（`Internal`，不导出），ID `org.helloutau.classicpluginhost`，显示名 Classic Plugin Host。
    - 库一级的三个类（公开、有测试）：`ClassicPlugin`（读 `plugin.txt`、发现、`execute` 路径校验、平台是否可用）；`ClassicPluginExchange`（`input()` 写出临时文件，`apply()` 在一个 `EditSession::Transaction` 中按段落顺序合并结果，整个结果为**一个撤销步骤**）；`ClassicPluginRunner`（临时文件、启动、等待或取消、读回）。首次运行确认的记录由另一个公开类 `ClassicPluginApproval` 比较与更新。OpenUtau 同样分为 `PluginLoader` 与 `PluginRunner`。
