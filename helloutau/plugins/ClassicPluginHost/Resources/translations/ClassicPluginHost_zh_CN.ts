@@ -128,6 +128,49 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::ClassicPluginPreviewInstallation</name>
+    <message>
+        <source>The preview program is already installed.</source>
+        <translation>试听程序已经安装。</translation>
+    </message>
+    <message>
+        <source>The preview program &quot;%1&quot; does not exist.</source>
+        <translation>试听程序「%1」不存在。</translation>
+    </message>
+    <message>
+        <source>The plugin.txt of the plugin cannot be read.</source>
+        <translation>无法读取该插件的 plugin.txt。</translation>
+    </message>
+    <message>
+        <source>The plugin.json of the plugin cannot be read.</source>
+        <translation>无法读取该插件的 plugin.json。</translation>
+    </message>
+    <message>
+        <source>The file &quot;%1&quot; already exists.</source>
+        <translation>文件「%1」已存在。</translation>
+    </message>
+    <message>
+        <source>The file &quot;%1&quot; cannot be renamed.</source>
+        <translation>无法重命名文件「%1」。</translation>
+    </message>
+    <message>
+        <source>The preview program cannot be copied to &quot;%1&quot;.</source>
+        <translation>无法将试听程序复制到「%1」。</translation>
+    </message>
+    <message>
+        <source>The file &quot;%1&quot; cannot be written.</source>
+        <translation>无法写入文件「%1」。</translation>
+    </message>
+    <message>
+        <source>The preview program is not installed.</source>
+        <translation>试听程序尚未安装。</translation>
+    </message>
+    <message>
+        <source>The file &quot;%1&quot; cannot be removed.</source>
+        <translation>无法删除文件「%1」。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::ClassicPluginPreviewServer</name>
     <message>
         <source>Another preview of the plugin is in progress.</source>
