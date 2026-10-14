@@ -12,7 +12,7 @@ qak_add_action_extension(_actions_src Resources/ClassicPluginActions.xml
     NAMESPACE hello::daw
 )
 
-qm_find_qt(Core Gui Widgets)
+qm_find_qt(Core Gui Widgets Network)
 
 helloutau_add_native_plugin(${PROJECT_NAME}
     ID org.helloutau.classicpluginhost
@@ -26,6 +26,7 @@ helloutau_add_native_plugin(${PROJECT_NAME}
           HelloKitSupport
     LINKS_PRIVATE stdutau::stdutau QActionKit::Widgets
     QT_LINKS Core Gui Widgets
+    QT_LINKS_PRIVATE Network
     INCLUDE_PRIVATE Internal
     MACRO_PREFIX CLASSICPLUGINHOST
 )

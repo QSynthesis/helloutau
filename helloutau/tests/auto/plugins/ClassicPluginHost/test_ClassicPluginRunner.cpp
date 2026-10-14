@@ -80,8 +80,11 @@ private Q_SLOTS:
         QString error;
         QVERIFY2(runner.start(p, "[#0000]\r\nLyric=a\r\n", &error), qPrintable(error));
         QVERIFY(runner.isRunning());
+        // The process of the program, by which the pipe of its previews is named
+        QVERIFY(runner.processId().value_or(0) > 0);
         QVERIFY(finished.wait(20000));
         QVERIFY(!runner.isRunning());
+        QVERIFY(!runner.processId());
         QVERIFY(!runner.isCancelled());
         QCOMPARE(runner.result(), QByteArray("[#0000]\r\nLyric=z\r\n"));
         QVERIFY(!runner.isUnchanged());

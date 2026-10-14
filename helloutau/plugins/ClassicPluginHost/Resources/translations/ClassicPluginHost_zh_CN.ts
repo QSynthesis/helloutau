@@ -85,6 +85,25 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::ClassicPluginPreviewServer</name>
+    <message>
+        <source>Another preview of the plugin is in progress.</source>
+        <translation>该插件的另一次试听正在进行。</translation>
+    </message>
+    <message>
+        <source>The request of the preview cannot be read.</source>
+        <translation>无法读取试听的请求。</translation>
+    </message>
+    <message>
+        <source>The file &quot;%1&quot; of the preview cannot be read.</source>
+        <translation>无法读取试听的文件「%1」。</translation>
+    </message>
+    <message>
+        <source>The notes of the preview are not the notes passed to the plugin.</source>
+        <translation>试听的音符与交给插件的音符不一致。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::ClassicPluginRun</name>
     <message>
         <source>The program of the plugin &quot;%1&quot; has changed since its last run. The plugin runs the following program:</source>

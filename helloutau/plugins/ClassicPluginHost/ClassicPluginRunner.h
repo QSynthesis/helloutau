@@ -2,6 +2,7 @@
 #define HELLOUTAU_CLASSICPLUGINHOST_CLASSICPLUGINRUNNER_H
 
 #include <memory>
+#include <optional>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QObject>
@@ -46,6 +47,11 @@ namespace hello::daw {
 
         /// Returns whether the program has started and has not yet ended.
         bool isRunning() const;
+
+        /// Returns the process identifier of the program while it runs, or std::nullopt if it
+        /// does not run or its process cannot be observed. For a batch file, the process is the
+        /// command processor that runs it.
+        std::optional<qint64> processId() const;
 
         /// Returns whether the end of the program cannot be observed. The handler of a file
         /// type may pass the file to a program that is already running, such as a browser, and

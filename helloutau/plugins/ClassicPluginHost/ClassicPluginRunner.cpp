@@ -314,6 +314,18 @@ namespace hello::daw {
         return _impl->running;
     }
 
+    std::optional<qint64> ClassicPluginRunner::processId() const {
+        if (!_impl->running || !_impl->process) {
+            return std::nullopt;
+        }
+#ifdef Q_OS_WINDOWS
+        const auto id = GetProcessId(_impl->process);
+        return id == 0 ? std::nullopt : std::optional<qint64>(id);
+#else
+        return _impl->process->processId();
+#endif
+    }
+
     bool ClassicPluginRunner::isUnobservable() const {
         return _impl->unobservable;
     }
