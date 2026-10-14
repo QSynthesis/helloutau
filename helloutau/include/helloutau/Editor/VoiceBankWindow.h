@@ -257,9 +257,10 @@ namespace hello::daw {
 
         /// Processes audio files of the voice bank with kit::AudioFileProcessor, with the
         /// processing and the files that the user chooses in a ProcessAudioFilesDialog, which
-        /// lists the readable audio files, those of the folders not read included. Each original
-        /// file is first copied to the backup folder of the dialog under its path relative to the
-        /// voice bank, and a file whose copy fails is not processed. The frequency maps and the
+        /// lists the readable audio files, those of the folders not read included. If the dialog
+        /// specifies a backup, each original file is first copied to the backup folder of the
+        /// dialog under its path relative to the voice bank, and a file whose copy fails is not
+        /// processed. The frequency maps and the
         /// analysis caches of the processed files are then removed in every format if the dialog
         /// specifies so. No undo restores the files.
         ///

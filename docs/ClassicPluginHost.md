@@ -91,7 +91,7 @@
 4. ~~**ClassicPluginHost**~~：发现、`plugin.txt` 与编码、写出与合并（`fab6818`）；进程的启动与取消（`ad8da63`）、菜单、模态对话框、首次确认（`f045b9e`）。库一级的部分在 `tests/auto/plugins/ClassicPluginHost` 中测试：合并以探针 R1–R3 的结果对照 UTAU 另存的工程；运行以批处理、`shell=use` 与测试程序自身充当的 `.exe` 插件端到端运行，包括取消时结束插件启动的后台进程。菜单与对话框由作者试用。
    - `plugin.json`（作者定的格式，见 note.md「插件」）：已实现。
    - ~~`ustversion` 1.00 与 1.10~~：已实现，格式经实测（stdutau `a18f443`）。
-   - 试听（playinplugin 的兼容程序）：设计见 [`PluginPlay.md`](PluginPlay.md)，未实现。
+   - ~~试听（playinplugin 的兼容程序）~~：已实现，作者已以 PitTrace 验收（2026-10-14），见 [`PluginPlay.md`](PluginPlay.md)。
 5. **验收**：作者以社区常用的原版插件试用。
 
 ## 作者的决定（2026-09-30）

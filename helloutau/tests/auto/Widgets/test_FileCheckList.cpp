@@ -72,7 +72,8 @@ private Q_SLOTS:
         QCOMPARE(list.checkedRows(), QList<int>{1});
     }
 
-    // A click on the box for all checks every row, and checkedChanged() follows the user.
+    // A click on the box for all checks every row, and checkedChanged() is emitted for the
+    // change.
     void the_box_checks_every_row() {
         FileCheckList list({QStringLiteral("File"), QStringLiteral("State")});
         fill(list);

@@ -24,7 +24,7 @@ namespace hello::daw {
         }
 
         // Returns the header of the column of a format, with a parenthesized part of the name,
-        // such as frq (resampler), on a line of its own, so that the column is narrow
+        // such as its resampler, on a line of its own, so that the column is narrow
         QString headerOf(const QString &name) {
             const auto open = name.indexOf(QStringLiteral(" ("));
             return open < 0 ? name : name.left(open) + QLatin1Char('\n') + name.mid(open + 1);

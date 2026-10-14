@@ -1245,7 +1245,6 @@ private Q_SLOTS:
         e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
     }
 
-    // The language is chosen on System Settings from the system default, English and Simplified
     // The threads of the general tasks are set on the System Settings page, apart from those of
     // the rendering and the frequency maps. A count that is not a number is refused.
     void the_task_threads_are_set_on_the_system_page() {
@@ -1270,6 +1269,7 @@ private Q_SLOTS:
         QCOMPARE(e->settings().tasks().threadCount(), 3);
     }
 
+    // The language is chosen on System Settings from the system default, English and Simplified
     // Chinese. A changed language is applied for the next start, and a restart is offered once
     // the dialog closes. If the restart is declined, nothing restarts.
     void the_language_is_chosen_for_the_next_start() {

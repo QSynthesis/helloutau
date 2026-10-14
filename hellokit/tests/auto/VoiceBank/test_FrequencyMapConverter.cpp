@@ -136,8 +136,9 @@ private Q_SLOTS:
         QCOMPARE(*converted.frames.at(0).amplitude, 7.0);
     }
 
-    // A map with another hop is resampled to floor(samples / hop) + 1 frames of the hop of the
-    // target format, and the amplitudes are computed for the new frames.
+    // A map with another hop is resampled to floor(n / hop) + 1 frames of the hop of the target
+    // format, where n is the number of audio frames, and the amplitudes are computed for the new
+    // frames.
     void a_map_with_another_hop_is_resampled() {
         Fixed target;
         target.hop = 3;

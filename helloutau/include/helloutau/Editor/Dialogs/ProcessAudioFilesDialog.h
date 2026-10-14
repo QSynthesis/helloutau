@@ -25,16 +25,17 @@ namespace hello::daw {
 
     class FileCheckList;
 
-    /// A dialog in which the user chooses the processing of audio files and the files to
-    /// process, see kit::AudioFileProcessor. The files are listed on the left, and the options
-    /// on the right, beyond a splitter. The selected files are checked initially. If none is
-    /// selected, the files that the options change are checked again whenever an option changes.
-    /// A tri-state box checks or unchecks every file, and a button checks exactly the files that
-    /// the options change.
+    /// A dialog in which the user chooses the processing of audio files and the files to process.
+    /// The files are listed on the left, and the options on the right, beyond a splitter. The
+    /// selected files are checked initially. If none is selected, the files that the options
+    /// change are checked initially, and again whenever an option changes. A tri-state box checks
+    /// or unchecks every file, and a button checks exactly the files that the options change.
     ///
     /// The dialog also offers the removal of the frequency maps and the analysis caches of the
     /// processed files, checked initially, and a backup of the original files into a folder,
     /// checked initially. The dialog changes no file.
+    ///
+    /// \sa kit::AudioFileProcessor
     class HELLOUTAU_EDITOR_EXPORT ProcessAudioFilesDialog : public QDialog {
         Q_OBJECT
     public:
@@ -47,8 +48,9 @@ namespace hello::daw {
             bool selected = false;
         };
 
-        /// Creates the dialog for \a files of the voice bank at \a root, whose paths are shown
-        /// relative to \a root, with \a backup as the initial backup folder.
+        /// Creates the dialog for \a files of the voice bank at \a root, with \a backup as the
+        /// initial backup folder. The paths of the files are shown relative to \a root, or whole
+        /// if they have no path relative to \a root, as on another drive.
         ProcessAudioFilesDialog(QList<File> files, const std::filesystem::path &root,
                                 const std::filesystem::path &backup, QWidget *parent = nullptr);
         ~ProcessAudioFilesDialog();
@@ -106,7 +108,7 @@ namespace hello::daw {
         void refreshFiles();
 
         // Shows the number of checked files and enables the OK button if any is checked and the
-        // backup has a folder
+        // backup is unchecked or has a folder
         void updateSummary();
     };
 

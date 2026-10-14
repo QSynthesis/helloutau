@@ -217,7 +217,8 @@ private Q_SLOTS:
 
         const auto converted = WaveAudio::resampled(tone, 1, from, to);
         QCOMPARE(qsizetype(converted.size()), qsizetype(to));
-        // Away from the edges, where the filter has no neighbors, the result is the same tone.
+        // Away from the edges, where the filter reads only samples of the tone, the result is the
+        // same tone.
         double error = 0;
         for (int i = to / 4; i < to * 3 / 4; ++i) {
             const double expected = 0.5 * std::sin(2 * M_PI * frequency * i / to);

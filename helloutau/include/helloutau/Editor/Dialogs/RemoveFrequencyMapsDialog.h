@@ -40,9 +40,10 @@ namespace hello::daw {
             bool selected = false;
         };
 
-        /// Creates the dialog for \a files of the voice bank at \a root, whose paths are shown
-        /// relative to \a root, with the maps in the format named \a formatName, whose analysis
-        /// caches are named \a cacheNames.
+        /// Creates the dialog for \a files of the voice bank at \a root, with the maps in the
+        /// format named \a formatName, whose analysis caches are named \a cacheNames. The paths of
+        /// the files are shown relative to \a root, or whole if they have no path relative to
+        /// \a root, as on another drive.
         RemoveFrequencyMapsDialog(QList<File> files, const std::filesystem::path &root,
                                   const QString &formatName, const QStringList &cacheNames,
                                   QWidget *parent = nullptr);

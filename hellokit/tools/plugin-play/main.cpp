@@ -32,13 +32,13 @@ namespace fs = std::filesystem;
 
 namespace {
 
-    // The name of the pipe of the host without the process number of the plugin
+    // The name of the pipe of the host without the process ID of the plugin
     constexpr wchar_t pipePrefix[] = L"\\\\.\\pipe\\helloutau-plugin-play-";
 
     // The name under which the original playinplugin.exe is kept on deployment
     constexpr wchar_t originalName[] = L"playinplugin-original.exe";
 
-    // The time limit of the wait for a pipe instance of the host that is busy
+    // The time limit of the wait while every instance of the pipe of the host is busy
     constexpr DWORD busyTimeout = 5000;
 
     enum ExitCode {
@@ -181,8 +181,8 @@ namespace {
         return {};
     }
 
-    // Returns a connection to the pipe of the host, or std::nullopt if no other process of the job
-    // of this process has a pipe of a host.
+    // Returns a connection to the pipe of the host, or std::nullopt if the other processes of the
+    // job of this process have no pipe of a host.
     std::optional<HANDLE> connectToHost() {
         for (const auto process : jobProcesses()) {
             if (process == GetCurrentProcessId()) {
@@ -235,10 +235,8 @@ namespace {
     }
 
     // Runs the original program beside this program with the arguments as written, so that the
-    // original receives the command line that the plugin passed, and waits for it.
-    //
-    // \return the exit status of the original, or std::nullopt if the original is absent or
-    //         cannot start
+    // original receives the command line that the plugin passed, and waits for it. Returns the
+    // exit status of the original, or std::nullopt if the original is absent or cannot start.
     std::optional<int> runOriginal() {
         std::wstring module(MAX_PATH, L'\0');
         for (;;) {

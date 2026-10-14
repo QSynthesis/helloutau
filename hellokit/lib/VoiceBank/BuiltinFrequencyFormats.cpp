@@ -66,7 +66,7 @@ namespace hello::kit {
             }
 
             // A map that is not complete is damaged, regardless of the sample rate that read()
-            // requires as well, and is written again by the resampler.
+            // also requires, and is written again by the resampler.
             QList<MapFileDamage>
                 checkMapFiles(const std::filesystem::path &directory,
                               const QList<std::filesystem::path> &wavs) const override {

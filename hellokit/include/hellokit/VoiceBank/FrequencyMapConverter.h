@@ -28,10 +28,10 @@ namespace hello::kit {
 
         /// Returns \a map of the audio \a audio in the terms of \a target. A map whose hop
         /// differs from FrequencyFormat::hopOf() of \a target at the sample rate of \a audio is
-        /// resampled with FrequencyMap::resampled() to floor(samples / hop) + 1 frames, the frame
-        /// count of the resamplers of UTAU and world4utau. If a frame lacks an amplitude, the
-        /// amplitude of every frame is the root mean square of the samples of the first channel
-        /// of \a audio in the frame, on the scale of 16-bit samples.
+        /// resampled with FrequencyMap::resampled() to floor(n / hop) + 1 frames, the frame count
+        /// of the resamplers of UTAU and world4utau, where n is the number of audio frames. If a
+        /// frame lacks an amplitude, the amplitude of every frame is the root mean square of the
+        /// samples of the first channel of \a audio in the frame, on the scale of 16-bit samples.
         static FrequencyMap converted(const FrequencyMap &map, const FrequencyFormat &target,
                                       const WaveAudio &audio);
 

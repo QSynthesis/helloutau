@@ -1627,7 +1627,8 @@ namespace hello::daw {
 
         // Returns the audio files of the voice bank, those of the folders not read included,
         // each with whether it has a map of format, whether it has each analysis cache of
-        // format, and whether it is selected, as the File of a dialog of the maps holds them
+        // format, and whether it is selected, as GenerateFrequencyMapsDialog::File and
+        // RemoveFrequencyMapsDialog::File hold them
         template <class File>
         QList<File> mapListingOf(const kit::FrequencyFormat &format) const {
             const auto selected = selectedAudioPaths();

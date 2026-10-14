@@ -24,15 +24,15 @@ namespace hello::daw {
 
     /// A dialog in which the user checks the audio files whose frequency maps are converted, and
     /// chooses the format from which the maps are converted and the format into which they are
-    /// converted. The files are listed on the left with a column for each format, which shows
+    /// converted. The files are listed on the left, one column for each format, each showing
     /// whether the file has a map of that format. The formats are chosen on the right, beyond a
     /// splitter. The target formats are the formats that write maps.
     ///
     /// The selected files are checked initially. If none is selected, the files with a map of the
-    /// source format are checked again whenever the source format changes. A tri-state box checks
-    /// or unchecks every file, and a button checks exactly the files with a map of the source
-    /// format. The OK button is enabled if a file is checked and the two formats differ. The
-    /// dialog changes no file.
+    /// source format are checked initially, and again whenever the source format changes. A
+    /// tri-state box checks or unchecks every file, and a button checks exactly the files with a
+    /// map of the source format. The OK button is enabled if a file is checked and the two formats
+    /// differ. The dialog changes no file.
     class HELLOUTAU_EDITOR_EXPORT ConvertFrequencyMapsDialog : public QDialog {
         Q_OBJECT
     public:
@@ -47,10 +47,11 @@ namespace hello::daw {
             bool selected = false;
         };
 
-        /// Creates the dialog for \a files of the voice bank at \a root, whose paths are shown
-        /// relative to \a root, and for the formats \a formats, with \a source as the initial
-        /// source format. The initial target format is the first format of \a formats that writes
-        /// maps and differs from \a source.
+        /// Creates the dialog for \a files of the voice bank at \a root and for the formats
+        /// \a formats, with \a source as the initial source format. The initial target format is
+        /// the first format of \a formats that writes maps and differs from \a source. The paths
+        /// of the files are shown relative to \a root, or whole if they have no path relative to
+        /// \a root, as on another drive.
         ConvertFrequencyMapsDialog(QList<File> files, const std::filesystem::path &root,
                                    const QList<kit::FrequencyFormat *> &formats,
                                    const kit::FrequencyFormat *source, QWidget *parent = nullptr);

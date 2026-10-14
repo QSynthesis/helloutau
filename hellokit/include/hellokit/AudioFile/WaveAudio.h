@@ -18,8 +18,8 @@ namespace hello::kit {
     /// The audio of a WAVE file, as floating-point samples.
     ///
     /// The formats read are integer PCM of 8, 16, 24 and 32 bits, IEEE floating point of 32 and
-    /// 64 bits, and either as the subformat of \c WAVE_FORMAT_EXTENSIBLE, as the Microsoft
-    /// documentation of the WAVE format defines them
+    /// 64 bits, each either as the format tag or as the subformat of \c WAVE_FORMAT_EXTENSIBLE,
+    /// as the Microsoft documentation of the WAVE format defines them
     /// (https://learn.microsoft.com/en-us/windows/win32/multimedia/waveformatex and
     /// https://learn.microsoft.com/en-us/windows/win32/api/mmreg/ns-mmreg-waveformatextensible).
     /// The wavtool writes 16-bit PCM at 44100 Hz, and other synth tools and the recordings of
@@ -53,8 +53,8 @@ namespace hello::kit {
         /// The duration in milliseconds.
         double duration() const;
 
-        /// Returns the audio converted to the sample rate \a sampleRate, which must be positive,
-        /// as the static overload converts the samples. The other members are kept.
+        /// Returns the audio converted to the sample rate \a sampleRate, which must be positive.
+        /// The samples are converted as by the static overload, and the other members are kept.
         WaveAudio resampled(int sampleRate) const;
 
         /// Converts \a samples, interleaved by \a channels, from \a sourceRate to \a targetRate

@@ -62,7 +62,7 @@ private Q_SLOTS:
     }
 
     // Each analysis cache has a column after the column of the map, named by the cache, which
-    // shows the presence of the cache as the column of the map shows that of the map.
+    // shows the presence of the cache as the column of the map shows the presence of the map.
     void each_cache_has_a_column() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "dio",
                                            {QStringLiteral("STAR"), QStringLiteral("PLATINUM")},

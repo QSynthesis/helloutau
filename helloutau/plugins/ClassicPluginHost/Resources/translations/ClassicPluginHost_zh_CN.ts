@@ -263,7 +263,7 @@
     </message>
     <message>
         <source>Some plugins play their notes through the program playinplugin.exe in their folder. The preview program of HelloUtau replaces it, so that the notes are rendered and played in HelloUtau. The original program is kept, and still runs if UTAU runs the plugin.</source>
-        <translation>某些插件通过其文件夹中的程序 playinplugin.exe 试听音符。HelloUtau 的试听程序替换该程序，使音符在 HelloUtau 中渲染与播放。原有的程序予以保留，由 UTAU 运行插件时仍使用它。</translation>
+        <translation>某些插件通过其文件夹中的程序 playinplugin.exe 试听音符。HelloUtau 的试听程序替换该程序，使音符在 HelloUtau 中渲染与播放。原有的程序予以保留，UTAU 运行插件时仍使用它。</translation>
     </message>
     <message>
         <source>Open</source>
@@ -295,7 +295,7 @@
     </message>
     <message>
         <source>Installs the preview program in the plugins whose folder has a playinplugin.exe, and updates the older versions.</source>
-        <translation>在文件夹中有 playinplugin.exe 的插件中安装试听程序，并更新版本较旧的试听程序。</translation>
+        <translation>为文件夹中有 playinplugin.exe 的插件安装试听程序，并更新版本较旧的试听程序。</translation>
     </message>
     <message>
         <source>Remove All</source>

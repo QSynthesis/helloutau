@@ -22,9 +22,9 @@ namespace hello::daw {
     ///
     /// The pipe is named after the process of the plugin, which hello-plugin-play finds in its
     /// job object. Each request is one line of JSON. A request whose input file does not match
-    /// the selection of the run is rejected. For another request, the result of the plugin is
-    /// applied to a copy of the project, and requested() is emitted with the copy. The receiver
-    /// renders it and calls reply(). One request is handled at a time.
+    /// the selection of the run is rejected. For a request that matches the run, the result of
+    /// the plugin is applied to a copy of the project, and requested() is emitted with the copy.
+    /// The receiver renders it and calls reply(). One request is handled at a time.
     class CLASSICPLUGINHOST_EXPORT ClassicPluginPreviewServer : public QObject {
         Q_OBJECT
     public:

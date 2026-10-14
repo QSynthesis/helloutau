@@ -145,8 +145,8 @@ namespace hello::daw {
             return true;
         }
 
-        // Returns the synth tools of the project if both exist and may run, as the window plays
-        // with them, or std::nullopt with the reason in message.
+        // Returns the synth tools of the project, those with which the window plays, if both
+        // exist and may run, or std::nullopt with the reason in message.
         std::optional<kit::SynthTools> synthTools(const kit::Project &project,
                                                   QString *message) const {
             const auto &settings = window->editor()->settings();
@@ -217,8 +217,8 @@ namespace hello::daw {
                              [this, request] { finish(request, Server::Done); });
             QObject::connect(playback, &Playback::failed, context,
                              [this, request] { finish(request, Server::Failed); });
-            // A render stopped from the status bar ends without either signal. The check
-            // follows them, which may arrive after the change of the state.
+            // A render stopped from the status bar ends without trackRendered() or failed(). The
+            // check comes after those signals, which may arrive after the change of the state.
             QObject::connect(playback, &Playback::stateChanged, context,
                              [this, request, context](Playback::State state) {
                                  if (state == Playback::Stopped) {

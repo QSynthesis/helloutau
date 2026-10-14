@@ -130,7 +130,7 @@ namespace hello::daw {
                 return std::nullopt;
             }
 
-            // The input file is the temporary file of the run, or a copy of it as PitTrace
+            // The input file is the temporary file of the run, or a copy of it that PitTrace
             // makes, and its notes are those passed to the plugin.
             QFile in(input);
             if (!in.open(QIODevice::ReadOnly)) {

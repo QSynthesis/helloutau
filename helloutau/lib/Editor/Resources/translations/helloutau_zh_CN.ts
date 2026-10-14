@@ -755,7 +755,7 @@
     </message>
     <message>
         <source>Check Files with Source &amp;Maps</source>
-        <translation>勾选有源格式频率表的项(&amp;M)</translation>
+        <translation>勾选具有源格式频率表的项(&amp;M)</translation>
     </message>
     <message>
         <source>An audio file without a map of the source format is skipped. The maps of the target format are replaced, and their analysis caches are removed.</source>
@@ -2367,7 +2367,7 @@
     </message>
     <message>
         <source>The frequency maps of the format %1 and their analysis caches are deleted for the checked audio files.</source>
-        <translation>删除勾选的音频文件的格式 %1 的频率表及其分析缓存。</translation>
+        <translation>删除勾选的音频文件中格式 %1 的频率表及其分析缓存。</translation>
     </message>
     <message>
         <source>File</source>
@@ -3949,7 +3949,7 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     </message>
     <message>
         <source>No audio file has a frequency map of the format %1.</source>
-        <translation>没有音频文件具有 %1 格式的频率表。</translation>
+        <translation>没有音频文件拥有格式 %1 的频率表。</translation>
     </message>
     <message numerus="yes">
         <source>%n frequency map(s) were converted.</source>
