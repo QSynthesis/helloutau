@@ -152,7 +152,7 @@ moresampler 等重采样器把从 wav 分析出的结果保存为缓存，其中
 - 生成日志（作者 2026-10-13 决定）：生成时重采样器的输出写入音源窗口的日志（`VoiceBankWindow::frequencyMapLog()`，由生成器的 `SynthToolProcess` 写入），以「工具 > 查看频率表日志」查看，对话框与工程窗口的渲染日志共用（`OutputLogDialog`）。复选框「沿用渲染日志的设置」默认选中，此时保留方式与大小取「音频渲染」页的渲染日志设置，取消后使用本页自己的保留方式与大小（`FrequencyMapSettings::followsRenderLog()` 等）。设置在每次生成开始时套用，「仅保留最近一次运行」因此在每次生成的第一条输出时清空旧内容。
 - 重新生成时：「删除频率表及其分析缓存」（默认）或「只删除分析缓存，保留频率表」。后者删除缓存后对每个 wav 都运行重采样器（`FrequencyMapGenerator::everyFile`），由重采样器按频率表重建缓存。没有缓存的格式照常删除频率表。
 - 分析缓存：每个缓存一行，列出格式、`a.wav` 的频率表文件（`FrequencyFormat::mapFileNameOf()`，默认为附属文件，mrq 为 `desc.mrq`）、缓存名与缓存文件，格式与频率表文件只写在该格式的第一行，没有缓存的格式占一行，插件登记的格式同样列出。各列的宽度可以拖动调整（作者 2026-10-13 要求）。格式名中的重采样器不带 `.exe`。
-- 保存频率表时自动删除缓存：待频率表编辑实现时加入，接口已有（`FrequencyFormats::writeMaps()` 的 `invalidatingCaches`）。
+- 保存频率表时自动删除缓存：默认删除，用户可以改为不删（作者 2026-10-14 决定），待频率表编辑实现时加入，接口已有（`FrequencyFormats::writeMaps()` 的 `invalidatingCaches`）。只删除所写格式声明的缓存，与 qfrqeditor 的 `SampleList::save()` 相同，写 `.frq` 不删 `.llsm`。不删时修改不生效：实测（2026-10-14，`.cache/claude/tools/work/moresampler_edited_mrq_probe.py`，打开 `resampler-compatibility`）把条目的基频全部乘以 1.5 后保留 `.llsm` 渲染，`.llsm` 不变，删除 `.llsm` 后才按新基频重建。对照中不改基频重建两次，`.llsm` 相同，因此重建是确定的。合成的音频不能用来比较，同一个 `.llsm` 渲染两次的结果也不同。
 - 音源窗口条目表的缓存（作者 2026-10-13 提出，以后再做）：条目表的行数很多，缓存不宜像设置页一样每个一行，而是在「频率表」列之后每个缓存一列，接口须相应调整。
 
 ## 并发生成与共用的频率表文件
