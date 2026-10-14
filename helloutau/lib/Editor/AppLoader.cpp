@@ -157,14 +157,23 @@ namespace hello::daw {
     }
 
     void AppLoader::addQtPluginPaths() {
+        // TODO: Support the macOS bundle, which has not been built or tested:
+        // - HELLOUTAU_BUILTIN_PLUGINS_PATH is ../Plugins in a bundle, so the path computed by
+        //   qtPluginPaths() is outside Contents, does not exist, and nothing is added.
+        // - Qt itself searches Contents/PlugIns of the main bundle. The bundle layout of qmsetup
+        //   uses Contents/Plugins, which equals Contents/PlugIns only on a case-insensitive file
+        //   system.
+        // - The location of the Qt plugins in the bundle is not yet decided.
+
         // The directory of the program from the system, known before the application object
         const auto directory =
             QString::fromStdU16String(stdc::system::application_directory().u16string());
         if (directory.isEmpty()) {
             return;
         }
-        // addLibraryPath() prepends, so the paths are added from the last to the first. Qt keeps
-        // the paths added before the application object, ahead of those it computes then.
+        // addLibraryPath() prepends, so the paths are added from the last to the first. Qt places
+        // the paths added before the application object ahead of the paths computed at its
+        // creation.
         const auto paths = qtPluginPaths(directory);
         for (auto it = paths.crbegin(); it != paths.crend(); ++it) {
             QCoreApplication::addLibraryPath(*it);
