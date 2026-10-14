@@ -81,7 +81,7 @@
     </message>
     <message>
         <source>desc.mrq has no entry for the audio file, and moresampler does not write the entry while this file exists.</source>
-        <translation>desc.mrq 中没有该音频文件的条目，此文件存在期间 moresampler 不会写入该条目。</translation>
+        <translation>desc.mrq 中没有该音频文件的条目，该音频文件存在期间 moresampler 不会写入该条目。</translation>
     </message>
     <message>
         <source>The sample rate of the audio file is unknown.</source>

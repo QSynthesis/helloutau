@@ -200,8 +200,8 @@ namespace hello::daw {
         return QList<FileChange>{FileChange::rewritten("desc.mrq", *bytes)};
     }
 
-    // The entry count falls short of the entries if another process locks the count while
-    // moresampler appends an entry, measured with moresampler 0.8.4 on 2026-10-14
+    // The entry count falls short of the number of complete entries if another process locks the
+    // count while moresampler appends an entry, measured with moresampler 0.8.4 on 2026-10-14
     // (docs/FrequencyMaps.md). An LLSM file without an entry remains if desc.mrq cannot be opened
     // while moresampler analyzes the audio file, measured on the same day.
     QList<kit::FrequencyFormat::MapFileDamage>

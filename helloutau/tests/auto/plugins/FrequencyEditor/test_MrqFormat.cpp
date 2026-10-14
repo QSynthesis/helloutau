@@ -336,7 +336,8 @@ private Q_SLOTS:
         const auto directory = pathOf("s");
         QByteArray bytes("mrq ");
         bytes += bytesOf<qint32>(2) + bytesOf<qint32>(2);
-        bytes += mrqEntry(QStringLiteral("a.wav"), {1.0f}) + mrqEntry(QStringLiteral("b.wav"), {2.0f});
+        bytes +=
+            mrqEntry(QStringLiteral("a.wav"), {1.0f}) + mrqEntry(QStringLiteral("b.wav"), {2.0f});
         write(directory / "desc.mrq", bytes);
         write(directory / "a.wav.llsm", "llsm");
         QVERIFY(MrqFormat().checkMapFiles(directory, {"a.wav", "b.wav"}).isEmpty());
@@ -423,8 +424,8 @@ private Q_SLOTS:
         QCOMPARE(changes->at(0).contents, repaired);
     }
 
-    // The LLSM file of an audio file without an entry is reported, also without desc.mrq, and it
-    // is not repairable. A desc.mrq without a header is not repairable either.
+    // The LLSM file of an audio file without an entry is reported, also if desc.mrq does not
+    // exist, and it is not repairable. A desc.mrq without a header is not repairable either.
     void an_llsm_file_without_an_entry_is_reported() {
         QDir(m_dir.path()).mkdir(QStringLiteral("l"));
         const auto directory = pathOf("l");
@@ -436,7 +437,8 @@ private Q_SLOTS:
         QVERIFY(!damages.at(0).repairable);
 
         QByteArray bytes("mrq ");
-        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(1) + mrqEntry(QStringLiteral("A.WAV"), {1.0f});
+        bytes +=
+            bytesOf<qint32>(2) + bytesOf<qint32>(1) + mrqEntry(QStringLiteral("A.WAV"), {1.0f});
         write(directory / "desc.mrq", bytes);
         write(directory / "b.wav.llsm", "llsm");
         damages = mrq.checkMapFiles(directory, {"a.wav", "b.wav"});

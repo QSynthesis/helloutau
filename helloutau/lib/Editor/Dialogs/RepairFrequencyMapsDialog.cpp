@@ -44,11 +44,11 @@ namespace hello::daw {
             font.setBold(true);
             title->setFont(font);
             auto action = new QLabel(
-                maps ? tr("A checked file is repaired in place if it is repairable, and the "
+                maps ? tr("A checked file is repaired in place if it is repairable and the "
                           "resampler generates the maps that the repair drops again. Another "
                           "checked file is removed with the analysis caches of its audio files, "
                           "and the resampler generates them again.")
-                     : tr("A checked file is removed, and the resampler generates it again."));
+                     : tr("A checked file is removed and the resampler generates it again."));
             action->setWordWrap(true);
 
             auto list = new QListWidget();
@@ -65,15 +65,16 @@ namespace hello::daw {
                         text += QLatin1Char('\n') + tr("The file does not exist.");
                         item->setFlags(Qt::NoItemFlags);
                     } else if (file.damage) {
-                        text += QLatin1Char('\n') + file.damage->description + QLatin1Char(' ') +
-                                (file.damage->repairable ? tr("It is repaired in place.")
-                                                         : tr("It is removed and generated again."));
+                        text +=
+                            QLatin1Char('\n') + file.damage->description + QLatin1Char(' ') +
+                            (file.damage->repairable ? tr("It is repaired in place.")
+                                                     : tr("It is removed and generated again."));
                         item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsUserCheckable);
                         item->setCheckState(Qt::Checked);
                     } else if (file.wavs.size() > 1) {
-                        // An undamaged file of several audio files is not offered, because its
-                        // removal generates all of their maps again, as the regeneration of all
-                        // maps does.
+                        // An undamaged file that holds the maps of several audio files is not
+                        // offered, because its removal generates all of their maps again, as the
+                        // regeneration of all maps does.
                         text += QLatin1Char('\n') + tr("No damage was detected.");
                         item->setFlags(Qt::NoItemFlags);
                     } else {

@@ -1651,7 +1651,7 @@ private:
         return bank;
     }
 
-    // Returns a frq without frames that the format of resampler.exe reads.
+    // Returns a frq that the format of resampler.exe reads, without frames.
     static QByteArray completeFrq() {
         return QByteArray("FREQ0003") + QByteArray("\x00\x01\x00\x00", 4) + QByteArray(28, '\0');
     }

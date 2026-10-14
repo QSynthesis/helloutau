@@ -260,9 +260,9 @@ private Q_SLOTS:
         FrequencyFormats formats;
         const BuiltinFrequencyFormats builtins(formats.registry());
         const QList<FrequencyFormat::AudioRename> renames{
-            {"a.wav",            fs::path(u"あ.wav")},
+            {"a.wav",             fs::path(u"あ.wav")},
             {fs::path(u"偁.wav"), "b.wav"            },
-            {"c.wav",            "d.wav"            },
+            {"c.wav",             "d.wav"            },
         };
 
         DiagnosticList diagnostics;
@@ -549,7 +549,7 @@ private Q_SLOTS:
         bytes += bytesOf(220.0) + bytesOf(22.0);
         write(directory / "a_wav.frq", bytes);
         write(directory / "b_wav.frq", bytes.left(bytes.size() - 1));
-        // Complete apart from the header
+        // The file is complete apart from the header
         write(directory / "d_wav.frq", QByteArray("FREQ0002") + bytes.mid(8));
         FrequencyFormats formats;
         const BuiltinFrequencyFormats builtins(formats.registry());
@@ -616,7 +616,7 @@ private Q_SLOTS:
     }
 
     // A repairable file is repaired in place. Another map is removed with the caches of its audio
-    // file, and a cache alone, and the audio files of the removed files are returned.
+    // file, and a cache is removed alone, and the audio files of the removed files are returned.
     void the_damaged_files_are_repaired_or_removed() {
         QDir(m_dir.path()).mkdir(QStringLiteral("p"));
         const auto directory = pathOf("p");

@@ -45,9 +45,9 @@ namespace hello::daw {
             PreUtteranceColumn,
             OverlapColumn,
             FrequencyMapColumn, ///< Whether the audio file has a map of frequencyFormat()
-            /// The first column of the analysis caches of frequencyFormat(), one column for each
-            /// cache in the order of FrequencyFormat::analysisCaches(), each showing whether the
-            /// audio file has the cache file
+            /// The first column of the analysis caches of frequencyFormat(), one for each cache in
+            /// the order of FrequencyFormat::analysisCaches(), each showing whether the audio file
+            /// has the cache file
             CacheColumn,
         };
 
@@ -84,8 +84,8 @@ namespace hello::daw {
         /// The format whose maps FrequencyMapColumn shows and whose analysis caches the columns
         /// from CacheColumn show, or null for none, in which case FrequencyMapColumn is empty and
         /// the table has no cache columns. The maps and caches of a folder are queried at once
-        /// when its rows are built, and kept until refreshFrequencyMaps() or another format.
-        /// Another format with another number of caches inserts or removes cache columns.
+        /// when its rows are built, and kept until refreshFrequencyMaps() or a change of the
+        /// format. Another format with another number of caches inserts or removes cache columns.
         const kit::FrequencyFormat *frequencyFormat() const;
         void setFrequencyFormat(const kit::FrequencyFormat *format);
 

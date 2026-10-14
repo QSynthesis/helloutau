@@ -21,8 +21,8 @@ namespace hello::daw {
     /// folders of a voice bank, one column for the files that hold maps and one column for each
     /// cache, so that the user checks the files to repair. The action on a checked file is shown
     /// above each column and beside each damaged file. A damaged file is checked at first. A file
-    /// that holds the maps of several audio files can be checked only if damaged, and is listed as
-    /// missing if it does not exist. See the repair in docs/FrequencyMaps.md.
+    /// that holds the maps of several audio files can be checked only if damaged. A missing file
+    /// is listed with a note that it does not exist. See the repair in docs/FrequencyMaps.md.
     class HELLOUTAU_EDITOR_EXPORT RepairFrequencyMapsDialog : public QDialog {
         Q_OBJECT
     public:

@@ -48,16 +48,21 @@ class test_RepairFrequencyMapsDialog : public QObject {
 
 private Q_SLOTS:
     // A damaged file is checked. An undamaged file that holds the maps of several audio files
-    // cannot be checked, nor can a missing file, and another undamaged file can be checked and
-    // is not. The checked files
-    // are returned by folder, and the repair requires a checked file.
+    // cannot be checked, nor can a missing file, and an undamaged file of a single audio file is
+    // checkable but not checked. The checked files are returned by folder, and the repair
+    // requires a checked file.
     void the_damaged_files_are_checked() {
         const fs::path root("C:/bank");
         RepairFrequencyMapsDialog::Files files;
         files[root] = {
-            {"desc.map",    -1, {"a.wav", "b.wav"}, kit::FrequencyFormat::MapFileDamage{"desc.map", QStringLiteral("cut"), true}       },
-            {"a.wav.cache", 0,  {"a.wav"},          kit::FrequencyFormat::MapFileDamage{"a.wav.cache", QStringLiteral("orphan"), false}},
-            {"b.wav.cache", 0,  {"b.wav"},          std::nullopt                                                                       },
+            {"desc.map",
+             -1,
+             {"a.wav", "b.wav"},
+             kit::FrequencyFormat::MapFileDamage{"desc.map", QStringLiteral("cut"), true}       },
+            {"a.wav.cache",
+             0,                {"a.wav"},
+             kit::FrequencyFormat::MapFileDamage{"a.wav.cache", QStringLiteral("orphan"), false}},
+            {"b.wav.cache", 0, {"b.wav"}, std::nullopt                                          },
         };
         files[root / "sub"] = {
             {"desc.map", -1, {"c.wav", "d.wav"}, std::nullopt},
@@ -80,8 +85,8 @@ private Q_SLOTS:
         QVERIFY(!checkable(maps->item(2)));
         QVERIFY(maps->item(2)->text().contains(QStringLiteral("two")));
         QVERIFY(maps->item(2)->text().contains(QLatin1Char('\n')));
-        QVERIFY(maps->item(2)->text() != maps->item(1)->text().replace(QStringLiteral("sub"),
-                                                                        QStringLiteral("two")));
+        QVERIFY(maps->item(2)->text() !=
+                maps->item(1)->text().replace(QStringLiteral("sub"), QStringLiteral("two")));
 
         const auto caches = dialog.list(1);
         QCOMPARE(caches->count(), 2);

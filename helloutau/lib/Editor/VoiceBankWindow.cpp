@@ -1562,7 +1562,6 @@ namespace hello::daw {
             return audio;
         }
 
-        // The files that a generation writes
         enum Generation {
             MapsOnly,      // The missing maps
             CachesOnly,    // The analysis caches of every audio file
@@ -1570,8 +1569,8 @@ namespace hello::daw {
         };
 
         // Generates the files of generation for wavs in a progress dialog that cancels the
-        // generation, and shows the map of the current row again. Returns whether every map was
-        // generated.
+        // generation, and shows the map of the current row again. Returns whether the run
+        // completed without a cancel and without a diagnostic.
         bool generate(const QString &title, const kit::FrequencyFormat &format,
                       const std::filesystem::path &resampler,
                       const QList<std::filesystem::path> &wavs, Generation generation) {

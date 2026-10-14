@@ -81,7 +81,7 @@ namespace hello::daw {
             QList<bool> caches;
         };
 
-        // Whether an audio file has a map of format, and each cache of caches
+        // Whether an audio file has a map of format, and each cache of the format
         struct Analysis {
             bool map = false;
             QList<bool> caches;
@@ -190,8 +190,8 @@ namespace hello::daw {
             // through an edit of a cell or a value.
             if (built.size() == rows.size() && !rows.isEmpty()) {
                 rows = std::move(built);
-                Q_EMIT decl.dataChanged(decl.index(0, 0), decl.index(int(rows.size()) - 1,
-                                                                     decl.columnCount() - 1));
+                Q_EMIT decl.dataChanged(decl.index(0, 0),
+                                        decl.index(int(rows.size()) - 1, decl.columnCount() - 1));
                 return;
             }
             decl.beginResetModel();
@@ -304,7 +304,8 @@ namespace hello::daw {
         }
         // The cache columns are inserted or removed rather than the model reset, which keeps the
         // selection of a view.
-        const auto caches = format ? format->analysisCaches() : QList<kit::FrequencyFormat::AnalysisCache>();
+        const auto caches =
+            format ? format->analysisCaches() : QList<kit::FrequencyFormat::AnalysisCache>();
         const auto before = int(impl.caches.size());
         const auto after = int(caches.size());
         if (after < before) {

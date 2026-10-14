@@ -51,9 +51,10 @@ namespace hello::daw {
                             const QList<std::filesystem::path> &wavs,
                             kit::DiagnosticList &diagnostics) const override;
 
-        /// Reports \c desc.mrq as repairable if its entry count differs from its complete entries
-        /// or bytes follow the last complete entry. Reports the LLSM file of an audio file
-        /// without an entry, since moresampler does not write the entry while the file exists.
+        /// Reports \c desc.mrq as repairable if its entry count differs from the number of its
+        /// complete entries, or bytes follow the last complete entry. Reports the LLSM file of an
+        /// audio file without an entry, since moresampler does not write the entry while the file
+        /// exists.
         QList<MapFileDamage> checkMapFiles(const std::filesystem::path &directory,
                                            const QList<std::filesystem::path> &wavs) const override;
 

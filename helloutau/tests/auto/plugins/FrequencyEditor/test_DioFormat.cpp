@@ -209,7 +209,7 @@ private Q_SLOTS:
         write(directory / "a.dio", bytes);
         write(directory / "b.dio", bytes.chopped(1));
         write(directory / "c.dio", "wrld-di");
-        // Complete apart from the header
+        // The file is complete apart from the header
         write(directory / "f.dio", QByteArray("wrld-frq") + bytes.mid(8));
         const auto damages =
             DioFormat().checkMapFiles(directory, {"a.wav", "b.wav", "c.wav", "e.wav", "f.wav"});
