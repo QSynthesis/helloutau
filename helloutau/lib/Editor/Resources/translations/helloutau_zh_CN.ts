@@ -1066,7 +1066,7 @@
     </message>
     <message>
         <source>Check &amp;Missing</source>
-        <translation>勾选缺失的(&amp;M)</translation>
+        <translation>勾选缺失的项(&amp;M)</translation>
     </message>
     <message numerus="yes">
         <source>%n missing frequency map(s) will be generated.</source>
@@ -1851,7 +1851,7 @@
     </message>
     <message>
         <source>Check Files to &amp;Process</source>
-        <translation>勾选需要处理的(&amp;P)</translation>
+        <translation>勾选需要处理的项(&amp;P)</translation>
     </message>
     <message>
         <source>&amp;Remove the frequency maps and analysis caches of the processed files</source>
