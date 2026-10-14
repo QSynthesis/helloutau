@@ -62,6 +62,24 @@
         <translation>「%1」中没有「%2」的条目。</translation>
     </message>
     <message>
+        <source>desc.mrq has no valid header.</source>
+        <translation>desc.mrq 没有有效的文件头。</translation>
+    </message>
+    <message>
+        <source>The header records %1 entries, and the file has %2 complete entries.</source>
+        <translation>文件头记有 %1 个条目，文件中有 %2 个完整的条目。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n byte(s) at the end belong to no complete entry.</source>
+        <translation>
+            <numerusform>末尾有 %n 个字节不属于任何完整的条目。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>desc.mrq has no entry for the audio file, and moresampler does not write the entry while this file exists.</source>
+        <translation>desc.mrq 中没有该音频文件的条目，此文件存在期间 moresampler 不会写入该条目。</translation>
+    </message>
+    <message>
         <source>The sample rate of the audio file is unknown.</source>
         <translation>音频文件的采样率未知。</translation>
     </message>

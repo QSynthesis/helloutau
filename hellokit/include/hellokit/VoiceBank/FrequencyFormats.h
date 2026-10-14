@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 
 #include <QtCore/QList>
 #include <QtCore/QObject>
@@ -33,6 +34,21 @@ namespace hello::kit {
     class HELLOKIT_VOICEBANK_EXPORT FrequencyFormats : public QObject {
         Q_OBJECT
     public:
+        /// A file of the maps or the analysis caches of audio files in a directory.
+        struct MapFile {
+            /// The name of the file in the directory
+            std::filesystem::path path;
+            /// The index of the cache of the file in FrequencyFormat::analysisCaches(), or -1 for
+            /// a file that holds maps
+            int cache = -1;
+            /// The audio files whose maps or caches the file holds, names in the directory
+            QList<std::filesystem::path> wavs;
+            /// The damage that FrequencyFormat::checkMapFiles() detects
+            std::optional<FrequencyFormat::MapFileDamage> damage;
+            /// Whether the file exists
+            bool exists = true;
+        };
+
         explicit FrequencyFormats(QObject *parent = nullptr);
         ~FrequencyFormats();
 
@@ -85,6 +101,30 @@ namespace hello::kit {
                                      const std::filesystem::path &directory,
                                      const QList<std::filesystem::path> &wavs,
                                      DiagnosticList &diagnostics);
+
+        /// Returns the files of the maps and the analysis caches of \a format of the audio files
+        /// \a wavs, names in the directory \a directory, with the damages that
+        /// FrequencyFormat::checkMapFiles() detects. The files that hold maps come first in the
+        /// order of \a wavs, and the cache files follow by cache. A missing file is listed only if
+        /// it is to hold the maps of several audio files, such as \c desc.mrq, and is no sidecar
+        /// file of one audio file.
+        static QList<MapFile> mapFilesOf(const FrequencyFormat &format,
+                                         const std::filesystem::path &directory,
+                                         const QList<std::filesystem::path> &wavs);
+
+        /// Repairs the files \a files of mapFilesOf() in the directory \a directory. A file with
+        /// a repairable damage is repaired in place, and another file is removed. A removed file
+        /// that holds maps is removed together with the analysis caches of its audio files, so
+        /// that the resampler writes the maps again. A missing file is skipped. Failures are
+        /// reported as removeMaps() reports them.
+        ///
+        /// \return the audio files whose maps or caches the resampler is to write again, names in
+        ///         the directory: the audio files of the removed files, and the audio files of a
+        ///         repaired file that have no map after the repair
+        static QList<std::filesystem::path> repairMapFiles(const FrequencyFormat &format,
+                                                           const std::filesystem::path &directory,
+                                                           const QList<MapFile> &files,
+                                                           DiagnosticList &diagnostics);
 
     Q_SIGNALS:
         /// Emitted after a format was registered or unregistered.

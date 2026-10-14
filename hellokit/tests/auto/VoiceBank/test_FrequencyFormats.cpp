@@ -86,6 +86,38 @@ namespace {
         }
     };
 
+    // A format of Cached whose check reports damages, and whose repair writes "repaired", or
+    // removes the map if dropping, as a repair drops a map that is cut short
+    class Damaged : public Cached {
+    public:
+        QList<MapFileDamage> damages;
+        bool dropping = false;
+
+        QList<MapFileDamage> checkMapFiles(const fs::path &,
+                                           const QList<fs::path> &) const override {
+            return damages;
+        }
+
+        std::optional<QList<FileChange>> changesRepairing(const fs::path &, const fs::path &path,
+                                                          DiagnosticList &) const override {
+            return QList<FileChange>{dropping ? FileChange::removed(path)
+                                              : FileChange::rewritten(path, "repaired")};
+        }
+    };
+
+    // A format of Cached whose maps of a directory are in shared.map
+    class Shared : public Cached {
+    public:
+        std::optional<fs::path> mapFileNameOf(const fs::path &) const override {
+            return fs::path("shared.map");
+        }
+    };
+
+    QByteArray contentsOf(const fs::path &path) {
+        QFile file(QString::fromStdU16String(path.u16string()));
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    }
+
     FrequencyFormatRegistry::AddFactory registration(FrequencyFormats &formats, const char *id,
                                                      QStringList patterns = {}) {
         return FrequencyFormatRegistry::AddFactory(formats.registry(), id, {}, [id, patterns] {
@@ -505,6 +537,127 @@ private Q_SLOTS:
         },
                                              false, diagnostics));
         QCOMPARE(diagnostics.size(), 2);
+    }
+
+    // A frq that read() rejects is damaged, cannot be repaired, and is reported regardless of the
+    // sample rate. A complete frq and an audio file without a frq are not reported.
+    void a_damaged_frq_is_reported() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("d"));
+        const auto directory = pathOf("d");
+        QByteArray bytes("FREQ0003");
+        bytes += bytesOf<qint32>(256) + bytesOf(220.5) + QByteArray(16, '\0') + bytesOf<qint32>(1);
+        bytes += bytesOf(220.0) + bytesOf(22.0);
+        write(directory / "a_wav.frq", bytes);
+        write(directory / "b_wav.frq", bytes.left(bytes.size() - 1));
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto damages = formats.format(QStringLiteral("frq"))
+                                 ->checkMapFiles(directory, {"a.wav", "b.wav", "c.wav"});
+        QCOMPARE(damages.size(), 1);
+        QCOMPARE(damages.at(0).path, fs::path("b_wav.frq"));
+        QVERIFY(!damages.at(0).repairable);
+        QVERIFY(!damages.at(0).description.isEmpty());
+    }
+
+    // The existing maps come first, a shared file once with all of its audio files, and the
+    // caches follow by cache. A damage is attached to its file. A missing shared file is listed,
+    // and a missing sidecar file is not.
+    void the_map_files_are_listed_with_their_damages() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("l"));
+        const auto directory = pathOf("l");
+        for (const auto name : {"a.map", "b.map", "a.env", "b.env", "b.wav.cache"}) {
+            write(directory / name, "x");
+        }
+        Damaged format;
+        format.damages = {
+            {"a.map",       QStringLiteral("cut"),    true },
+            {"b.wav.cache", QStringLiteral("orphan"), false},
+        };
+        // c.wav has no map, and its missing sidecar file is not listed.
+        const auto files =
+            FrequencyFormats::mapFilesOf(format, directory, {"a.wav", "b.wav", "c.wav"});
+        QCOMPARE(files.size(), 5);
+        QVERIFY(files.at(0).exists);
+        QCOMPARE(files.at(0).path, fs::path("a.map"));
+        QCOMPARE(files.at(0).cache, -1);
+        QCOMPARE(files.at(0).wavs, QList<fs::path>{"a.wav"});
+        QVERIFY(files.at(0).damage);
+        QVERIFY(files.at(0).damage->repairable);
+        QCOMPARE(files.at(1).path, fs::path("b.map"));
+        QVERIFY(!files.at(1).damage);
+        QCOMPARE(files.at(2).path, fs::path("a.env"));
+        QCOMPARE(files.at(2).cache, 0);
+        QCOMPARE(files.at(3).path, fs::path("b.env"));
+        QCOMPARE(files.at(4).path, fs::path("b.wav.cache"));
+        QCOMPARE(files.at(4).cache, 1);
+        QCOMPARE(files.at(4).wavs, QList<fs::path>{"b.wav"});
+        QCOMPARE(files.at(4).damage->description, QStringLiteral("orphan"));
+
+        // A missing file of several audio files is listed, and the repair skips it.
+        const auto missing = FrequencyFormats::mapFilesOf(Shared(), directory, {"a.wav", "b.wav"});
+        QCOMPARE(missing.at(0).path, fs::path("shared.map"));
+        QVERIFY(!missing.at(0).exists);
+        QCOMPARE(missing.at(0).wavs, (QList<fs::path>{"a.wav", "b.wav"}));
+        DiagnosticList diagnostics;
+        QVERIFY(FrequencyFormats::repairMapFiles(Shared(), directory, {missing.at(0)}, diagnostics)
+                    .isEmpty());
+        QVERIFY(fs::exists(directory / "a.env"));
+        QVERIFY(diagnostics.isEmpty());
+
+        write(directory / "shared.map", "x");
+        const auto shared = FrequencyFormats::mapFilesOf(Shared(), directory, {"a.wav", "b.wav"});
+        QCOMPARE(shared.at(0).path, fs::path("shared.map"));
+        QVERIFY(shared.at(0).exists);
+        QCOMPARE(shared.at(0).wavs, (QList<fs::path>{"a.wav", "b.wav"}));
+        QCOMPARE(shared.at(1).cache, 0);
+    }
+
+    // A repairable file is repaired in place. Another map is removed with the caches of its audio
+    // file, and a cache alone, and the audio files of the removed files are returned.
+    void the_damaged_files_are_repaired_or_removed() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("p"));
+        const auto directory = pathOf("p");
+        for (const auto name : {"a.map", "b.map", "a.env", "b.env", "b.wav.cache"}) {
+            write(directory / name, "x");
+        }
+        Damaged format;
+        format.damages = {
+            {"a.map", QStringLiteral("cut"), true},
+        };
+        const auto files = FrequencyFormats::mapFilesOf(format, directory, {"a.wav", "b.wav"});
+        DiagnosticList diagnostics;
+        auto again = FrequencyFormats::repairMapFiles(format, directory, {files.at(0), files.at(1)},
+                                                      diagnostics);
+        QCOMPARE(again, QList<fs::path>{"b.wav"});
+        QCOMPARE(contentsOf(directory / "a.map"), QByteArray("repaired"));
+        QVERIFY(!fs::exists(directory / "b.map"));
+        QVERIFY(!fs::exists(directory / "b.env"));
+        QVERIFY(!fs::exists(directory / "b.wav.cache"));
+        QVERIFY(fs::exists(directory / "a.env"));
+
+        again = FrequencyFormats::repairMapFiles(format, directory, {files.at(2)}, diagnostics);
+        QCOMPARE(again, QList<fs::path>{"a.wav"});
+        QVERIFY(!fs::exists(directory / "a.env"));
+        QCOMPARE(contentsOf(directory / "a.map"), QByteArray("repaired"));
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // An audio file whose map a repair drops is returned, so that the resampler writes its map
+    // again.
+    void the_maps_that_a_repair_drops_are_generated_again() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("q"));
+        const auto directory = pathOf("q");
+        write(directory / "a.map", "x");
+        Damaged format;
+        format.damages = {
+            {"a.map", QStringLiteral("cut"), true},
+        };
+        format.dropping = true;
+        const auto files = FrequencyFormats::mapFilesOf(format, directory, {"a.wav"});
+        DiagnosticList diagnostics;
+        QCOMPARE(FrequencyFormats::repairMapFiles(format, directory, files, diagnostics),
+                 QList<fs::path>{"a.wav"});
+        QVERIFY(diagnostics.isEmpty());
     }
 };
 

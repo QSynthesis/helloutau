@@ -278,6 +278,10 @@
         <translation>删除全部频率表(&amp;D)...</translation>
     </message>
     <message>
+        <source>Re&amp;pair Frequency Maps...</source>
+        <translation>修复频率表(&amp;P)...</translation>
+    </message>
+    <message>
         <source>View Frequency Map &amp;Log...</source>
         <translation>查看频率表日志(&amp;L)...</translation>
     </message>
@@ -2191,6 +2195,65 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::RepairFrequencyMapsDialog</name>
+    <message>
+        <source>Repair Frequency Maps</source>
+        <translation>修复频率表</translation>
+    </message>
+    <message>
+        <source>The voice bank has the following files of the format %1. The damaged files are checked.</source>
+        <translation>音源中有以下格式为 %1 的文件。损坏的文件已勾选。</translation>
+    </message>
+    <message>
+        <source>Frequency Maps</source>
+        <translation>频率表</translation>
+    </message>
+    <message>
+        <source>A checked file is repaired in place if it is repairable, and the resampler generates the maps that the repair drops again. Another checked file is removed with the analysis caches of its audio files, and the resampler generates them again.</source>
+        <translation>勾选的文件可以修复时原地修复，修复中删去的频率表由重采样器重新生成。其余勾选的文件连同其音频文件的分析缓存一起删除，由重采样器重新生成。</translation>
+    </message>
+    <message>
+        <source>A checked file is removed, and the resampler generates it again.</source>
+        <translation>勾选的文件将被删除，由重采样器重新生成。</translation>
+    </message>
+    <message>
+        <source>The file does not exist.</source>
+        <translation>此文件不存在。</translation>
+    </message>
+    <message>
+        <source>It is repaired in place.</source>
+        <translation>将原地修复。</translation>
+    </message>
+    <message>
+        <source>It is removed and generated again.</source>
+        <translation>将删除后重新生成。</translation>
+    </message>
+    <message>
+        <source>No damage was detected.</source>
+        <translation>未检查出损坏。</translation>
+    </message>
+    <message>
+        <source>&amp;Repair</source>
+        <translation>修复(&amp;R)</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) are repaired in place.</source>
+        <translation>
+            <numerusform>%n 个文件将原地修复。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) are removed, and the resampler generates them again.</source>
+        <translation>
+            <numerusform>%n 个文件将被删除，由重采样器重新生成。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No file is checked.</source>
+        <translation>没有勾选任何文件。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::ReplaceLyricsDialog</name>
     <message>
         <source>Replace Lyrics</source>
@@ -3406,13 +3469,19 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>取消</translation>
     </message>
     <message numerus="yes">
-        <source>The analysis caches of %n audio file(s) generated again.</source>
+        <source>The analysis caches of %n audio file(s) were generated again.</source>
         <translation>
             <numerusform>已重新生成 %n 个音频文件的分析缓存。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n frequency map(s) generated.</source>
+        <source>The frequency maps and analysis caches of %n audio file(s) were generated again.</source>
+        <translation>
+            <numerusform>已重新生成 %n 个音频文件的频率表与分析缓存。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n frequency map(s) were generated.</source>
         <translation>
             <numerusform>已生成 %n 个频率表。</numerusform>
         </translation>
@@ -3580,6 +3649,14 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>
             <numerusform>要重新生成 %n 个音频文件的频率表吗？将先删除格式 %1 的频率表及其分析缓存。</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Repair Frequency Maps</source>
+        <translation>修复频率表</translation>
+    </message>
+    <message>
+        <source>The voice bank has no frequency maps or analysis caches of the format %1.</source>
+        <translation>音源中没有格式为 %1 的频率表或分析缓存。</translation>
     </message>
     <message>
         <source>Delete All Frequency Maps</source>
@@ -3928,6 +4005,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>格式 %1 不支持写出频率表。</translation>
     </message>
     <message>
+        <source>The format %1 does not support repairing &quot;%2&quot;.</source>
+        <translation>格式 %1 不支持修复「%2」。</translation>
+    </message>
+    <message>
         <source>The maps of the format %1 cannot be renamed with their audio files.</source>
         <translation>格式 %1 的频率表无法随音频文件改名。</translation>
     </message>
@@ -3971,6 +4052,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>frq (resampler)</source>
         <translation>frq (resampler)</translation>
+    </message>
+    <message>
+        <source>The file is no frequency map of the format, or it is cut short.</source>
+        <translation>此文件不是该格式的频率表，或文件不完整。</translation>
     </message>
     <message>
         <source>The format records an amplitude for each frame, and the map lacks amplitudes.</source>

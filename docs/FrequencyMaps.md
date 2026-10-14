@@ -71,7 +71,7 @@ HelloUtau 的方案：
 ### 生成与检查
 
 - 生成：对每个 wav 以设置中的重采样器合成一个 50 毫秒的音符（C4，力度 100，无 flags），输出写到临时文件夹后丢弃，利用重采样器缺少频率表时自动生成的行为。frqeditor 运行的是 `"<wav>" nul 100 100 GN 0 50`（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」），HelloUtau 不照搬：参数一律由 `utau::ResamplerArguments::arguments()` 生成（CLAUDE.md「调用外部程序」），`nul` 也只在 Windows 上存在。多个 wav 并行，数目在设置的「频率表」页单独设置，默认为处理器数，可取消。生成线程数不沿用渲染线程数，因为经典模式的播放不用渲染线程（作者 2026-10-12 决定）。参数以向量交给 `SynthToolProcess`，不拼接命令行。
-  - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时给出没有生成频率表的 wav 与失败的重采样器调用，由诊断器分析可能的原因（运行模式 `FrequencyMapGeneration`，见 [`SynthDiagnostics.md`](SynthDiagnostics.md)「诊断器」），音源窗口以概括、原因列表与详细信息中的逐个文件显示，不再在消息框中列出每个文件的重采样器输出（2026-10-13，原先的消息框在大量文件失败时过长）。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件。mrq 的条目在 `desc.mrq` 中，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0 删除，数据留在原处。删除频率表时一律连同分析缓存（见下文「分析缓存」）。
+  - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时给出没有生成频率表的 wav 与失败的重采样器调用，由诊断器分析可能的原因（运行模式 `FrequencyMapGeneration`，见 [`SynthDiagnostics.md`](SynthDiagnostics.md)「诊断器」），音源窗口以概括、原因列表与详细信息中的逐个文件显示，不再在消息框中列出每个文件的重采样器输出（2026-10-13，原先的消息框在大量文件失败时过长）。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件。mrq 的条目在 `desc.mrq` 中，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0 删除，数据留在原处。文件中不再有名字不为 0 的完整条目时，`desc.mrq` 一并删除（作者 2026-10-14 决定），moresampler 下次生成时新建。删除频率表时一律连同分析缓存（见下文「分析缓存」）。
   - 音源窗口「工具」菜单：Generate Missing Frequency Maps（全部目录中没有表的 wav）、Regenerate Frequency Maps of Selection（选中条目的 wav）、Regenerate All Frequency Maps...（全部 wav，先确认）、Delete All Frequency Maps...（先确认）。格式为设置中的重采样器对应的格式（`formatForResampler()`），与波形上方「F0」框的选择无关，因为生成只能由该重采样器完成。
 - 检查与修正：qfrqeditor 以进程内的实现代替 `checkfrq.dll`，与原 DLL 逐帧比较约 486 万帧结果一致，可直接移入。
 - 试听：第 4 步的试合成已以设置中的重采样器合成一个音符，编辑频率表后再试合成即可听到效果，不另做 frqeditor 的试听。
@@ -168,6 +168,17 @@ moresampler 等重采样器把从 wav 分析出的结果保存为缓存，其中
 因此 HelloUtau 的并发生成、多线程渲染与实时渲染不会写坏 `desc.mrq`，生成与渲染照常并行。**生成器在全部重采样器调用结束之后才检查频率表**（作者 2026-10-14 决定，`FrequencyMapGenerator::generate()`），因为其他 moresampler 写入期间 `desc.mrq` 无法读取，每次调用结束就检查会把已经生成的频率表误报为没有生成。
 
 **2026-10-13 的结论有误。** 当时以 24 个音频文件、16 个进程实测，全部结束后读到 19 个条目，末尾另有 1834 字节不计入条目数，据此认为 mrq 库读出、修改、写回条目数的过程在多个进程之间互相覆盖，并决定让各个音频文件在临时文件夹中生成后再合并。2026-10-14 以相同及更大的规模重复实测，结果全部正确，该决定撤销。当时的探针未保留，错误的原因无法确认。上面最后一项表明，只要其他进程锁住了条目数所在的字节，就会出现完全相同的现象。
+
+## 修复
+
+频率表文件与分析缓存可能被外部的程序写坏，例如上一节最后两项实测中的情况。音源窗口「工具 > 修复频率表...」修复这些文件（作者 2026-10-14 要求），格式取设置中重采样器对应的格式，与其他频率表命令相同。
+
+- **检查与修复由格式声明。** `FrequencyFormat::checkMapFiles()` 报告损坏的文件（`MapFileDamage`：文件名、说明、能否原地修复），`changesRepairing()` 给出原地修复的改动，默认实现不报告损坏，也不修复。`FrequencyFormats::mapFilesOf()` 列出现有的频率表文件与缓存文件并附上损坏，`repairMapFiles()` 执行修复。
+- **只有 mrq 原地修复**（作者 2026-10-14 决定）。`desc.mrq` 的条目数与完整的条目数不符，或最后一个完整条目之后还有字节时，修复把条目数改为完整条目的个数，并截去其后的字节。完整的条目指名字、数据与数据所记的帧都在文件之内，且采样率与帧移为正。没有有效文件头的 `desc.mrq` 不能原地修复。
+- **其余文件删除后由重采样器重新生成。** 删除的频率表文件连同其音频文件的分析缓存一起删除，因为缓存存在时 moresampler 不补写条目。原地修复之后没有频率表的音频文件（修复截去的条目）同样重新生成（作者 2026-10-14 决定），因为它没有 `.llsm` 时不会被报告为损坏。之后对涉及的音频文件逐个运行重采样器（`FrequencyMapGenerator::everyFile`），缺少的频率表与缓存一并写出。
+- **损坏的判定**：frq 为 `read()` 拒绝的文件，与采样率无关。mrq 另外把没有条目的音频文件的 `.llsm` 报告为损坏，以修复之后的条目为准，因此修复找回的条目不算缺少，修复截去的条目算缺少。`desc.mrq` 不存在时同样如此：实测（2026-10-14，`.cache/claude/tools/work/moresampler_missing_mrq_probe.py`）删去 `desc.mrq` 而保留 `.llsm` 时，moresampler 不新建 `desc.mrq`，`.llsm` 一并删去时才新建。
+- **不存在的文件**：记有多个音频文件的频率表的文件（`desc.mrq`）不存在时，对话框照样列出，并注明「此文件不存在」，不能勾选（作者 2026-10-14 要求），以免误以为该文件没有损坏。附属文件不存在只表示该音频文件没有频率表，不列出。
+- **对话框**（`RepairFrequencyMapsDialog`）：频率表文件一列，每种缓存一列，例如 moresampler 为 `desc.mrq` 与 LLSM 两列。每列上方写明勾选的文件如何处理，损坏的文件下方写明损坏与处理方式，并预先勾选。没有损坏、且记有多个音频文件的频率表的文件（`desc.mrq`）不能勾选，因为删除它等于重新生成该文件夹的全部频率表。下方汇总原地修复与删除后重新生成的文件数，没有勾选时不能确定。修复不能撤销。
 
 ## 频谱的计算
 

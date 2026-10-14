@@ -163,8 +163,8 @@ private Q_SLOTS:
     }
 
     // The entries of desc.mrq are deleted as the mrq library deletes them, their names zeroed in
-    // place, whatever the case of the names, with their LLSM files. The other entries stay
-    // readable. A folder without desc.mrq needs no change.
+    // place regardless of their case, with their LLSM files. The other entries stay readable.
+    // desc.mrq is removed with its last entry. A folder without desc.mrq needs no change.
     void the_entries_of_desc_mrq_are_removed() {
         QDir(m_dir.path()).mkdir(QStringLiteral("m"));
         const auto directory = pathOf("m");
@@ -196,6 +196,10 @@ private Q_SLOTS:
         const auto table = mrq.read(directory / "x.wav", 0, diagnostics);
         QVERIFY(table);
         QCOMPARE(table->frames.at(0).frequency, 2.0);
+
+        QVERIFY(kit::FrequencyFormats::removeMaps(mrq, directory, {"x.wav"}, diagnostics));
+        QVERIFY(!fs::exists(directory / "desc.mrq"));
+        QVERIFY(!fs::exists(directory / "x.wav.llsm"));
 
         const auto changes = mrq.changesRemoving(pathOf("none"), {"a.wav"}, diagnostics);
         QVERIFY(changes);
@@ -323,6 +327,127 @@ private Q_SLOTS:
         },
                                     diagnostics));
         QCOMPARE(diagnostics.size(), 2);
+    }
+
+    // A desc.mrq whose count matches its complete entries, with the LLSM file of an audio file
+    // that has an entry, has no damage.
+    void a_sound_desc_mrq_has_no_damage() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("s"));
+        const auto directory = pathOf("s");
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(2);
+        bytes += mrqEntry(QStringLiteral("a.wav"), {1.0f}) + mrqEntry(QStringLiteral("b.wav"), {2.0f});
+        write(directory / "desc.mrq", bytes);
+        write(directory / "a.wav.llsm", "llsm");
+        QVERIFY(MrqFormat().checkMapFiles(directory, {"a.wav", "b.wav"}).isEmpty());
+    }
+
+    // Entries beyond the count are counted by the repair, and nothing else changes. The LLSM file
+    // of an uncounted entry is not reported, since the repair counts the entry.
+    void the_uncounted_entries_are_counted() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("u"));
+        const auto directory = pathOf("u");
+        const auto entries = mrqEntry(QStringLiteral("a.wav"), {1.0f}) +
+                             mrqEntry(QStringLiteral("b.wav"), {2.0f}) +
+                             mrqEntry(QStringLiteral("c.wav"), {3.0f});
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(1) + entries;
+        write(directory / "desc.mrq", bytes);
+        write(directory / "c.wav.llsm", "llsm");
+        const MrqFormat mrq;
+        QVERIFY(!hasMap(mrq, directory / "c.wav"));
+        const QList<fs::path> wavs{"a.wav", "b.wav", "c.wav"};
+        const auto damages = mrq.checkMapFiles(directory, wavs);
+        QCOMPARE(damages.size(), 1);
+        QCOMPARE(damages.at(0).path, fs::path("desc.mrq"));
+        QVERIFY(damages.at(0).repairable);
+        QVERIFY(!damages.at(0).description.isEmpty());
+
+        kit::DiagnosticList diagnostics;
+        const auto changes = mrq.changesRepairing(directory, "desc.mrq", diagnostics);
+        QVERIFY(changes);
+        QCOMPARE(changes->size(), 1);
+        QByteArray repaired("mrq ");
+        repaired += bytesOf<qint32>(2) + bytesOf<qint32>(3) + entries;
+        QCOMPARE(changes->at(0).contents, repaired);
+        write(directory / "desc.mrq", changes->at(0).contents);
+        QVERIFY(hasMap(mrq, directory / "c.wav"));
+        QVERIFY(mrq.checkMapFiles(directory, wavs).isEmpty());
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // An entry cut short at the end is a damage even if the count matches the complete entries.
+    // The repair removes the entry, and the LLSM file of its audio file is reported, since the
+    // audio file has no entry after the repair.
+    void an_entry_cut_short_is_removed() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("t"));
+        const auto directory = pathOf("t");
+        const auto entries =
+            mrqEntry(QStringLiteral("a.wav"), {1.0f}) + mrqEntry(QStringLiteral("b.wav"), {2.0f});
+        const auto cut = mrqEntry(QStringLiteral("c.wav"), {3.0f, 4.0f}).chopped(6);
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(2) + entries + cut;
+        write(directory / "desc.mrq", bytes);
+        write(directory / "c.wav.llsm", "llsm");
+        const MrqFormat mrq;
+        const auto damages = mrq.checkMapFiles(directory, {"a.wav", "b.wav", "c.wav"});
+        QCOMPARE(damages.size(), 2);
+        QVERIFY(damages.at(0).repairable);
+        QCOMPARE(damages.at(1).path, fs::path("c.wav.llsm"));
+        QVERIFY(!damages.at(1).repairable);
+
+        kit::DiagnosticList diagnostics;
+        const auto changes = mrq.changesRepairing(directory, "desc.mrq", diagnostics);
+        QVERIFY(changes);
+        QByteArray repaired("mrq ");
+        repaired += bytesOf<qint32>(2) + bytesOf<qint32>(2) + entries;
+        QCOMPARE(changes->at(0).contents, repaired);
+    }
+
+    // A count beyond the entries is corrected to the complete entries.
+    void a_count_beyond_the_entries_is_corrected() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("o"));
+        const auto directory = pathOf("o");
+        const auto entries =
+            mrqEntry(QStringLiteral("a.wav"), {1.0f}) + mrqEntry(QStringLiteral("b.wav"), {2.0f});
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(5) + entries;
+        write(directory / "desc.mrq", bytes);
+        const MrqFormat mrq;
+        QCOMPARE(mrq.checkMapFiles(directory, {"a.wav"}).size(), 1);
+        kit::DiagnosticList diagnostics;
+        const auto changes = mrq.changesRepairing(directory, "desc.mrq", diagnostics);
+        QVERIFY(changes);
+        QByteArray repaired("mrq ");
+        repaired += bytesOf<qint32>(2) + bytesOf<qint32>(2) + entries;
+        QCOMPARE(changes->at(0).contents, repaired);
+    }
+
+    // The LLSM file of an audio file without an entry is reported, also without desc.mrq, and it
+    // is not repairable. A desc.mrq without a header is not repairable either.
+    void an_llsm_file_without_an_entry_is_reported() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("l"));
+        const auto directory = pathOf("l");
+        write(directory / "a.wav.llsm", "llsm");
+        const MrqFormat mrq;
+        auto damages = mrq.checkMapFiles(directory, {"a.wav", "b.wav"});
+        QCOMPARE(damages.size(), 1);
+        QCOMPARE(damages.at(0).path, fs::path("a.wav.llsm"));
+        QVERIFY(!damages.at(0).repairable);
+
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(1) + mrqEntry(QStringLiteral("A.WAV"), {1.0f});
+        write(directory / "desc.mrq", bytes);
+        write(directory / "b.wav.llsm", "llsm");
+        damages = mrq.checkMapFiles(directory, {"a.wav", "b.wav"});
+        QCOMPARE(damages.size(), 1);
+        QCOMPARE(damages.at(0).path, fs::path("b.wav.llsm"));
+
+        write(directory / "desc.mrq", "mrq");
+        damages = mrq.checkMapFiles(directory, {"a.wav"});
+        QCOMPARE(damages.size(), 1);
+        QCOMPARE(damages.at(0).path, fs::path("desc.mrq"));
+        QVERIFY(!damages.at(0).repairable);
     }
 };
 

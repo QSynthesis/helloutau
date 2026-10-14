@@ -74,6 +74,7 @@
 #include "FindSupport_p.h"
 #include "OtoWaveformView.h"
 #include "OutputLogDialog.h"
+#include "RepairFrequencyMapsDialog.h"
 #include "SamplePreview.h"
 #include "VoiceBankDecodingDialog.h"
 #include "VoiceBankEntryModel.h"
@@ -408,6 +409,10 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.voiceBank.removeAllMaps"), [this] {
                 stdc_decl_t;
                 decl.removeFrequencyMaps();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.repairMaps"), [this] {
+                stdc_decl_t;
+                decl.repairFrequencyMaps();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.viewFrequencyMapLog"), [this] {
                 stdc_decl_t;
@@ -1550,12 +1555,19 @@ namespace hello::daw {
             return audio;
         }
 
-        // Generates the maps of wavs in a progress dialog that cancels the generation, or the
-        // analysis caches of every audio file of wavs if cachesOnly, and shows the map of the
-        // current row again. Returns whether every map was generated.
+        // The files that a generation writes
+        enum Generation {
+            MapsOnly,      // The missing maps
+            CachesOnly,    // The analysis caches of every audio file
+            MapsAndCaches, // The missing maps and caches of every audio file, after a repair
+        };
+
+        // Generates the files of generation for wavs in a progress dialog that cancels the
+        // generation, and shows the map of the current row again. Returns whether every map was
+        // generated.
         bool generate(const QString &title, const kit::FrequencyFormat &format,
                       const std::filesystem::path &resampler,
-                      const QList<std::filesystem::path> &wavs, bool cachesOnly) {
+                      const QList<std::filesystem::path> &wavs, Generation generation) {
             stdc_decl_t;
             QProgressDialog progress(tr("Generating frequency maps with the resampler..."),
                                      tr("Cancel"), 0, int(wavs.size()), &decl);
@@ -1570,7 +1582,7 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             kit::FrequencyMapGenerator::Outcome outcome;
             generator.threadCount = editor->settings().frequencyMaps().threadCount();
-            generator.everyFile = cachesOnly;
+            generator.everyFile = generation != MapsOnly;
             applyLogSettings();
             QEventLoop loop;
             const auto worker = QThread::create([&] {
@@ -1594,10 +1606,16 @@ namespace hello::daw {
             model->refreshFrequencyMaps();
             frequencyShown = {};
             showFrequency();
-            decl.statusBar()->showMessage(
-                cachesOnly ? tr("The analysis caches of %n audio file(s) generated again.", nullptr,
-                                outcome.generated)
-                           : tr("%n frequency map(s) generated.", nullptr, outcome.generated));
+            const auto done =
+                generation == CachesOnly
+                    ? tr("The analysis caches of %n audio file(s) were generated again.", nullptr,
+                         outcome.generated)
+                : generation == MapsAndCaches
+                    ? tr("The frequency maps and analysis caches of %n audio file(s) were "
+                         "generated again.",
+                         nullptr, outcome.generated)
+                    : tr("%n frequency map(s) were generated.", nullptr, outcome.generated);
+            decl.statusBar()->showMessage(done);
             reportGeneration(title, format, resampler, diagnostics, outcome.failures);
             return !cancelled.load() && diagnostics.isEmpty();
         }
@@ -2650,7 +2668,64 @@ namespace hello::daw {
                 return false;
             }
         }
-        return impl.generate(title, *format, resampler, wavs, cachesOnly);
+        return impl.generate(title, *format, resampler, wavs,
+                             cachesOnly ? Impl::CachesOnly : Impl::MapsOnly);
+    }
+
+    bool VoiceBankWindow::repairFrequencyMaps() {
+        stdc_impl_t;
+        const auto title = tr("Repair Frequency Maps");
+        const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
+        if (resampler.empty()) {
+            QMessageBox::information(this, title, tr("Set the resampler in the settings first."));
+            return false;
+        }
+        const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
+        if (!format) {
+            QMessageBox::information(this, title,
+                                     tr("No format of frequency maps is registered for the "
+                                        "resampler."));
+            return false;
+        }
+        RepairFrequencyMapsDialog::Files files;
+        for (const auto &[folder, names] : impl.audioByFolder()) {
+            auto found = kit::FrequencyFormats::mapFilesOf(*format, folder, names);
+            if (!found.isEmpty()) {
+                files[folder] = std::move(found);
+            }
+        }
+        if (files.empty()) {
+            QMessageBox::information(this, title,
+                                     tr("The voice bank has no frequency maps or analysis caches "
+                                        "of the format %1.")
+                                         .arg(format->name()));
+            return false;
+        }
+        RepairFrequencyMapsDialog dialog(*format, impl.document->rootPath(), std::move(files),
+                                         this);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+
+        kit::DiagnosticList diagnostics;
+        QList<std::filesystem::path> wavs;
+        for (const auto &[folder, checked] : dialog.checkedFiles()) {
+            for (const auto &name :
+                 kit::FrequencyFormats::repairMapFiles(*format, folder, checked, diagnostics)) {
+                wavs.push_back(folder / name);
+            }
+        }
+        if (!diagnostics.isEmpty()) {
+            DiagnosticBox::report(this, title, diagnostics);
+        }
+        if (wavs.isEmpty()) {
+            impl.model->refreshFrequencyMaps();
+            impl.frequencyShown = {};
+            impl.showFrequency();
+            return diagnostics.isEmpty();
+        }
+        return impl.generate(title, *format, resampler, wavs, Impl::MapsAndCaches) &&
+               diagnostics.isEmpty();
     }
 
     bool VoiceBankWindow::removeFrequencyMaps() {

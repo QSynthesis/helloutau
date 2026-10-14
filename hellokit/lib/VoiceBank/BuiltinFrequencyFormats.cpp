@@ -43,19 +43,14 @@ namespace hello::kit {
                 if (!bytes) {
                     return std::nullopt;
                 }
-                if (!bytes->startsWith("FREQ0003")) {
+                if (!isComplete(*bytes) || sampleRate <= 0) {
                     return damaged(path, diagnostics);
                 }
                 BinaryStream stream(*bytes, 8);
                 const auto hop = stream.read<qint32>();
                 const auto average = stream.read<double>();
-                if (!hop || !average || !stream.skip(16) || *hop <= 0 || sampleRate <= 0) {
-                    return damaged(path, diagnostics);
-                }
+                stream.skip(16);
                 const auto count = stream.read<qint32>();
-                if (!count || *count < 0 || stream.bytesAvailable() < qsizetype(*count) * 16) {
-                    return damaged(path, diagnostics);
-                }
                 FrequencyMap table;
                 table.hop = *hop;
                 table.averageFrequency = *average;
@@ -68,6 +63,27 @@ namespace hello::kit {
                     table.frames.push_back(frame);
                 }
                 return table;
+            }
+
+            // A map that read() rejects is damaged and is written again by the resampler.
+            QList<MapFileDamage> checkMapFiles(const std::filesystem::path &directory,
+                                               const QList<std::filesystem::path> &wavs) const override {
+                QList<MapFileDamage> damages;
+                for (const auto &wav : wavs) {
+                    const auto name = *sidecarNameOf(wav);
+                    std::error_code error;
+                    if (!std::filesystem::is_regular_file(directory / name, error)) {
+                        continue;
+                    }
+                    DiagnosticList ignored;
+                    const auto bytes = contentsOf(directory / name, ignored);
+                    if (!bytes || !isComplete(*bytes)) {
+                        damages.push_back(
+                            {name, tr("The file is no frequency map of the format, or it is cut short."),
+                             false});
+                    }
+                }
+                return damages;
             }
 
             bool canWrite() const override {
@@ -131,6 +147,22 @@ namespace hello::kit {
                     }
                 }
                 return std::filesystem::path(name + extension + u".frq");
+            }
+
+        private:
+            // Returns whether bytes is a complete map: the header and every frame that it counts.
+            static bool isComplete(const QByteArray &bytes) {
+                if (!bytes.startsWith("FREQ0003")) {
+                    return false;
+                }
+                BinaryStream stream(bytes, 8);
+                const auto hop = stream.read<qint32>();
+                const auto average = stream.read<double>();
+                if (!hop || !average || !stream.skip(16) || *hop <= 0) {
+                    return false;
+                }
+                const auto count = stream.read<qint32>();
+                return count && *count >= 0 && stream.bytesAvailable() >= qsizetype(*count) * 16;
             }
         };
 

@@ -68,6 +68,7 @@
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Editor/Dialogs/RegionDialog.h>
+#include <helloutau/Editor/Dialogs/RepairFrequencyMapsDialog.h>
 #include <helloutau/Editor/Playback.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
@@ -1649,6 +1650,11 @@ private:
         return bank;
     }
 
+    // Returns a frq without frames that the format of resampler.exe reads.
+    static QByteArray completeFrq() {
+        return QByteArray("FREQ0003") + QByteArray("\x00\x01\x00\x00", 4) + QByteArray(28, '\0');
+    }
+
     static void writeFile(const fs::path &path, const char *text) {
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
         file << text;
@@ -2874,6 +2880,59 @@ private Q_SLOTS:
         QVERIFY(message.contains(QStringLiteral("frq (resampler)")));
         QVERIFY(message.contains(QStringLiteral("c.wav")));
         QVERIFY(!message.contains(QStringLiteral("long resampler output")));
+    }
+
+    // The repair lists the frq files of the voice bank with the damaged file checked, removes the
+    // checked file, and generates it again with the resampler. The undamaged file is left alone.
+    void a_damaged_frequency_map_is_generated_again() {
+        // A resampler that writes a complete frq of its input
+        class StandIn : public kit::SynthToolProcess {
+        public:
+            mutable std::atomic<int> calls = 0;
+
+            kit::SynthToolRun run(const fs::path &, const QStringList &arguments,
+                                  kit::DiagnosticList &,
+                                  const std::function<bool()> &) const override {
+                ++calls;
+                const fs::path wav(arguments.at(0).toStdU16String());
+                const auto frq = completeFrq();
+                writeFile(wav.parent_path() / (fs::path(wav.stem()) += "_wav.frq"), frq.constData(),
+                          frq.size());
+                kit::SynthToolRun out;
+                out.started = true;
+                return out;
+            }
+        };
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto frq = completeFrq();
+        writeFile(bank / "a_wav.frq", "FREQ0003");
+        writeFile(bank / "c_wav.frq", frq.constData(), frq.size());
+        const auto e = editor();
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/resampler.exe"));
+        const auto restore = qScopeGuard([&e] { e->settings().rendering().setResampler({}); });
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto standIn = std::make_shared<StandIn>();
+        window->frequencyMapGenerator().process = standIn;
+
+        QStringList checked;
+        QStringList unchecked;
+        handleNextDialog<RepairFrequencyMapsDialog>(
+            [&checked, &unchecked](RepairFrequencyMapsDialog *dialog) {
+                const auto list = dialog->list(0);
+                for (int row = 0; row < list->count(); ++row) {
+                    const auto item = list->item(row);
+                    (item->checkState() == Qt::Checked ? checked : unchecked)
+                        .push_back(item->text().section(QLatin1Char('\n'), 0, 0));
+                }
+                dialog->accept();
+            });
+        QVERIFY(window->repairFrequencyMaps());
+        QCOMPARE(checked, QStringList{QStringLiteral("a_wav.frq")});
+        QCOMPARE(unchecked, QStringList{QStringLiteral("c_wav.frq")});
+        QCOMPARE(standIn->calls.load(), 1);
+        QCOMPARE(qsizetype(fs::file_size(bank / "a_wav.frq")), frq.size());
     }
 
     // The output of the resampler during the generations is written into the log of the window,

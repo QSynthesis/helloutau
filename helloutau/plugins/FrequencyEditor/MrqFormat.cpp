@@ -185,7 +185,93 @@ namespace hello::daw {
         if (!zeroNames(*bytes, names)) {
             return QList<FileChange>();
         }
+        // desc.mrq is removed once no entry remains, and moresampler creates it again
+        // (docs/FrequencyMaps.md). The complete entries beyond the count are entries as well.
+        const auto found = scan(*bytes);
+        const bool remaining =
+            found && std::any_of(found->entries.cbegin(), found->entries.cend(),
+                                 [](const std::pair<QString, qsizetype> &entry) {
+                                     return std::any_of(entry.first.cbegin(), entry.first.cend(),
+                                                        [](QChar c) { return c != QChar(0); });
+                                 });
+        if (!remaining) {
+            return QList<FileChange>{FileChange::removed("desc.mrq")};
+        }
         return QList<FileChange>{FileChange::rewritten("desc.mrq", *bytes)};
+    }
+
+    // The entry count falls short of the entries if another process locks the count while
+    // moresampler appends an entry, measured with moresampler 0.8.4 on 2026-10-14
+    // (docs/FrequencyMaps.md). An LLSM file without an entry remains if desc.mrq cannot be opened
+    // while moresampler analyzes the audio file, measured on the same day.
+    QList<kit::FrequencyFormat::MapFileDamage>
+        MrqFormat::checkMapFiles(const std::filesystem::path &directory,
+                                 const QList<std::filesystem::path> &wavs) const {
+        QList<MapFileDamage> damages;
+        const auto path = directory / "desc.mrq";
+        QSet<QString> names;
+        std::error_code error;
+        if (std::filesystem::is_regular_file(path, error)) {
+            kit::DiagnosticList ignored;
+            const auto bytes = contentsOf(path, ignored);
+            const auto found = bytes ? scan(*bytes) : std::nullopt;
+            if (!found) {
+                damages.push_back({"desc.mrq", tr("desc.mrq has no valid header."), false});
+                return damages;
+            }
+            QStringList description;
+            if (found->count != found->entries.size()) {
+                description.push_back(tr("The header records %1 entries, and the file has %2 "
+                                         "complete entries.")
+                                          .arg(found->count)
+                                          .arg(found->entries.size()));
+            }
+            if (found->end < bytes->size()) {
+                description.push_back(tr("%n byte(s) at the end belong to no complete entry.",
+                                         nullptr, int(bytes->size() - found->end)));
+            }
+            if (!description.isEmpty()) {
+                damages.push_back({"desc.mrq", description.join(QLatin1Char(' ')), true});
+            }
+            // The entries after the repair
+            for (const auto &entry : std::as_const(found->entries)) {
+                names.insert(entry.first.toCaseFolded());
+            }
+        }
+        const auto llsm = analysisCaches().constFirst();
+        for (const auto &wav : wavs) {
+            const auto cache = llsm.fileNameOf(wav);
+            if (std::filesystem::is_regular_file(directory / cache, error) &&
+                !names.contains(textOf(wav.filename()).toCaseFolded())) {
+                damages.push_back({cache,
+                                   tr("desc.mrq has no entry for the audio file, and moresampler "
+                                      "does not write the entry while this file exists."),
+                                   false});
+            }
+        }
+        return damages;
+    }
+
+    std::optional<QList<kit::FrequencyFormat::FileChange>>
+        MrqFormat::changesRepairing(const std::filesystem::path &directory,
+                                    const std::filesystem::path &path,
+                                    kit::DiagnosticList &diagnostics) const {
+        if (path != "desc.mrq") {
+            return FrequencyFormat::changesRepairing(directory, path, diagnostics);
+        }
+        auto bytes = contentsOf(directory / path, diagnostics);
+        if (!bytes) {
+            return std::nullopt;
+        }
+        const auto found = scan(*bytes);
+        if (!found) {
+            damaged(directory / path, diagnostics);
+            return std::nullopt;
+        }
+        bytes->truncate(found->end);
+        kit::BinaryStream header(&*bytes, 8);
+        header.write(qint32(found->entries.size()));
+        return QList<FileChange>{FileChange::rewritten(path, *bytes)};
     }
 
     bool MrqFormat::canWrite() const {
@@ -290,6 +376,40 @@ namespace hello::daw {
             }
         }
         return zeroed;
+    }
+
+    // An entry is complete if its name, its data and the frames that the data counts are within
+    // the file, and its sample rate and hop are positive.
+    std::optional<MrqFormat::Scan> MrqFormat::scan(const QByteArray &bytes) {
+        if (!bytes.startsWith("mrq ") || bytes.size() < 12) {
+            return std::nullopt;
+        }
+        Scan found;
+        kit::BinaryStream stream(bytes, 8);
+        found.count = *stream.read<qint32>();
+        while (stream.bytesAvailable() > 0) {
+            const auto length = stream.read<qint32>();
+            if (!length || *length < 0 || stream.bytesAvailable() < qsizetype(*length) * 2) {
+                break;
+            }
+            QString entry(*length, Qt::Uninitialized);
+            for (qint32 k = 0; k < *length; ++k) {
+                entry[k] = QChar(*stream.read<quint16>());
+            }
+            const auto size = stream.read<qint32>();
+            const auto data = stream.pos();
+            const auto frames = stream.read<qint32>();
+            const auto rate = stream.read<qint32>();
+            const auto hop = stream.read<qint32>();
+            if (!size || !frames || !rate || !hop || *frames < 0 || *rate <= 0 || *hop <= 0 ||
+                *size < 12 + qint64(*frames) * 4 || bytes.size() - data < *size) {
+                break;
+            }
+            found.entries.push_back({entry, data});
+            found.end = data + *size;
+            stream.seek(found.end);
+        }
+        return found;
     }
 
     QList<std::pair<QString, qsizetype>> MrqFormat::entriesOf(const QByteArray &bytes) {

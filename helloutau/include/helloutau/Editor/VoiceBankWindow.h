@@ -212,6 +212,14 @@ namespace hello::daw {
         /// resampler of the settings, after a confirmation. No undo restores them.
         bool removeFrequencyMaps();
 
+        /// Repairs the files of the frequency maps and the analysis caches that the user checks
+        /// in a RepairFrequencyMapsDialog, in the format of the resampler of the settings. A file
+        /// that the format cannot repair in place is removed, and the resampler generates it
+        /// again. No undo restores the files.
+        ///
+        /// \return whether every checked file was repaired or generated again
+        bool repairFrequencyMaps();
+
         /// The generator of generateFrequencyMaps(), whose process a test replaces.
         kit::FrequencyMapGenerator &frequencyMapGenerator();
 

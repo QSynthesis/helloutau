@@ -134,6 +134,25 @@ namespace hello::kit {
         return std::nullopt;
     }
 
+    QList<FrequencyFormat::MapFileDamage>
+        FrequencyFormat::checkMapFiles(const std::filesystem::path &directory,
+                                       const QList<std::filesystem::path> &wavs) const {
+        Q_UNUSED(directory);
+        Q_UNUSED(wavs);
+        return {};
+    }
+
+    std::optional<QList<FrequencyFormat::FileChange>>
+        FrequencyFormat::changesRepairing(const std::filesystem::path &directory,
+                                          const std::filesystem::path &path,
+                                          DiagnosticList &diagnostics) const {
+        Q_UNUSED(directory);
+        diagnostics.push_back({DiagnosticSeverity::Error,
+                               tr("The format %1 does not support repairing \"%2\".")
+                                   .arg(name(), QString::fromStdU16String(path.u16string()))});
+        return std::nullopt;
+    }
+
     QList<FrequencyFormat::FileChange>
         FrequencyFormat::changesInvalidating(const std::filesystem::path &directory,
                                              const QList<std::filesystem::path> &wavs) const {
@@ -295,6 +314,94 @@ namespace hello::kit {
                                             const QList<std::filesystem::path> &wavs,
                                             DiagnosticList &diagnostics) {
         return execute(directory, format.changesInvalidating(directory, wavs), diagnostics);
+    }
+
+    QList<FrequencyFormats::MapFile>
+        FrequencyFormats::mapFilesOf(const FrequencyFormat &format,
+                                     const std::filesystem::path &directory,
+                                     const QList<std::filesystem::path> &wavs) {
+        QList<MapFile> files;
+        const auto exists = [&directory](const std::filesystem::path &name) {
+            std::error_code error;
+            return std::filesystem::is_regular_file(directory / name, error);
+        };
+        // A file that holds the maps of several audio files, such as desc.mrq, is listed once,
+        // and is listed even if missing. A missing sidecar file only indicates a missing map.
+        for (const auto &wav : wavs) {
+            const auto name = format.mapFileNameOf(wav);
+            if (!name) {
+                continue;
+            }
+            const bool present = exists(*name);
+            if (!present && format.sidecarNameOf(wav) == name) {
+                continue;
+            }
+            const auto found = std::find_if(files.begin(), files.end(),
+                                            [&name](const MapFile &file) { return file.path == *name; });
+            if (found != files.end()) {
+                found->wavs.push_back(wav);
+            } else {
+                files.push_back({*name, -1, {wav}, std::nullopt, present});
+            }
+        }
+        const auto caches = format.analysisCaches();
+        for (int cache = 0; cache < caches.size(); ++cache) {
+            for (const auto &wav : wavs) {
+                const auto name = caches.at(cache).fileNameOf(wav);
+                if (exists(name)) {
+                    files.push_back({name, cache, {wav}, std::nullopt});
+                }
+            }
+        }
+        for (const auto &damage : format.checkMapFiles(directory, wavs)) {
+            for (auto &file : files) {
+                if (file.path == damage.path) {
+                    file.damage = damage;
+                }
+            }
+        }
+        return files;
+    }
+
+    QList<std::filesystem::path>
+        FrequencyFormats::repairMapFiles(const FrequencyFormat &format,
+                                         const std::filesystem::path &directory,
+                                         const QList<MapFile> &files,
+                                         DiagnosticList &diagnostics) {
+        QList<std::filesystem::path> again;
+        const auto generateAgain = [&again](const std::filesystem::path &wav) {
+            if (!again.contains(wav)) {
+                again.push_back(wav);
+            }
+        };
+        for (const auto &file : files) {
+            if (!file.exists) {
+                continue;
+            }
+            if (file.damage && file.damage->repairable) {
+                const auto changes = format.changesRepairing(directory, file.path, diagnostics);
+                if (changes && execute(directory, *changes, diagnostics)) {
+                    // A repair may drop a map that is cut short.
+                    const auto found = format.mapsExist(directory, file.wavs);
+                    for (qsizetype i = 0; i < file.wavs.size(); ++i) {
+                        if (!found.value(i)) {
+                            generateAgain(file.wavs.at(i));
+                        }
+                    }
+                }
+                continue;
+            }
+            QList<FrequencyFormat::FileChange> changes{FrequencyFormat::FileChange::removed(file.path)};
+            if (file.cache < 0) {
+                changes += format.changesInvalidating(directory, file.wavs);
+            }
+            if (execute(directory, changes, diagnostics)) {
+                for (const auto &wav : file.wavs) {
+                    generateAgain(wav);
+                }
+            }
+        }
+        return again;
     }
 
     bool FrequencyFormats::execute(const std::filesystem::path &directory,

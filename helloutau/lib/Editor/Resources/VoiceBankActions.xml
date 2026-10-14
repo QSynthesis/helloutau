@@ -138,6 +138,9 @@
                 text="&amp;Regenerate All Frequency Maps..." category="Tools" />
         <action id="helloutau.voiceBank.removeAllMaps" text="&amp;Delete All Frequency Maps..."
                 category="Tools" />
+        <!-- The damaged maps and caches, repaired in place or generated again -->
+        <action id="helloutau.voiceBank.repairMaps" text="Re&amp;pair Frequency Maps..."
+                category="Tools" />
         <!-- The output of the resampler during the generations of the window -->
         <action id="helloutau.voiceBank.viewFrequencyMapLog" text="View Frequency Map &amp;Log..."
                 category="Tools" />
@@ -216,6 +219,7 @@
                 <action id="helloutau.voiceBank.regenerateSelectedMaps" />
                 <action id="helloutau.voiceBank.regenerateAllMaps" />
                 <action id="helloutau.voiceBank.removeAllMaps" />
+                <action id="helloutau.voiceBank.repairMaps" />
                 <action id="helloutau.voiceBank.viewFrequencyMapLog" />
                 <separator />
                 <action id="helloutau.voiceBank.removeMetadata" />

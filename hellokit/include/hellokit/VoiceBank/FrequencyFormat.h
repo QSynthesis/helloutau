@@ -93,6 +93,18 @@ namespace hello::kit {
             bool editedByHand = true;
         };
 
+        /// A damaged file that checkMapFiles() detects: a file that holds maps, or a cache file
+        /// of analysisCaches().
+        struct MapFileDamage {
+            /// The name of the file in the directory
+            std::filesystem::path path;
+            /// The damage, for display
+            QString description;
+            /// Whether changesRepairing() repairs the file in place. A damaged file that is not
+            /// repairable is removed, and the resampler writes it again.
+            bool repairable = false;
+        };
+
         virtual ~FrequencyFormat();
 
         /// Returns a short identifier that is unique in a registry, such as \c frq.
@@ -189,6 +201,20 @@ namespace hello::kit {
         virtual std::optional<QList<FileChange>>
             changesWriting(const std::filesystem::path &directory, const QList<MapWrite> &writes,
                            DiagnosticList &diagnostics) const;
+
+        /// Returns the damaged files among the maps and the analysis caches of the audio files
+        /// \a wavs, names in the directory \a directory. The default implementation returns none.
+        virtual QList<MapFileDamage> checkMapFiles(const std::filesystem::path &directory,
+                                                   const QList<std::filesystem::path> &wavs) const;
+
+        /// Returns the changes that repair the file \a path of the directory \a directory in
+        /// place, for a damage that checkMapFiles() reports as repairable.
+        ///
+        /// \return the changes, or \c std::nullopt with the reason in \a diagnostics if the file
+        ///         cannot be repaired, which the default implementation returns
+        virtual std::optional<QList<FileChange>>
+            changesRepairing(const std::filesystem::path &directory,
+                             const std::filesystem::path &path, DiagnosticList &diagnostics) const;
 
         /// Returns the changes that remove the existing cache files of analysisCaches() of the
         /// audio files \a wavs, names in the directory \a directory.
