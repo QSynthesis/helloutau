@@ -10,6 +10,8 @@
 #endif
 #include <windows.h>
 
+#include <hellokit/Config.h>
+
 // hello-plugin-play: the preview program for classic plugins. A plugin such as PitTrace starts it
 // under the name playinplugin.exe. See docs/PluginPlay.md.
 //
@@ -46,6 +48,45 @@ namespace {
         Success = 0,
         NoHost = 1,
     };
+
+    // The text has no column alignment and unbroken paragraphs, because a message box shows the
+    // text in a proportional font and wraps the lines.
+    constexpr char usage[] =
+        "Usage: playinplugin.exe <input> [/m:<file>] [/o:<file>] [/noplay] [/nodeletewav] "
+        "[/nodeletecache] [/debug]\n"
+        "\n"
+        "hello-plugin-play replaces the playinplugin.exe of a classic plugin under that name, so "
+        "that the notes of the plugin are rendered and played in HelloUtau. The command line is "
+        "that of the original playinplugin, and the switches are case-sensitive.\n"
+        "\n"
+        "<input>\n"
+        "    The file of the notes, which is the first argument also if it has the form of a "
+        "switch.\n"
+        "/m:<file>\n"
+        "    A file in the format of a plugin result, which is applied to the notes before the "
+        "rendering. The input file is not changed.\n"
+        "/o:<file>\n"
+        "    The file into which the notes are rendered.\n"
+        "/noplay\n"
+        "    Renders the notes without playing them.\n"
+        "/nodeletewav\n"
+        "    Keeps the file of /o: after the preview, which is otherwise removed.\n"
+        "/nodeletecache, /debug\n"
+        "    Accepted and without effect, because HelloUtau creates none of the files that they "
+        "concern in the original.\n"
+        "/?, -h, --help\n"
+        "    Shows this text, if it is the only argument.\n"
+        "--version\n"
+        "    Shows the version, if it is the only argument.\n"
+        "\n"
+        "If HelloUtau runs the plugin, the request is sent to HelloUtau, which renders and plays "
+        "the notes. Otherwise the original program runs if it is kept beside this program as "
+        "playinplugin-original.exe, and an error is shown if it is not.\n"
+        "\n"
+        "Exit status: 0 on success and for this text, the exit status of the original program "
+        "if it runs, and 1 if neither HelloUtau nor the original program is available.\n";
+
+    constexpr char version[] = "hello-plugin-play " HELLOKIT_VERSION "\n";
 
     // The request to the host, in the terms of the original command line
     struct Request {
@@ -272,12 +313,42 @@ namespace {
         return int(code);
     }
 
+    // Shows text, which is ASCII, on the standard output if it is redirected to a file or a pipe,
+    // and in a message box otherwise, because a GUI program has no console of its own.
+    void show(const char *text) {
+        const auto output = GetStdHandle(STD_OUTPUT_HANDLE);
+        const auto type =
+            output && output != INVALID_HANDLE_VALUE ? GetFileType(output) : FILE_TYPE_UNKNOWN;
+        const std::string bytes(text);
+        if (type == FILE_TYPE_DISK || type == FILE_TYPE_PIPE) {
+            DWORD written = 0;
+            WriteFile(output, bytes.data(), DWORD(bytes.size()), &written, nullptr);
+            return;
+        }
+        const std::wstring message(bytes.begin(), bytes.end());
+        MessageBoxW(nullptr, message.c_str(), L"hello-plugin-play", MB_OK | MB_ICONINFORMATION);
+    }
+
 }
 
 int wmain(int argc, wchar_t *argv[]) {
     // The original exits at once without arguments.
     if (argc < 2) {
         return Success;
+    }
+    // The help and the version only as the only argument, so that the first argument of a
+    // longer command line is the input file as in the original. A file name cannot contain the
+    // question mark of /?.
+    if (argc == 2) {
+        const std::wstring argument = argv[1];
+        if (argument == L"/?" || argument == L"-h" || argument == L"--help") {
+            show(usage);
+            return Success;
+        }
+        if (argument == L"--version") {
+            show(version);
+            return Success;
+        }
     }
     if (const auto pipe = connectToHost()) {
         // This program was started by the plugin, the foreground process, and may therefore

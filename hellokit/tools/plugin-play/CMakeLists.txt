@@ -18,6 +18,10 @@ hellokit_add_executable(${PROJECT_NAME}
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
+# hellokit/Config.h, the version of which --version shows. The header is generated, and the
+# program links no library of the repository.
+target_include_directories(${PROJECT_NAME} PRIVATE ${HELLOKIT_BUILD_INCLUDE_DIR})
+
 # The static runtime of the MSVC ABI, which clang targeting x86_64-pc-windows-msvc also uses.
 # Compilers of other ABIs ignore the property.
 set_target_properties(${PROJECT_NAME} PROPERTIES

@@ -24,6 +24,6 @@ endif()
 
 add_test(NAME test_plugin_play
     COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/test_plugin_play.py
-        $<TARGET_FILE:hello-plugin-play> $<TARGET_FILE:plugin-play-original-stub>
+        $<TARGET_FILE:hello-plugin-play> $<TARGET_FILE:plugin-play-original-stub> ${HELLO_VERSION}
 )
 set_tests_properties(test_plugin_play PROPERTIES TIMEOUT 180)

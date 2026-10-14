@@ -1,6 +1,7 @@
 """Test of hello-plugin-play, the preview program for classic plugins (docs/PluginPlay.md).
 
     python3 test_plugin_play.py <path to hello-plugin-play> <path to plugin-play-original-stub>
+        <version>
 
 Each test creates a job object as HelloUtau does for a plugin run, starts a stand-in for the
 process of the plugin in it, and creates the pipe of the host named after that process. The
@@ -22,6 +23,7 @@ from ctypes import wintypes
 
 PROGRAM = os.path.abspath(sys.argv[1])
 STUB = os.path.abspath(sys.argv[2])
+VERSION = sys.argv[3]
 
 # The longest time a run may take
 RUN_LIMIT = 30
@@ -249,6 +251,35 @@ def test_the_original_runs_without_a_host():
 def test_no_arguments_end_at_once():
     status = subprocess.run([PROGRAM], timeout=RUN_LIMIT).returncode
     check(status == 0, "no arguments: exit status %r" % status)
+
+
+def test_the_help_and_the_version_as_the_only_argument():
+    # The standard output is a pipe, to which the program writes instead of a message box.
+    for argument in ["/?", "-h", "--help"]:
+        result = subprocess.run([PROGRAM, argument], stdout=subprocess.PIPE, timeout=RUN_LIMIT)
+        check(result.returncode == 0, "help %s: exit status %r" % (argument, result.returncode))
+        check(result.stdout.startswith(b"Usage: playinplugin.exe <input>"),
+              "help %s: output %r" % (argument, result.stdout[:40]))
+    result = subprocess.run([PROGRAM, "--version"], stdout=subprocess.PIPE, timeout=RUN_LIMIT)
+    check(result.returncode == 0, "version: exit status %r" % result.returncode)
+    check(result.stdout == ("hello-plugin-play %s\n" % VERSION).encode("ascii"),
+          "version: output %r" % result.stdout)
+
+
+def test_the_help_with_other_arguments_is_the_input():
+    # As in the original, the first argument of a longer command line is the input file.
+    cwd = folder()
+    host = Host()
+    try:
+        status = host.run('"%s" --help /noplay' % PROGRAM, cwd)
+        check(status == 0, "help as input: exit status %r" % status)
+        request = host.request or {}
+        check(same_path(request.get("input"), os.path.join(cwd, "--help")),
+              "help as input: input %r" % request.get("input"))
+        check(request.get("play") is False, "help as input: /noplay")
+    finally:
+        host.close()
+        shutil.rmtree(os.path.dirname(cwd), ignore_errors=True)
 
 
 def main():
