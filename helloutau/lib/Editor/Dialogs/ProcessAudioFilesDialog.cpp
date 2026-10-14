@@ -12,6 +12,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSplitter>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -137,17 +138,22 @@ namespace hello::daw {
         m_buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
         // The files are on the left, where the list has the full height, and the options on the
-        // right.
-        auto right = new QVBoxLayout();
-        right->addWidget(processing);
-        right->addWidget(m_removingMaps);
-        right->addLayout(backupRow);
-        right->addStretch();
-        auto content = new QHBoxLayout();
-        content->addWidget(m_list, 3);
-        content->addLayout(right, 2);
+        // right, in the panes of a splitter.
+        auto right = new QWidget();
+        auto rightLayout = new QVBoxLayout(right);
+        rightLayout->setContentsMargins(0, 0, 0, 0);
+        rightLayout->addWidget(processing);
+        rightLayout->addWidget(m_removingMaps);
+        rightLayout->addLayout(backupRow);
+        rightLayout->addStretch();
+        m_splitter = new QSplitter(Qt::Horizontal);
+        m_splitter->setChildrenCollapsible(false);
+        m_splitter->addWidget(m_list);
+        m_splitter->addWidget(right);
+        m_splitter->setStretchFactor(0, 3);
+        m_splitter->setStretchFactor(1, 2);
         auto layout = new QVBoxLayout(this);
-        layout->addLayout(content, 1);
+        layout->addWidget(m_splitter, 1);
         layout->addWidget(m_summary);
         layout->addWidget(m_buttons);
         resize(1000, 560);
@@ -260,6 +266,10 @@ namespace hello::daw {
 
     QPushButton *ProcessAudioFilesDialog::checkFilesButton() const {
         return m_checkFiles;
+    }
+
+    QSplitter *ProcessAudioFilesDialog::splitter() const {
+        return m_splitter;
     }
 
     QLineEdit *ProcessAudioFilesDialog::backupFolderEdit() const {

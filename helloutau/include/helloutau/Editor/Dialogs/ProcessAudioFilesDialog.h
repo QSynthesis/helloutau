@@ -18,6 +18,7 @@ class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class QSplitter;
 class QTreeWidget;
 
 namespace hello::daw {
@@ -26,9 +27,9 @@ namespace hello::daw {
 
     /// A dialog in which the user chooses the processing of audio files and the files to
     /// process, see kit::AudioFileProcessor. The files are listed on the left, and the options
-    /// on the right. The files that the options change are checked, again whenever an option
-    /// changes. A tri-state box checks or unchecks every file, and a button checks exactly the
-    /// files that the options change.
+    /// on the right, beyond a splitter. The files that the options change are checked, again
+    /// whenever an option changes. A tri-state box checks or unchecks every file, and a button
+    /// checks exactly the files that the options change.
     ///
     /// The dialog also offers the removal of the frequency maps and the analysis caches of the
     /// processed files, checked initially, and a backup of the original files into a folder,
@@ -66,6 +67,8 @@ namespace hello::daw {
         QTreeWidget *fileList() const;
         /// The button that checks exactly the files that the options change
         QPushButton *checkFilesButton() const;
+        /// The splitter between the files and the options
+        QSplitter *splitter() const;
         QLineEdit *backupFolderEdit() const;
         QDialogButtonBox *buttonBox() const;
 
@@ -85,6 +88,7 @@ namespace hello::daw {
         QCheckBox *m_scalingPeak;
         QDoubleSpinBox *m_peakLevel;
         FileCheckList *m_list;
+        QSplitter *m_splitter;
         QPushButton *m_checkFiles;
         QCheckBox *m_removingMaps;
         QCheckBox *m_backingUp;

@@ -2,6 +2,7 @@
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSplitter>
 #include <QtWidgets/QTreeWidget>
 
 #include <helloutau/Editor/Dialogs/ProcessAudioFilesDialog.h>
@@ -87,6 +88,17 @@ private Q_SLOTS:
         QVERIFY(ok->isEnabled());
         dialog.backupFolderEdit()->clear();
         QVERIFY(!ok->isEnabled());
+    }
+
+    // The files and the options are the panes of a splitter, which the user resizes and cannot
+    // collapse.
+    void the_files_and_the_options_are_split() {
+        ProcessAudioFilesDialog dialog({fileOf("a.wav", 44100, 1)}, "C:/bank", "C:/backup");
+        const auto splitter = dialog.splitter();
+        QCOMPARE(splitter->count(), 2);
+        QVERIFY(splitter->widget(0)->isAncestorOf(dialog.fileList()));
+        QVERIFY(splitter->widget(1)->isAncestorOf(dialog.backupFolderEdit()));
+        QVERIFY(!splitter->childrenCollapsible());
     }
 
     // The options read back as set.
