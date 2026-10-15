@@ -8,8 +8,10 @@ project(hello-plugin-play
 # See main.cpp and docs/PluginPlay.md.
 #
 # The program runs in the folder of a plugin, where no library of the application is available.
-# It therefore links neither Qt nor any library of this repository, and links the C++ runtime
-# statically, as hello-updater does. It is a GUI program, so that no console window appears.
+# It therefore links neither Qt nor any shared library of this repository, and links the C++
+# runtime statically, as hello-updater does. Its only library of this repository is the static
+# HelloKitWinMain, which requires no particular runtime. It is a GUI program, so that no console
+# window appears.
 # Classic plugins run only on Windows, and the program is built only there.
 helloutau_add_executable(${PROJECT_NAME}
     SOURCES main.cpp
@@ -29,10 +31,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 
-# The entry point is wmain, for the arguments in UTF-16, also in a GUI program.
+# The entry point of the GUI program, which passes the arguments to main in UTF-8
+target_link_libraries(${PROJECT_NAME} PRIVATE HelloKitWinMain)
 if(MINGW)
-    target_compile_options(${PROJECT_NAME} PRIVATE -municode)
-    target_link_options(${PROJECT_NAME} PRIVATE -municode -static)
-else()
-    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:/ENTRY:wmainCRTStartup")
+    target_link_options(${PROJECT_NAME} PRIVATE -static)
 endif()

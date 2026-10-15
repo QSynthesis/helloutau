@@ -445,11 +445,11 @@ namespace {
 
 }
 
-#ifdef _WIN32
-int wmain(int argc, wchar_t *argv[])
-#else
-int main(int argc, char *argv[])
-#endif
-{
-    return run(std::vector<NativeString>(argv + 1, argv + argc));
+// The arguments are in UTF-8, on Windows from HelloKitWinMain.
+int main(int argc, char *argv[]) {
+    std::vector<NativeString> arguments;
+    for (int i = 1; i < argc; ++i) {
+        arguments.push_back(fs::u8path(argv[i]).native());
+    }
+    return run(arguments);
 }

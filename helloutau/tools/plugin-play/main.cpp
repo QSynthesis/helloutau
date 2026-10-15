@@ -331,16 +331,21 @@ namespace {
 
 }
 
-int wmain(int argc, wchar_t *argv[]) {
+// The arguments are in UTF-8, from HelloKitWinMain.
+int main(int argc, char *argv[]) {
+    std::vector<std::wstring> arguments;
+    for (int i = 1; i < argc; ++i) {
+        arguments.push_back(std::filesystem::u8path(argv[i]).native());
+    }
     // The original exits at once without arguments.
-    if (argc < 2) {
+    if (arguments.empty()) {
         return Success;
     }
     // The help and the version only as the only argument, so that the first argument of a
     // longer command line is the input file as in the original. A file name cannot contain the
     // question mark of /?.
-    if (argc == 2) {
-        const std::wstring argument = argv[1];
+    if (arguments.size() == 1) {
+        const std::wstring &argument = arguments.front();
         if (argument == L"/?" || argument == L"-h" || argument == L"--help") {
             show(usage);
             return Success;
@@ -358,7 +363,7 @@ int wmain(int argc, wchar_t *argv[]) {
         if (GetNamedPipeServerProcessId(*pipe, &host)) {
             AllowSetForegroundWindow(host);
         }
-        sendRequest(*pipe, message(parse(std::vector<std::wstring>(argv + 1, argv + argc))));
+        sendRequest(*pipe, message(parse(arguments)));
         CloseHandle(*pipe);
         return Success;
     }

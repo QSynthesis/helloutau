@@ -8,9 +8,10 @@ project(hello-updater
 # version that the application has extracted beside it. See main.cpp and docs/Distribution.md.
 #
 # The application runs a copy outside the installation directory, where no library of the
-# application is available. The program therefore links neither Qt nor any library of this
-# repository, and links the C++ runtime statically. It is a GUI program on Windows, so that no
-# console window appears.
+# application is available. The program therefore links neither Qt nor any shared library of
+# this repository, and links the C++ runtime statically. Its only library of this repository is
+# the static HelloKitWinMain on Windows, which requires no particular runtime. It is a GUI program
+# on Windows, so that no console window appears.
 hellokit_add_executable(${PROJECT_NAME}
     SOURCES main.cpp
     WINDOWS
@@ -29,12 +30,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 if(WIN32)
-    # The entry point is wmain, for the arguments in UTF-16, also in a GUI program.
+    # The entry point of the GUI program, which passes the arguments to main in UTF-8
+    target_link_libraries(${PROJECT_NAME} PRIVATE HelloKitWinMain)
     if(MINGW)
-        target_compile_options(${PROJECT_NAME} PRIVATE -municode)
-        target_link_options(${PROJECT_NAME} PRIVATE -municode -static)
-    else()
-        target_link_options(${PROJECT_NAME} PRIVATE "LINKER:/ENTRY:wmainCRTStartup")
+        target_link_options(${PROJECT_NAME} PRIVATE -static)
     endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # glibc is not linked statically, because its name resolution loads shared modules.
