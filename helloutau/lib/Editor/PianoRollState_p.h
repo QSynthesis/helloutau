@@ -25,6 +25,7 @@
 #include <hellokit/Synth/SampleTiming.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include <helloutau/Widgets/SceneGestures.h>
 #include <helloutau/Widgets/SceneLayer.h>
 #include <helloutau/Widgets/SceneView.h>
 

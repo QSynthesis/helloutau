@@ -1,7 +1,6 @@
 #ifndef HELLOUTAU_WIDGETS_SCENELAYER_H
 #define HELLOUTAU_WIDGETS_SCENELAYER_H
 
-#include <functional>
 #include <memory>
 #include <optional>
 
@@ -9,6 +8,7 @@
 #include <QtCore/QRect>
 
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
+#include <helloutau/Widgets/SceneGesture.h>
 
 class QPainter;
 
@@ -39,61 +39,6 @@ namespace hello::daw {
             return layer == RHS.layer && node == RHS.node && part == RHS.part &&
                    index == RHS.index && cursor == RHS.cursor;
         }
-    };
-
-    /// One interaction from a press of a mouse button to its release, created by a layer for the
-    /// element that was pressed.
-    ///
-    /// While the interaction lasts it keeps its own preview state, which its layer draws instead
-    /// of the document. Only release() changes the document, in one step. cancel() leaves the
-    /// document as it was. See the section on the piano roll in docs/Widgets.md.
-    class HELLOUTAU_WIDGETS_EXPORT SceneGesture {
-    public:
-        virtual ~SceneGesture();
-
-        /// The pointer moved to \a position, in view coordinates.
-        virtual void move(QPointF position, Qt::KeyboardModifiers modifiers) = 0;
-
-        /// The button was released at \a position: the interaction completes.
-        virtual void release(QPointF position, Qt::KeyboardModifiers modifiers) = 0;
-
-        /// The interaction was abandoned, on Escape or when the view lost the pointer.
-        virtual void cancel() = 0;
-
-        /// Returns whether the view scrolls while the pointer is near an edge: across near the
-        /// left and right edges, up and down near the top and bottom edges.
-        virtual bool hasAutoScroll() const {
-            return false;
-        }
-    };
-
-    /// A press that becomes a click or a drag. A move farther than
-    /// QApplication::startDragDistance() from the press starts the drag: the drag function
-    /// receives the modifiers held then and returns the gesture of the drag, which receives
-    /// that move, the later moves and the release. A release before that is a click: the click
-    /// function receives the modifiers held then. The drag function may return no gesture, and
-    /// the click function may do nothing. Without a click function, the first move starts the
-    /// drag, and a release before any move ends a drag that does not move.
-    class HELLOUTAU_WIDGETS_EXPORT PressGesture : public SceneGesture {
-    public:
-        using DragFunction = std::function<std::unique_ptr<SceneGesture>(Qt::KeyboardModifiers)>;
-        using ClickFunction = std::function<void(Qt::KeyboardModifiers)>;
-
-        PressGesture(QPointF position, DragFunction drag, ClickFunction click);
-        ~PressGesture();
-
-        void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
-        void release(QPointF position, Qt::KeyboardModifiers modifiers) override;
-        void cancel() override;
-        bool hasAutoScroll() const override;
-
-    private:
-        QPointF m_origin;
-        DragFunction m_drag;
-        ClickFunction m_click;
-        bool m_started = false;
-        // The gesture of the drag, if the drag started and the drag function returned a gesture
-        std::unique_ptr<SceneGesture> m_gesture;
     };
 
     /// One layer of a scene view, which draws the part of the scene that is visible and reports

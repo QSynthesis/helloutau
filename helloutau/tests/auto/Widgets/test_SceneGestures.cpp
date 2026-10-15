@@ -4,7 +4,7 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 
-#include <helloutau/Widgets/SceneLayer.h>
+#include <helloutau/Widgets/SceneGestures.h>
 
 using namespace hello::daw;
 
@@ -43,7 +43,7 @@ namespace {
 
 }
 
-class test_SceneLayer : public QObject {
+class test_SceneGestures : public QObject {
     Q_OBJECT
 
 private:
@@ -139,6 +139,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_MAIN(test_SceneLayer)
+QTEST_MAIN(test_SceneGestures)
 
-#include "test_SceneLayer.moc"
+#include "test_SceneGestures.moc"
