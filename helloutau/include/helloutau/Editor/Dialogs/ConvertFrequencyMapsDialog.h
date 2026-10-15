@@ -45,6 +45,9 @@ namespace hello::daw {
             QList<bool> maps;
             /// Whether the file is selected in the window
             bool selected = false;
+            /// The path that the list shows, relative to the root, with misdecoded names
+            /// restored. If empty, the list shows the path relative to the root.
+            std::filesystem::path shownPath;
         };
 
         /// Creates the dialog for \a files of the voice bank at \a root and for the formats

@@ -66,7 +66,10 @@ namespace hello::daw {
             m_list->setColumnAlignment(column, Qt::AlignCenter);
         }
         for (const auto &file : std::as_const(m_files)) {
-            const auto relative = file.path.lexically_relative(root);
+            auto relative = file.path.lexically_relative(root);
+            if (!file.shownPath.empty()) {
+                relative = file.shownPath;
+            }
             QStringList texts{
                 QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative))};
             for (qsizetype i = 0; i < m_formats.size(); ++i) {

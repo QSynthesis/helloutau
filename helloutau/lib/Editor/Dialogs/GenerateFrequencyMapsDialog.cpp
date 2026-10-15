@@ -45,7 +45,10 @@ namespace hello::daw {
         }
         bool anySelected = false;
         for (const auto &file : std::as_const(m_files)) {
-            const auto relative = file.path.lexically_relative(root);
+            auto relative = file.path.lexically_relative(root);
+            if (!file.shownPath.empty()) {
+                relative = file.shownPath;
+            }
             QStringList texts{
                 QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)),
                 presence(file.hasMap)};

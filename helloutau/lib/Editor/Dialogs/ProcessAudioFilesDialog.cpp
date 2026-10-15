@@ -113,7 +113,10 @@ namespace hello::daw {
         // The rows are in the order of the files.
         m_list = new FileCheckList({tr("File"), tr("Format"), tr("Changes")});
         for (const auto &file : m_files) {
-            const auto relative = file.path.lexically_relative(m_root);
+            auto relative = file.path.lexically_relative(m_root);
+            if (!file.shownPath.empty()) {
+                relative = file.shownPath;
+            }
             m_list->addRow(
                 {QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)),
                  formatOf(file.inspection), QString()});

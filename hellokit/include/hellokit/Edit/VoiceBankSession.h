@@ -82,6 +82,9 @@ namespace hello::kit {
         /// \sa VoiceBankFileSystemState::undeterminedNames()
         QStringList undeterminedNames(const std::filesystem::path &directory) const;
 
+        /// Returns \a directory, a path relative to the root, with each name restored by the
+        /// record of its parent directory, for display. The last name may be that of a file.
+        ///
         /// \sa VoiceBank::logicalPathOf()
         std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const;
 

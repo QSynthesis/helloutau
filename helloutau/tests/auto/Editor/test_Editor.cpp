@@ -3383,6 +3383,48 @@ private Q_SLOTS:
         QCOMPARE(map->frames.at(0).frequency, 440.0);
     }
 
+    // The editing dialog of frequency maps shows the audio files under their restored names, as
+    // the voice bank window does.
+    void the_frequency_map_dialog_shows_the_restored_names() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        // あ.wav, which the disk holds as 偁.wav, recorded as misdecoded
+        writeFile(bank / "oto.ini", "#Charset:UTF-8\r\n\xe3\x81\x82.wav=a,1,2,3,4,5\r\n");
+        writeWave(bank / fs::path(u"偁.wav"), 1000);
+        writeFile(bank / "hello-config.json",
+                  R"({"$format":"hello-voicebank","charset":"UTF-8",
+                  "fileNameEncoding":{"original":"Shift_JIS","misdecodedAs":"GBK"}})");
+        const auto le = [](auto value) {
+            QByteArray bytes(sizeof(value), '\0');
+            qToLittleEndian(value, bytes.data());
+            return bytes;
+        };
+        QByteArray frq("FREQ0003");
+        frq += le(qint32(10)) + le(220.0) + QByteArray(16, '\0') + le(qint32(100));
+        for (int i = 0; i < 100; ++i) {
+            frq += le(220.0) + le(1.0);
+        }
+        writeFile(bank / fs::path(u"偁_wav.frq"), frq.constData(), frq.size());
+        const auto e = editor();
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/resampler.exe"));
+        const auto restore = qScopeGuard([&e] { e->settings().rendering().setResampler({}); });
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+
+        bool handled = false;
+        handleNextDialog<EditFrequencyMapsDialog>([&](EditFrequencyMapsDialog *dialog) {
+            // The only file with a map is current.
+            QTRY_VERIFY(dialog->currentFile() >= 0);
+            QCOMPARE(dialog->fileList()->topLevelItem(dialog->currentFile())->text(0),
+                     QString::fromUtf8("あ.wav"));
+            QCOMPARE(dialog->view()->title(), QString::fromUtf8("あ.wav"));
+            dialog->reject();
+            handled = true;
+        });
+        QVERIFY(window->editFrequencyMaps());
+        QVERIFY(handled);
+    }
+
     // Each shortcut of Synthesize and Play, including Enter of the keypad, reaches the command
     // from each part of the dialog that takes the focus. The shortcut events are counted and not
     // delivered, so that nothing plays.

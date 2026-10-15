@@ -1676,10 +1676,22 @@ namespace hello::daw {
                             folder / cache.fileNameOf(names.at(i)), error));
                     }
                     file.selected = selected.contains(file.path);
+                    file.shownPath = shownPathOf(file.path);
                     files.push_back(std::move(file));
                 }
             }
             return files;
+        }
+
+        // Returns the path of the file at path for the lists of the dialogs, relative to the root
+        // and with misdecoded names restored as the window shows them, or an empty path for a
+        // file outside the root.
+        std::filesystem::path shownPathOf(const std::filesystem::path &path) const {
+            const auto relative = path.lexically_relative(document->rootPath());
+            if (relative.empty() || *relative.begin() == "..") {
+                return {};
+            }
+            return document->session()->logicalPathOf(relative);
         }
 
         // Returns the resampler of the settings and the format of its frequency maps, or shows
@@ -2916,6 +2928,7 @@ namespace hello::daw {
                     file.maps.push_back(maps.value(i));
                 }
                 file.selected = selected.contains(file.path);
+                file.shownPath = impl.shownPathOf(file.path);
                 files.push_back(std::move(file));
             }
         }
@@ -3106,7 +3119,8 @@ namespace hello::daw {
         QList<ProcessAudioFilesDialog::File> files;
         for (qsizetype i = 0; i < paths.size(); ++i) {
             if (const auto &inspection = inspections.at(i)) {
-                files.push_back({paths.at(i), *inspection, selected.contains(paths.at(i))});
+                files.push_back({paths.at(i), *inspection, selected.contains(paths.at(i)),
+                                 impl.shownPathOf(paths.at(i))});
             }
         }
         if (files.isEmpty()) {

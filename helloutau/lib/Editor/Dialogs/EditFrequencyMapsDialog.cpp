@@ -72,6 +72,11 @@ namespace hello::daw {
             return QString::fromStdU16String(path.u16string());
         }
 
+        // Returns the name of the audio file for display, with a misdecoded name restored.
+        QString shownNameOf(const EditFrequencyMapsDialog::File &file) {
+            return textOf((file.shownPath.empty() ? file.path : file.shownPath).filename());
+        }
+
         // Returns the text of a frequency in the list and the edits, as frqeditor writes it,
         // or ---- for an unvoiced frame.
         QString frequencyText(double frequency) {
@@ -444,7 +449,7 @@ namespace hello::daw {
                 QMessageBox::warning(&decl, decl.windowTitle(),
                                      tr("The reading of %1 was canceled. The file in the editing "
                                         "area does not change.")
-                                         .arg(textOf(file.path.filename())));
+                                         .arg(shownNameOf(file)));
                 return false;
             }
 
@@ -495,7 +500,7 @@ namespace hello::daw {
                                     "generates the frequency map."));
             }
             message->setVisible(!reason.isEmpty());
-            view->setTitle(textOf(file.path.filename()));
+            view->setTitle(shownNameOf(file));
             view->setBuffer(currentBuffer());
             if (const auto entry = openedOf(index)) {
                 view->setCorrections(entry->corrections);
@@ -994,7 +999,7 @@ namespace hello::daw {
                     &decl, title,
                     tr("The file %1 changed after the frequency map of %2 was read. Overwrite "
                        "it?")
-                        .arg(textOf(mapFile->filename()), textOf(file.path.filename())),
+                        .arg(textOf(mapFile->filename()), shownNameOf(file)),
                     QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
                 if (answer != QMessageBox::Yes) {
                     return false;
@@ -1212,7 +1217,10 @@ namespace hello::daw {
         int firstWithMap = -1;
         for (int i = 0; i < impl.files.size(); ++i) {
             const auto &file = impl.files.at(i);
-            const auto relative = file.path.lexically_relative(root);
+            auto relative = file.path.lexically_relative(root);
+            if (!file.shownPath.empty()) {
+                relative = file.shownPath;
+            }
             auto item = new QTreeWidgetItem(impl.list);
             item->setText(
                 0, QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)));
