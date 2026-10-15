@@ -101,7 +101,7 @@ namespace hello::kit {
         /// Returns whether a value changed, and false while a stroke is in progress.
         bool revertAll();
 
-        /// Sets the frequency of \a frame to \a frequency, as the button Set of frqeditor does, as
+        /// Sets the frequency of \a frame to \a frequency, as the Set button of frqeditor does, as
         /// one step. Returns whether it changed, and false while a stroke is in progress.
         bool setFrequency(std::size_t frame, double frequency);
 

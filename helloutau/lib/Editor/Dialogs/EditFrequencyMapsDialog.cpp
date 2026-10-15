@@ -1055,7 +1055,7 @@ namespace hello::daw {
             context = new QAK::WidgetActionContext(&decl);
             context->addMenuBar(QStringLiteral("helloutau.frequencyMapEditorMenu"), menuBar);
             context->addToolBar(QStringLiteral("helloutau.frequencyMap.toolBar"), toolBar);
-            // The same command as the button Play of the preview
+            // The same command as the Play button of the preview
             addCommand(QStringLiteral("helloutau.frequencyMap.synthesize"), [this] { play(); });
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] {
                 preview->stop();

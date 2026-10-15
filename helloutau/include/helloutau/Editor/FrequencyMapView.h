@@ -34,8 +34,8 @@ namespace hello::daw {
     /// spectrogram of the audio file in one of six color schemes and seven levels of brightness.
     /// Over either it shows a line every 17 frames, the key and the frames of the map as last
     /// saved, and the key and the frames of the map, with the selected frames in their own
-    /// color. The button \c s in the corner switches the view, and opens the color schemes on a
-    /// right click. The button \c * beside it shows the brightness slider.
+    /// color. The \c s button in the corner switches the view, and opens the color schemes on a
+    /// right click. The \c * button beside it shows the brightness slider.
     ///
     /// Above the editing area a bar shows the title, and a ruler below the bar marks the time in
     /// milliseconds. The left drags depend on tool(). The drags follow the bindings of

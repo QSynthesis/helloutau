@@ -53,8 +53,8 @@ namespace hello::daw {
     /// modified map shows a question whether to save every modified map.
     ///
     /// Beside the file list the dialog has the right side of the window of frqeditor: the key
-    /// with its button Update, the list of the frequencies of the frames, which selects the
-    /// frames of the editing area, the frequency of the current frame with its button Set, the
+    /// with its Update button, the list of the frequencies of the frames, which selects the
+    /// frames of the editing area, the frequency of the current frame with its Set button, the
     /// preview, the information of the audio file, the editing area with the waveform below it,
     /// and a row of buttons for the selected frames. The tool bar
     /// \c helloutau.frequencyMap.toolBar lies below the menu bar. The preview synthesizes the
@@ -145,7 +145,7 @@ namespace hello::daw {
         QPushButton *playButton() const;
         /// Returns the box that plays the audio file as it is, as \c $direct=True of UTAU does
         QCheckBox *directBox() const;
-        /// Returns the preview that the button Play starts.
+        /// Returns the preview that the Play button starts.
         SamplePreview *preview() const;
         /// Returns the box that removes the analysis caches on save, for this dialog only
         QCheckBox *removeCachesBox() const;
