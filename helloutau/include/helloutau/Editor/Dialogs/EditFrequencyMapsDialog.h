@@ -53,11 +53,11 @@ namespace hello::daw {
     /// with its button Update, the list of the frequencies of the frames, which selects the
     /// frames of the editing area, the frequency of the current frame with its button Set, the
     /// preview, the information of the audio file, the editing area with the waveform below it,
-    /// and a row of buttons for the selected frames, which ends with the tool bar
-    /// \c helloutau.frequencyMap.toolBar. The preview synthesizes the audio file at the key with
-    /// the map as edited and the resampler of the settings, or plays the audio file as it is with
-    /// \c $direct. The command Synthesize and Play of the playback menu triggers the preview. The
-    /// playhead of the waveform follows the playback.
+    /// and a row of buttons for the selected frames. The tool bar
+    /// \c helloutau.frequencyMap.toolBar lies below the menu bar. The preview synthesizes the
+    /// audio file at the key with the map as edited and the resampler of the settings, or plays
+    /// the audio file as it is with \c $direct. The command Synthesize and Play of the playback
+    /// menu triggers the preview. The playhead of the waveform follows the playback.
     ///
     /// The dialog opens wide enough to show the whole file list, unless the screen is narrower.
     ///

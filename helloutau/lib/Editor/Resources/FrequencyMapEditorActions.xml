@@ -89,7 +89,7 @@
         <menu id="helloutau.frequencyMap.select" text="&amp;Select" />
         <menu id="helloutau.frequencyMap.view" text="&amp;View" />
         <menu id="helloutau.frequencyMap.playback" text="&amp;Playback" />
-        <!-- The tool bar at the end of the row of buttons, which the dialog places -->
+        <!-- The tool bar below the menu bar, which the dialog places -->
         <menu id="helloutau.frequencyMap.toolBar" text="Editing Toolbar" topLevel="true" />
         <menu id="helloutau.frequencyMap.spectrum" text="Spec&amp;trogram" />
         <menu id="helloutau.frequencyMap.colors" text="&amp;Colors" />

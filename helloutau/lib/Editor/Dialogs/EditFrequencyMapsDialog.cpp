@@ -987,12 +987,12 @@ namespace hello::daw {
             impl.editButtons.push_back({button, QLatin1String(id)});
         }
         buttonRow->addStretch(1);
-        // The tool bar at the end, which QActionKit fills from the layout of
-        // helloutau.frequencyMap.toolBar: the tools of the editing area and the playback
+        // The tool bar below the menu bar, which QActionKit fills from the layout of
+        // helloutau.frequencyMap.toolBar: the tools of the editing area, the playback and the
+        // corrections
         impl.toolBar = new QToolBar();
         impl.toolBar->setObjectName(QStringLiteral("frequencyMapToolBar"));
         followToolBarPalette(impl.toolBar);
-        buttonRow->addWidget(impl.toolBar);
 
         auto panel = new QWidget();
         auto grid = new QGridLayout(panel);
@@ -1016,6 +1016,7 @@ namespace hello::daw {
         auto menuBar = new QMenuBar();
         auto layout = new QVBoxLayout(this);
         layout->setMenuBar(menuBar);
+        layout->addWidget(impl.toolBar);
         layout->addWidget(splitter, 1);
         layout->addWidget(buttons);
         impl.initActions(menuBar);
