@@ -1,5 +1,6 @@
 add_auto_test(test_ActionLayoutsFile.cpp HelloUtauEditor QActionKit::Core)
 add_auto_test(test_AppSettings.cpp HelloUtauEditor)
+add_auto_test(test_FrequencyMapView.cpp HelloUtauEditor)
 add_auto_test(test_FrequencyViewKeyboardModifiers.cpp HelloUtauEditor)
 add_auto_test(test_KeymapFile.cpp HelloUtauEditor QActionKit::Core)
 # The editor of the test registers the formats dio and mrq of the FrequencyEditor plugin, as the
