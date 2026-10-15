@@ -179,7 +179,7 @@ namespace hello::daw {
             stdc_decl_t;
             const auto &file = files.at(index);
             const bool readsMap = file.hasMap && !openedOf(index);
-            const bool showsSpectrum = spectrumAction()->isChecked();
+            const bool showsSpectrum = view->viewMode() == FrequencyMapView::SpectrumView;
             std::shared_ptr<const kit::WaveAudio> read;
             std::shared_ptr<const kit::Spectrogram> spectrum;
             std::optional<kit::FrequencyMap> map;
@@ -227,6 +227,7 @@ namespace hello::daw {
                 list->setCurrentItem(list->topLevelItem(index));
             }
             audio = read;
+            spectrumSource = spectrum ? read : nullptr;
             view->setSpectrogram(spectrum);
             QString reason;
             if (!openedOf(index)) {
@@ -256,6 +257,7 @@ namespace hello::daw {
                                     "generates the frequency map."));
             }
             message->setVisible(!reason.isEmpty());
+            view->setTitle(textOf(file.path.filename()));
             view->setBuffer(currentBuffer());
             updateActions();
             return true;
@@ -270,13 +272,14 @@ namespace hello::daw {
         int initial = -1;
         bool shownOnce = false;
 
-        // Computes the spectrogram of the current file in the background if it is shown, and
-        // hides it again if the user cancels.
+        // Computes the spectrogram of the current file in the background if the view shows it
+        // and it is not computed yet, and shows the rows of the keys again if the user cancels.
         void updateSpectrogram() {
             stdc_decl_t;
-            const auto action = spectrumAction();
-            if (!audio || !action->isChecked()) {
-                view->setSpectrogram(nullptr);
+            const QSignalBlocker blocker(spectrumAction());
+            spectrumAction()->setChecked(view->viewMode() == FrequencyMapView::SpectrumView);
+            if (!audio || view->viewMode() != FrequencyMapView::SpectrumView ||
+                spectrumSource == audio) {
                 return;
             }
             const auto source = audio;
@@ -288,14 +291,41 @@ namespace hello::daw {
                                 std::make_shared<const kit::Spectrogram>(std::move(*computed));
                         }
                     })) {
-                const QSignalBlocker blocker(action);
-                action->setChecked(false);
+                view->setViewMode(FrequencyMapView::KeyRowsView);
                 QMessageBox::warning(&decl, decl.windowTitle(),
                                      tr("The computation of the spectrogram was canceled."));
                 return;
             }
+            spectrumSource = audio;
             view->setSpectrogram(spectrum);
         }
+
+        // The audio that the spectrogram of the view was computed from
+        std::shared_ptr<const kit::WaveAudio> spectrumSource;
+
+        // Checks the action of the color scheme of the view.
+        void updateColorActions() {
+            for (int i = 0; i < FrequencyMapView::colorSchemeCount; ++i) {
+                if (const auto action = actions.value(QLatin1String(colorActionIds[i]))) {
+                    action->setChecked(i == view->colorScheme());
+                }
+            }
+            if (const auto action =
+                    actions.value(QStringLiteral("helloutau.frequencyMap.brighten"))) {
+                action->setEnabled(view->brightness() > FrequencyMapView::lowestBrightness);
+            }
+            if (const auto action =
+                    actions.value(QStringLiteral("helloutau.frequencyMap.darken"))) {
+                action->setEnabled(view->brightness() < FrequencyMapView::highestBrightness);
+            }
+        }
+
+        // The actions of the color schemes, in the order of FrequencyMapView::colorScheme()
+        static constexpr const char *colorActionIds[FrequencyMapView::colorSchemeCount] = {
+            "helloutau.frequencyMap.coolColors",  "helloutau.frequencyMap.purpleColors",
+            "helloutau.frequencyMap.jadeColors",  "helloutau.frequencyMap.grassyColors",
+            "helloutau.frequencyMap.flameColors", "helloutau.frequencyMap.rubyColors",
+        };
 
         void updateRow(int index) {
             const auto item = list->topLevelItem(index);
@@ -478,23 +508,28 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.select.selectAll"), [this] { view->selectAll(); });
             addCommand(QStringLiteral("helloutau.select.deselect"),
                        [this] { view->clearSelection(); });
-            const auto zoom = [this](bool time, double factor) {
-                const auto area = view->viewport()->rect();
-                if (time) {
-                    view->zoomTime(factor, area.center().x());
-                } else {
-                    view->zoomKeys(factor, area.center().y());
-                }
-            };
-            addCommand(QStringLiteral("helloutau.view.zoomInTime"), [zoom] { zoom(true, 1.25); });
-            addCommand(QStringLiteral("helloutau.view.zoomOutTime"), [zoom] { zoom(true, 0.8); });
-            addCommand(QStringLiteral("helloutau.view.zoomInKeys"), [zoom] { zoom(false, 1.25); });
-            addCommand(QStringLiteral("helloutau.view.zoomOutKeys"), [zoom] { zoom(false, 0.8); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.zoomIn"),
+                       [this] { view->setZoomLevel(view->zoomLevel() + 1); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.zoomOut"),
+                       [this] { view->setZoomLevel(view->zoomLevel() - 1); });
             const auto spectrum =
-                addCommand(QStringLiteral("helloutau.frequencyMap.showSpectrogram"),
-                           [this] { updateSpectrogram(); });
+                addCommand(QStringLiteral("helloutau.frequencyMap.showSpectrogram"), [this] {
+                    view->setViewMode(spectrumAction()->isChecked()
+                                          ? FrequencyMapView::SpectrumView
+                                          : FrequencyMapView::KeyRowsView);
+                });
             spectrum->setCheckable(true);
-            spectrum->setChecked(true);
+            for (int i = 0; i < FrequencyMapView::colorSchemeCount; ++i) {
+                addCommand(QLatin1String(colorActionIds[i]), [this, i] {
+                    view->setColorScheme(i);
+                    updateColorActions();
+                })->setCheckable(true);
+            }
+            // A lower brightness is brighter, as in frqeditor.
+            addCommand(QStringLiteral("helloutau.frequencyMap.brighten"),
+                       [this] { view->setBrightness(view->brightness() - 1); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.darken"),
+                       [this] { view->setBrightness(view->brightness() + 1); });
             addCommand(QStringLiteral("helloutau.frequencyMap.previousFile"), [this] {
                 if (current > 0) {
                     show(current - 1);
@@ -614,6 +649,15 @@ namespace hello::daw {
             stdc_impl_t;
             impl.updateActions();
         });
+        connect(impl.view, &FrequencyMapView::viewModeChanged, this, [this] {
+            stdc_impl_t;
+            impl.updateSpectrogram();
+        });
+        connect(impl.view, &FrequencyMapView::spectrumChanged, this, [this] {
+            stdc_impl_t;
+            impl.updateColorActions();
+        });
+        impl.updateColorActions();
         connect(impl.view, &FrequencyMapView::selectionChanged, this, [this] {
             stdc_impl_t;
             impl.updateActions();

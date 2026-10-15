@@ -30,10 +30,6 @@
                 shortcut="Ctrl+A" />
         <action id="helloutau.select.deselect" text="Desele&amp;ct" category="Select"
                 shortcut="Ctrl+Shift+A" />
-        <action id="helloutau.view.zoomInTime" text="Zoom In &amp;Horizontally" category="View" />
-        <action id="helloutau.view.zoomOutTime" text="Zoom Out Horizontall&amp;y" category="View" />
-        <action id="helloutau.view.zoomInKeys" text="Zoom In &amp;Vertically" category="View" />
-        <action id="helloutau.view.zoomOutKeys" text="Zoom Out Verticall&amp;y" category="View" />
 
         <!-- Every modified frequency map in order, as Save All of frqeditor -->
         <action id="helloutau.frequencyMap.saveAll" text="Save &amp;All" category="File"
@@ -48,8 +44,21 @@
         <action id="helloutau.frequencyMap.unvoice" text="&amp;Unvoice" category="Edit" />
         <!-- Linear in hertz between the ends of the selection, as the avg button of frqeditor -->
         <action id="helloutau.frequencyMap.interpolate" text="I&amp;nterpolate" category="Edit" />
+        <!-- Both axes by one of the seven zoom levels, as in frqeditor -->
+        <action id="helloutau.frequencyMap.zoomIn" text="Zoom &amp;In" category="View" />
+        <action id="helloutau.frequencyMap.zoomOut" text="Zoom &amp;Out" category="View" />
+        <!-- The spectrogram in place of the rows of the keys, as the button s of frqeditor -->
         <action id="helloutau.frequencyMap.showSpectrogram" text="Show &amp;Spectrogram"
                 category="View" />
+        <!-- The color schemes and the brightness of the spectrogram, as in frqeditor -->
+        <action id="helloutau.frequencyMap.coolColors" text="&amp;Cool" category="View" />
+        <action id="helloutau.frequencyMap.purpleColors" text="&amp;Purple" category="View" />
+        <action id="helloutau.frequencyMap.jadeColors" text="&amp;Jade" category="View" />
+        <action id="helloutau.frequencyMap.grassyColors" text="&amp;Grassy" category="View" />
+        <action id="helloutau.frequencyMap.flameColors" text="&amp;Flame" category="View" />
+        <action id="helloutau.frequencyMap.rubyColors" text="&amp;Ruby" category="View" />
+        <action id="helloutau.frequencyMap.brighten" text="&amp;Brighten" category="View" />
+        <action id="helloutau.frequencyMap.darken" text="&amp;Darken" category="View" />
         <!-- The audio files of the list, as Ctrl+Up and Ctrl+Down of frqeditor -->
         <action id="helloutau.frequencyMap.previousFile" text="&amp;Previous File"
                 category="View" shortcut="Ctrl+Up" />
@@ -61,6 +70,9 @@
         <menu id="helloutau.frequencyMap.edit" text="&amp;Edit" />
         <menu id="helloutau.frequencyMap.select" text="&amp;Select" />
         <menu id="helloutau.frequencyMap.view" text="&amp;View" />
+        <menu id="helloutau.frequencyMap.spectrum" text="Spec&amp;trogram" />
+        <menu id="helloutau.frequencyMap.colors" text="&amp;Colors" />
+        <menu id="helloutau.frequencyMap.brightness" text="&amp;Brightness" />
     </items>
 
     <layouts>
@@ -89,14 +101,27 @@
                 <action id="helloutau.select.deselect" />
             </menu>
             <menu id="helloutau.frequencyMap.view">
-                <action id="helloutau.view.zoomInTime" />
-                <action id="helloutau.view.zoomOutTime" />
-                <action id="helloutau.view.zoomInKeys" />
-                <action id="helloutau.view.zoomOutKeys" />
-                <action id="helloutau.frequencyMap.showSpectrogram" />
+                <action id="helloutau.frequencyMap.zoomIn" />
+                <action id="helloutau.frequencyMap.zoomOut" />
                 <separator />
                 <action id="helloutau.frequencyMap.previousFile" />
                 <action id="helloutau.frequencyMap.nextFile" />
+                <separator />
+                <menu id="helloutau.frequencyMap.spectrum">
+                    <action id="helloutau.frequencyMap.showSpectrogram" />
+                    <menu id="helloutau.frequencyMap.colors">
+                        <action id="helloutau.frequencyMap.coolColors" />
+                        <action id="helloutau.frequencyMap.purpleColors" />
+                        <action id="helloutau.frequencyMap.jadeColors" />
+                        <action id="helloutau.frequencyMap.grassyColors" />
+                        <action id="helloutau.frequencyMap.flameColors" />
+                        <action id="helloutau.frequencyMap.rubyColors" />
+                    </menu>
+                    <menu id="helloutau.frequencyMap.brightness">
+                        <action id="helloutau.frequencyMap.brighten" />
+                        <action id="helloutau.frequencyMap.darken" />
+                    </menu>
+                </menu>
             </menu>
         </menu>
     </layouts>

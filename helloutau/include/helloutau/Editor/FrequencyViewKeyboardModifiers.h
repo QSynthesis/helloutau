@@ -15,6 +15,7 @@ namespace hello::daw {
     /// - A left drag draws the frequencies.
     /// - A left drag with Ctrl selects frames.
     /// - A right drag unvoices frames.
+    /// - A left drag of the key line in the labels sets the key.
     class HELLOUTAU_EDITOR_EXPORT FrequencyViewKeyboardModifiers {
     public:
         enum Role {
@@ -27,6 +28,7 @@ namespace hello::daw {
             Unvoice,
             DragZoom,
             DragZoomAxisLock,
+            DragKey,
         };
 
         enum Scene {
@@ -38,6 +40,9 @@ namespace hello::daw {
 
             /// A right click or drag
             RightDragScene,
+
+            /// A left click or drag of the key line in the labels
+            KeyLineScene,
         };
 
         static const KeyboardModifierScheme &scheme();

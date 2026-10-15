@@ -654,6 +654,46 @@
         <translation>插值(&amp;N)</translation>
     </message>
     <message>
+        <source>Zoom &amp;In</source>
+        <translation>放大(&amp;I)</translation>
+    </message>
+    <message>
+        <source>Zoom &amp;Out</source>
+        <translation>缩小(&amp;O)</translation>
+    </message>
+    <message>
+        <source>&amp;Cool</source>
+        <translation>冰蓝(&amp;C)</translation>
+    </message>
+    <message>
+        <source>&amp;Purple</source>
+        <translation>炫紫(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Jade</source>
+        <translation>翠绿(&amp;J)</translation>
+    </message>
+    <message>
+        <source>&amp;Grassy</source>
+        <translation>草原(&amp;G)</translation>
+    </message>
+    <message>
+        <source>&amp;Flame</source>
+        <translation>烈焰(&amp;F)</translation>
+    </message>
+    <message>
+        <source>&amp;Ruby</source>
+        <translation>宝红(&amp;R)</translation>
+    </message>
+    <message>
+        <source>&amp;Brighten</source>
+        <translation>调亮(&amp;B)</translation>
+    </message>
+    <message>
+        <source>&amp;Darken</source>
+        <translation>调暗(&amp;D)</translation>
+    </message>
+    <message>
         <source>&amp;Previous File</source>
         <translation>上一个文件(&amp;P)</translation>
     </message>
@@ -664,6 +704,18 @@
     <message>
         <source>Frequency Map Editor Menu</source>
         <translation>频率表编辑器菜单</translation>
+    </message>
+    <message>
+        <source>Spec&amp;trogram</source>
+        <translation>频谱图(&amp;T)</translation>
+    </message>
+    <message>
+        <source>&amp;Colors</source>
+        <translation>颜色(&amp;C)</translation>
+    </message>
+    <message>
+        <source>&amp;Brightness</source>
+        <translation>亮度(&amp;B)</translation>
     </message>
 </context>
 <context>
@@ -1196,6 +1248,41 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::FrequencyMapView</name>
+    <message>
+        <source>Show Spectrogram</source>
+        <translation>显示频谱图</translation>
+    </message>
+    <message>
+        <source>&amp;Cool</source>
+        <translation>冰蓝(&amp;C)</translation>
+    </message>
+    <message>
+        <source>&amp;Purple</source>
+        <translation>炫紫(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Jade</source>
+        <translation>翠绿(&amp;J)</translation>
+    </message>
+    <message>
+        <source>&amp;Grassy</source>
+        <translation>草原(&amp;G)</translation>
+    </message>
+    <message>
+        <source>&amp;Flame</source>
+        <translation>烈焰(&amp;F)</translation>
+    </message>
+    <message>
+        <source>&amp;Ruby</source>
+        <translation>宝红(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Brightness</source>
+        <translation>亮度</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::FrequencyViewKeyboardModifiers</name>
     <message>
         <source>Frequency Map Area</source>
@@ -1236,6 +1323,10 @@
     <message>
         <source>Zoom: Lock Direction</source>
         <translation>缩放：锁定方向</translation>
+    </message>
+    <message>
+        <source>Drag Key Line: Set Key</source>
+        <translation>拖动键线：设定键</translation>
     </message>
 </context>
 <context>

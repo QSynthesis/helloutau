@@ -47,11 +47,16 @@ namespace hello::daw {
                  QT_TRANSLATE_NOOP("hello::daw::FrequencyViewKeyboardModifiers",
                                    "Zoom: Lock Direction"),
                  shift},
+                {DragKey, "dragKey",
+                 QT_TRANSLATE_NOOP("hello::daw::FrequencyViewKeyboardModifiers",
+                                   "Drag Key Line: Set Key"),
+                 none},
             },
             {
                 {WheelScene, {{VerticalScroll}, {HorizontalScroll}, {TimeZoom}, {KeyZoom}}},
                 {LeftDragScene, {{Draw}, {SelectFrames}, {DragZoom, {DragZoomAxisLock}}}},
                 {RightDragScene, {{Unvoice}}},
+                {KeyLineScene, {{DragKey}}},
             });
         return scheme;
     }

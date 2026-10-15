@@ -4,6 +4,8 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QSlider>
+#include <QtWidgets/QToolButton>
 
 #include <hellokit/VoiceBank/FrequencyMapRevisionBuffer.h>
 
@@ -77,18 +79,95 @@ private Q_SLOTS:
         m_buffer.reset();
     }
 
-    // The view fits the map across, and maps positions to frames and frequencies and back.
-    void positions_map_to_frames_and_frequencies() {
-        QVERIFY(near(m_view->xOf(1000), m_view->viewport()->width(), 1e-6));
+    // The view starts at zoom level 0 with C1 at the bottom and the first frame at the right of
+    // the labels, as frqeditor starts, and maps positions to frames and frequencies and back.
+    void the_view_starts_as_frqeditor() {
+        QCOMPARE(m_view->zoomLevel(), 0);
+        QCOMPARE(m_view->keyAxis().pixelsPerKey, double(FrequencyMapView::semitonePixels[0]));
+        QVERIFY(near(m_view->xOf(10) - m_view->xOf(0), FrequencyMapView::framePixels[0], 1e-9));
+        QVERIFY(near(m_view->keyAxis().toKey(m_view->viewport()->height()), 24, 1e-9));
+        QVERIFY(near(m_view->xOf(0), m_view->labelWidth(), 1e-9));
+        // C8 is in view.
+        QVERIFY(m_view->yOf(4186.01) > 0);
+
+        // The frame whose column holds the position
         QCOMPARE(m_view->frameAt(m_view->xOf(42)), std::optional<std::size_t>(4));
         QCOMPARE(m_view->frameAt(-100), std::optional<std::size_t>(0));
         QCOMPARE(m_view->frameAt(1e6), std::optional<std::size_t>(99));
         QVERIFY(near(m_view->frequencyAt(m_view->yOf(330)), 330, 1e-9));
-        // 200 Hz is in view, an octave of room beyond the voiced notes.
-        QVERIFY(m_view->yOf(200) > 0 && m_view->yOf(200) < m_view->viewport()->height());
 
         m_view->setBuffer(nullptr);
         QCOMPARE(m_view->frameAt(0), std::nullopt);
+    }
+
+    // A zoom level sets both axes, keeps the first frame and the lowest note, and stays when
+    // another buffer is set.
+    void the_zoom_levels_set_both_axes() {
+        m_view->setZoomLevel(6);
+        QCOMPARE(m_view->zoomLevel(), 6);
+        QCOMPARE(m_view->keyAxis().pixelsPerKey, double(FrequencyMapView::semitonePixels[6]));
+        QVERIFY(near(m_view->xOf(10) - m_view->xOf(0), FrequencyMapView::framePixels[6], 1e-9));
+        QVERIFY(near(m_view->keyAxis().toKey(m_view->viewport()->height()), 24, 1e-9));
+        QVERIFY(near(m_view->xOf(0), m_view->labelWidth(), 1e-9));
+        m_view->setZoomLevel(9);
+        QCOMPARE(m_view->zoomLevel(), 6);
+
+        FrequencyMapRevisionBuffer other(flatMap());
+        m_view->setBuffer(&other);
+        QCOMPARE(m_view->zoomLevel(), 6);
+        m_view->setBuffer(m_buffer.get());
+    }
+
+    // The button s switches the view, and the brightness and the color scheme are limited.
+    void the_controls_switch_the_view() {
+        QSignalSpy modes(m_view.get(), &FrequencyMapView::viewModeChanged);
+        QSignalSpy spectrum(m_view.get(), &FrequencyMapView::spectrumChanged);
+        QCOMPARE(m_view->viewMode(), FrequencyMapView::KeyRowsView);
+        QVERIFY(m_view->brightnessButton()->isHidden());
+        m_view->viewButton()->click();
+        QCOMPARE(m_view->viewMode(), FrequencyMapView::SpectrumView);
+        QCOMPARE(modes.count(), 1);
+        QVERIFY(!m_view->brightnessButton()->isHidden());
+        m_view->brightnessButton()->click();
+        QVERIFY(!m_view->brightnessSlider()->isHidden());
+        m_view->brightnessSlider()->setValue(-2);
+        QCOMPARE(m_view->brightness(), -2);
+        m_view->setBrightness(9);
+        QCOMPARE(m_view->brightness(), FrequencyMapView::highestBrightness);
+        m_view->setColorScheme(4);
+        QCOMPARE(m_view->colorScheme(), 4);
+        m_view->setColorScheme(-1);
+        QCOMPARE(m_view->colorScheme(), 0);
+        QCOMPARE(spectrum.count(), 4);
+        m_view->setViewMode(FrequencyMapView::KeyRowsView);
+        QVERIFY(!m_view->viewButton()->isChecked());
+        QVERIFY(m_view->brightnessSlider()->isHidden());
+    }
+
+    // A drag of the key line in the labels sets the key as one step, and a double click in the
+    // labels flattens the frames and the key.
+    void the_labels_set_the_key() {
+        auto map = flatMap();
+        map.averageFrequency = 200;
+        FrequencyMapRevisionBuffer buffer(map);
+        m_view->setBuffer(&buffer);
+        m_view->setZoomLevel(4);
+        const int x = m_view->labelWidth() / 2;
+        const auto at = [this, x](double frequency) {
+            return QPoint(x, int(std::lround(m_view->yOf(frequency))));
+        };
+        QSignalSpy edited(m_view.get(), &FrequencyMapView::edited);
+        drag(at(200), at(300), Qt::LeftButton);
+        QCOMPARE(edited.count(), 1);
+        QVERIFY2(near(buffer.key(), 300, 300 * 0.02), qPrintable(QString::number(buffer.key())));
+        QVERIFY(buffer.undo());
+        QCOMPARE(buffer.key(), 200.0);
+
+        QTest::mouseDClick(m_view->viewport(), Qt::LeftButton, {}, at(250));
+        QCOMPARE(edited.count(), 2);
+        QVERIFY(near(buffer.map().frames[50].frequency, 250, 250 * 0.02));
+        QCOMPARE(buffer.key(), buffer.map().frames[50].frequency);
+        m_view->setBuffer(m_buffer.get());
     }
 
     // A left drag draws the frames under the pointer as one step.
