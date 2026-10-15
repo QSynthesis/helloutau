@@ -166,6 +166,39 @@ private Q_SLOTS:
             QVERIFY(splitter->widget(column)->isAncestorOf(dialog.list(column)));
         }
     }
+
+    // With misdecoded names restored, a file of one audio file takes the name that the format
+    // derives from the restored name of the audio file, and a file of several audio files, or a
+    // file that the format does not derive from its audio file, keeps its name in the restored
+    // folder. The folder 偆 and the audio file 偁.wav restore as い and あ.wav.
+    void the_files_are_named_as_restored() {
+        const fs::path root("C:/bank");
+        const auto folder = root / fs::path(u"偆");
+        RepairFrequencyMapsDialog::Files files;
+        files[folder] = {
+            {"desc.map",                -1, {fs::path(u"偁.wav"), "b.wav"}, std::nullopt},
+            {fs::path(u"偁.wav.cache"), 0,  {fs::path(u"偁.wav")},          std::nullopt},
+            {fs::path(u"other.cache"),  0,  {fs::path(u"偁.wav")},          std::nullopt},
+        };
+        const auto shownPathOf = [&root](const fs::path &path) {
+            auto text = QString::fromStdU16String(path.lexically_relative(root).u16string());
+            text.replace(QString::fromUtf8("偆"), QString::fromUtf8("い"));
+            text.replace(QString::fromUtf8("偁"), QString::fromUtf8("あ"));
+            return fs::path(text.toStdU16String());
+        };
+        const Format format;
+        RepairFrequencyMapsDialog dialog(format, root, files, shownPathOf);
+        const auto firstLine = [](const QListWidgetItem *item) {
+            return item->text().section(QLatin1Char('\n'), 0, 0);
+        };
+        QCOMPARE(firstLine(dialog.list(0)->item(0)), QString::fromUtf8("い\\desc.map"));
+        QCOMPARE(firstLine(dialog.list(1)->item(0)), QString::fromUtf8("い\\あ.wav.cache"));
+        QCOMPARE(firstLine(dialog.list(1)->item(1)), QString::fromUtf8("い\\other.cache"));
+
+        // Without the function, the names on disk
+        RepairFrequencyMapsDialog onDisk(format, root, files);
+        QCOMPARE(firstLine(onDisk.list(1)->item(0)), QString::fromUtf8("偆\\偁.wav.cache"));
+    }
 };
 
 QTEST_MAIN(test_RepairFrequencyMapsDialog)

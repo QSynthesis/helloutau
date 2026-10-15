@@ -2,6 +2,7 @@
 #define HELLOUTAU_EDITOR_DIALOGS_REPAIRFREQUENCYMAPSDIALOG_H
 
 #include <filesystem>
+#include <functional>
 #include <map>
 
 #include <QtCore/QList>
@@ -29,10 +30,16 @@ namespace hello::daw {
         /// The files of each folder, by the folder
         using Files = std::map<std::filesystem::path, QList<kit::FrequencyFormats::MapFile>>;
 
-        /// Lists \a files of \a format, each named relative to \a root.
+        /// Returns the path for display of an absolute path of a file or a folder, relative to
+        /// the root and with misdecoded names restored, or an empty path to show the name on disk.
+        using ShownPath = std::function<std::filesystem::path(const std::filesystem::path &)>;
+
+        /// Lists \a files of \a format, each named relative to \a root. With \a shownPathOf, a
+        /// file of one audio file takes the name that the format derives from the restored name
+        /// of the audio file, and another file is named in its restored folder.
         RepairFrequencyMapsDialog(const kit::FrequencyFormat &format,
                                   const std::filesystem::path &root, Files files,
-                                  QWidget *parent = nullptr);
+                                  ShownPath shownPathOf = {}, QWidget *parent = nullptr);
         ~RepairFrequencyMapsDialog();
 
         /// Returns the checked files by folder, without the folders that have none.

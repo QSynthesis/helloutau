@@ -1,5 +1,7 @@
 #include "RepairFrequencyMapsDialog.h"
 
+#include <optional>
+
 #include <QtCore/QDir>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
@@ -24,11 +26,46 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
+        // Returns the path of file in folder with misdecoded names restored by shownPathOf, or an
+        // empty path if shownPathOf restores nothing. A file of one audio file takes the name that
+        // format derives from the restored name of the audio file, provided that format derives
+        // the name on disk from the name of the audio file on disk, as a rename of the audio file
+        // keeps it. Another file keeps its name in the restored folder.
+        fs::path restoredPathOf(const kit::FrequencyFormat &format,
+                                const RepairFrequencyMapsDialog::ShownPath &shownPathOf,
+                                const fs::path &folder,
+                                const kit::FrequencyFormats::MapFile &file) {
+            if (!shownPathOf) {
+                return {};
+            }
+            if (file.wavs.size() == 1) {
+                const auto &wav = file.wavs.front();
+                const auto shownWav = shownPathOf(folder / wav);
+                const auto caches = format.analysisCaches();
+                const auto derive = [&](const fs::path &audio) -> std::optional<fs::path> {
+                    if (file.cache < 0) {
+                        return format.sidecarNameOf(audio);
+                    }
+                    if (file.cache < caches.size()) {
+                        return caches.at(file.cache).fileNameOf(audio);
+                    }
+                    return std::nullopt;
+                };
+                const auto onDisk = derive(wav);
+                const auto restored = derive(shownWav.filename());
+                if (!shownWav.empty() && onDisk && restored && *onDisk == file.path) {
+                    return (shownWav.parent_path() / *restored).lexically_normal();
+                }
+            }
+            const auto shownFolder = shownPathOf(folder);
+            return shownFolder.empty() ? fs::path() : (shownFolder / file.path).lexically_normal();
+        }
+
     }
 
     RepairFrequencyMapsDialog::RepairFrequencyMapsDialog(const kit::FrequencyFormat &format,
                                                          const fs::path &root, Files files,
-                                                         QWidget *parent)
+                                                         ShownPath shownPathOf, QWidget *parent)
         : QDialog(parent), m_files(std::move(files)) {
         setWindowTitle(tr("Repair Frequency Maps"));
         resize(720, 420);
@@ -64,7 +101,11 @@ namespace hello::daw {
                     if (file.cache != column - 1) {
                         continue;
                     }
-                    auto text = displayed(root, folder, file.path);
+                    const auto restored = restoredPathOf(format, shownPathOf, folder, file);
+                    auto text = restored.empty()
+                                    ? displayed(root, folder, file.path)
+                                    : QDir::toNativeSeparators(
+                                          QString::fromStdU16String(restored.u16string()));
                     auto item = new QListWidgetItem(list);
                     if (!file.exists) {
                         text += QLatin1Char('\n') + tr("The file does not exist.");

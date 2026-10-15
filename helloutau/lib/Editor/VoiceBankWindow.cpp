@@ -2882,8 +2882,13 @@ namespace hello::daw {
                                          .arg(format->name()));
             return false;
         }
-        RepairFrequencyMapsDialog dialog(*format, impl.document->rootPath(), std::move(files),
-                                         this);
+        RepairFrequencyMapsDialog dialog(
+            *format, impl.document->rootPath(), std::move(files),
+            [this](const std::filesystem::path &path) {
+                stdc_impl_t;
+                return impl.shownPathOf(path);
+            },
+            this);
         if (dialog.exec() != QDialog::Accepted) {
             return false;
         }
