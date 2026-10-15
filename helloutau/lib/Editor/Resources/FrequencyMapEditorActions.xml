@@ -57,6 +57,9 @@
         <!-- Every correction of every map, each map as one step of its history -->
         <action id="helloutau.frequencyMap.adoptAllCorrections" text="Correct &amp;All"
                 category="Check" />
+        <!-- Every correction of every map, with no change of the frames -->
+        <action id="helloutau.frequencyMap.ignoreAllCorrections" text="Ignore A&amp;ll"
+                category="Check" />
 
         <!-- Every modified frequency map in order, as Save All of frqeditor -->
         <action id="helloutau.frequencyMap.saveAll" text="Save &amp;All" category="File"
@@ -153,6 +156,7 @@
                 <action id="helloutau.frequencyMap.adoptCorrection" />
                 <action id="helloutau.frequencyMap.ignoreCorrection" />
                 <action id="helloutau.frequencyMap.adoptAllCorrections" />
+                <action id="helloutau.frequencyMap.ignoreAllCorrections" />
             </menu>
             <menu id="helloutau.frequencyMap.view">
                 <action id="helloutau.frequencyMap.zoomIn" />

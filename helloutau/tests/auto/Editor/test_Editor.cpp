@@ -3422,7 +3422,18 @@ private Q_SLOTS:
             QCOMPARE(frequencyAt(42), 880.0);
             QCOMPARE(correctedCount(), 0);
 
-            // Correct All adopts every correction, after which a check finds nothing and says so.
+            // Ignore All drops every correction and leaves the frames as they are.
+            QVERIFY(dialog->check({}));
+            trigger("helloutau.frequencyMap.ignoreAllCorrections");
+            QCOMPARE(frequencyAt(42), 880.0);
+            QCOMPARE(correctedCount(), 0);
+            QVERIFY(dialog->view()->corrections().empty());
+            QVERIFY(!dialog->actionContext()
+                         ->action(QStringLiteral("helloutau.frequencyMap.ignoreAllCorrections"))
+                         ->isEnabled());
+
+            // Correct All adopts every correction, after which a check finds nothing and reports
+            // it.
             QVERIFY(dialog->check({}));
             trigger("helloutau.frequencyMap.adoptAllCorrections");
             QCOMPARE(frequencyAt(42), 220.0);

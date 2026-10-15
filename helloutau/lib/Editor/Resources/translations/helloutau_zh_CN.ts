@@ -654,6 +654,10 @@
         <translation>全部修正(&amp;A)</translation>
     </message>
     <message>
+        <source>Ignore A&amp;ll</source>
+        <translation>全部忽略(&amp;L)</translation>
+    </message>
+    <message>
         <source>Save &amp;All</source>
         <translation>全部保存(&amp;A)</translation>
     </message>

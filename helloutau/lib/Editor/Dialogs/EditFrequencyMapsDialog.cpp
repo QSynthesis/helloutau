@@ -695,7 +695,8 @@ namespace hello::daw {
                                [](const auto &file) { return file.hasMap; }));
             for (const auto id : {"helloutau.frequencyMap.previousCorrection",
                                   "helloutau.frequencyMap.nextCorrection",
-                                  "helloutau.frequencyMap.adoptAllCorrections"}) {
+                                  "helloutau.frequencyMap.adoptAllCorrections",
+                                  "helloutau.frequencyMap.ignoreAllCorrections"}) {
                 enable(id, anyCorrection);
             }
             const bool atCorrection = currentCorrectionRun().has_value();
@@ -966,6 +967,23 @@ namespace hello::daw {
             updateActions();
         }
 
+        // Drops every correction of every map and leaves the frames as they are. A map other
+        // than the current one, left without a history, is read again when it is shown again.
+        void ignoreAllCorrections() {
+            for (auto it = opened.begin(); it != opened.end();) {
+                auto &[index, entry] = *it;
+                entry.corrections.clear();
+                const bool released =
+                    index != current && !entry.buffer->canUndo() && !entry.buffer->canRedo();
+                const int row = index;
+                it = released ? opened.erase(it) : std::next(it);
+                updateRow(row);
+            }
+            view->setCorrections({});
+            view->viewport()->update();
+            updateActions();
+        }
+
         bool save(int index) {
             stdc_decl_t;
             const auto entry = openedOf(index);
@@ -1060,6 +1078,8 @@ namespace hello::daw {
                        [this] { resolveCorrection(false); });
             addCommand(QStringLiteral("helloutau.frequencyMap.adoptAllCorrections"),
                        [this] { adoptAllCorrections(); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.ignoreAllCorrections"),
+                       [this] { ignoreAllCorrections(); });
             addCommand(QStringLiteral("helloutau.file.save"), [this] {
                 stdc_decl_t;
                 decl.save();
