@@ -4,11 +4,11 @@ add_auto_test(test_FrequencyMapView.cpp HelloUtauEditor)
 add_auto_test(test_FrequencyMapWaveform.cpp HelloUtauEditor)
 add_auto_test(test_FrequencyViewKeyboardModifiers.cpp HelloUtauEditor)
 add_auto_test(test_KeymapFile.cpp HelloUtauEditor QActionKit::Core)
-# The editor of the test registers the formats dio and mrq of the FrequencyEditor plugin, as the
+# The editor of the test registers the formats dio and mrq of the SynthToolSupport plugin, as the
 # plugin does, whose library is in its own directory of the plugins.
-add_auto_test(test_Editor.cpp HelloUtauTestingEditor FrequencyEditorPlugin)
+add_auto_test(test_Editor.cpp HelloUtauTestingEditor SynthToolSupportPlugin)
 set_property(TEST test_Editor APPEND PROPERTY ENVIRONMENT_MODIFICATION
-    "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:FrequencyEditorPlugin>>"
+    "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:SynthToolSupportPlugin>>"
 )
 add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
 add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
@@ -56,7 +56,7 @@ target_compile_definitions(test_AppLoaderFailingPlugin PRIVATE TEST_APPLOADER_FA
 
 add_auto_test(test_AppLoader.cpp HelloUtauEditor)
 add_dependencies(test_AppLoader test_AppLoaderPlugin test_AppLoaderFailingPlugin CorePlugin
-    ClassicPluginHostPlugin FrequencyEditorPlugin InterchangePlugin)
+    ClassicPluginHostPlugin SynthToolSupportPlugin InterchangePlugin)
 target_compile_definitions(test_AppLoader PRIVATE
     TEST_APPLOADER_CORE="$<TARGET_FILE:test_AppLoaderPlugin>"
     TEST_APPLOADER_FAILING_CORE="$<TARGET_FILE:test_AppLoaderFailingPlugin>"

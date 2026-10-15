@@ -117,5 +117,5 @@ endfunction()
 
 add_subdirectory(Core)
 add_subdirectory(ClassicPluginHost)
-add_subdirectory(FrequencyEditor)
+add_subdirectory(SynthToolSupport)
 add_subdirectory(Interchange)

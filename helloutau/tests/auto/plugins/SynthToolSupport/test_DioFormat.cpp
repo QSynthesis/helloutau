@@ -8,7 +8,7 @@
 
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
-#include <FrequencyEditor/DioFormat.h>
+#include <SynthToolSupport/DioFormat.h>
 
 using namespace hello;
 using namespace hello::daw;

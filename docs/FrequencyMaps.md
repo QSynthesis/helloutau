@@ -161,7 +161,7 @@ dio 的采样率不按 qfrqeditor 由帧间隔反推（`hop × 44100 / 256` 取�
 
 之后作者决定插件只有一种原生插件（[`Plugins.md`](Plugins.md)），频率表格式随之改为它的一个扩展点，`FrequencyFormatPlugin` 已删除，由登记对象 `FrequencyFormatRegistration` 取代；多个格式匹配重采样器时后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
 
-**格式的位置**（作者 2026-09-30 定，2026-10-12 实施）：每种格式各占一个源文件。UTAU 自带的 frq 留在库中（`BuiltinFrequencyFormats`），由编辑器自己登记，因此没有任何插件时也有 frq，与「都不匹配时为 frq」一致（作者 2026-10-12 决定）。dio 与 mrq 移到 FrequencyEditor 插件（`DioFormat`、`MrqFormat`），由插件登记。各格式共用的读取放在 `FrequencyFormat` 的保护成员中（读文件、报告损坏、按附属文件批量查询），二进制数据的读写用 `kit::BinaryStream`（HelloKitSupport，可选大小端，说明了不用 `QDataStream` 的理由）。
+**格式的位置**（作者 2026-09-30 定，2026-10-12 实施）：每种格式各占一个源文件。UTAU 自带的 frq 留在库中（`BuiltinFrequencyFormats`），由编辑器自己登记，因此没有任何插件时也有 frq，与「都不匹配时为 frq」一致（作者 2026-10-12 决定）。dio 与 mrq 移到 SynthToolSupport 插件（`DioFormat`、`MrqFormat`），由插件登记。各格式共用的读取放在 `FrequencyFormat` 的保护成员中（读文件、报告损坏、按附属文件批量查询），二进制数据的读写用 `kit::BinaryStream`（HelloKitSupport，可选大小端，说明了不用 `QDataStream` 的理由）。
 
 ### 闭源与无公开资料的格式
 

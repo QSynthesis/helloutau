@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_FREQUENCYEDITOR_MORESAMPLERDIAGNOSER_H
-#define HELLOUTAU_FREQUENCYEDITOR_MORESAMPLERDIAGNOSER_H
+#ifndef HELLOUTAU_SYNTHTOOLSUPPORT_MORESAMPLERDIAGNOSER_H
+#define HELLOUTAU_SYNTHTOOLSUPPORT_MORESAMPLERDIAGNOSER_H
 
 #include <filesystem>
 #include <optional>
@@ -8,16 +8,16 @@
 
 #include <hellokit/Synth/SynthDiagnoser.h>
 
-#include <FrequencyEditor/FrequencyEditorPluginGlobal.h>
+#include <SynthToolSupport/SynthToolSupportPluginGlobal.h>
 
 namespace hello::daw {
 
     /// The diagnoser of moresampler with \c resampler-compatibility off, registered by the
-    /// FrequencyEditor plugin. Moresampler then writes a placeholder text at the path of each
+    /// SynthToolSupport plugin. Moresampler then writes a placeholder text at the path of each
     /// fragment and the data beside it with the extension \c .llsm.tmp, which only moresampler
     /// as the wavtool joins. The diagnoser identifies such a fragment by the placeholder text.
     /// See docs/SynthDiagnostics.md.
-    class FREQUENCYEDITORPLUGIN_EXPORT MoresamplerDiagnoser : public kit::SynthDiagnoser {
+    class SYNTHTOOLSUPPORTPLUGIN_EXPORT MoresamplerDiagnoser : public kit::SynthDiagnoser {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::MoresamplerDiagnoser)
     public:
         static constexpr char diagnoserId[] = "moresampler.compatibility";
@@ -41,4 +41,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_FREQUENCYEDITOR_MORESAMPLERDIAGNOSER_H
+#endif // HELLOUTAU_SYNTHTOOLSUPPORT_MORESAMPLERDIAGNOSER_H

@@ -63,7 +63,7 @@
 - 其余的失败，按阶段说明：重采样器没有写出分片，合成器对音符失败（分片不是 wav 时附上其开头），合成器没有写出整轨，实时模式无法读取分片。这是兜底的诊断。
 - 路径超过 260 个字符。
 
-moresampler 的诊断器由 FrequencyEditor 插件注册（作者 2026-10-11 决定），该插件已经注册了 moresampler 的频率表格式：
+moresampler 的诊断器由 SynthToolSupport 插件注册（作者 2026-10-11 决定），该插件已经注册了 moresampler 的频率表格式：
 
 - **重采样器为 moresampler，`moreconfig.txt` 中 `resampler-compatibility off`，而拼接不由 moresampler 完成**（`MoresamplerDiagnoser`）。识别方式：合成器对某个音符失败（多线程模式），实时模式无法读取分片，或经典模式没有写出整轨，而该音符的分片以 moresampler 的那段占位文字开头。依据见下文实测。解决办法：把 moresampler 目录中 `moreconfig.txt` 的 `resampler-compatibility` 改为 `on`，或把合成器也设为 moresampler，修改后清除渲染缓存，因为已写出的分片仍是占位文件。实时模式以内置的拼接读取分片，无论合成器是什么都无法读取这样的分片，因此不提供改合成器的办法。若 `moreconfig.txt` 已为 `on` 或不存在，moresampler 写出的是 wav，这些占位分片来自修改之前的渲染，此时只提供清除缓存的办法。
 - **`.llsm` 文件的版本比 moresampler 新且不兼容。** 教程「兼容性」一节记载 moresampler 此时停止工作并报错。识别这种情况需要该错误的输出原文，尚未取得，实现前须实测。

@@ -109,8 +109,8 @@
 #include <helloutau/Testing/Editor/TestingEditor.h>
 #include <helloutau/Widgets/TimelineRuler.h>
 
-#include <FrequencyEditor/DioFormat.h>
-#include <FrequencyEditor/MrqFormat.h>
+#include <SynthToolSupport/DioFormat.h>
+#include <SynthToolSupport/MrqFormat.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -390,13 +390,13 @@ private:
     QTemporaryDir m_dir;
     // The launcher of the application, in which a restart is scheduled
     kit::ExitLauncher m_launcher;
-    // The registrations of the formats of frequency maps that the plugin FrequencyEditor
+    // The registrations of the formats of frequency maps that the plugin SynthToolSupport
     // registers, dio and mrq of each editor that editor() created. A registration that outlives
     // its editor removes nothing.
     mutable std::vector<kit::FrequencyFormatRegistry::AddFactory> m_formats;
 
     // An editor with the menus, the commands and the frequency map formats that the core
-    // plugin and the plugin FrequencyEditor register, whose voice bank windows do not follow the
+    // plugin and the plugin SynthToolSupport register, whose voice bank windows do not follow the
     // disk independently, which would ask at any moment. A test calls VoiceBankWindow::checkDisk()
     // instead. The editor registers frq itself.
     std::unique_ptr<Editor> editor() const {

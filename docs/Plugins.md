@@ -54,8 +54,8 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
   |---|---|---|---|---|
   | 动作 | `ActionContributionRegistry`（HelloUtauWidgets） | 插件 ID | `Editor`，`Editor::actionContributions()` | `BuiltinActions`（Core 为其编辑器创建，是编辑器的子对象） |
   | 设置页 | `SettingPageRegistry`（HelloUtauWidgets），工厂返回 `SettingPagePlacement` | 页面 id | `Editor`，`Editor::settingPages()` | 无，编辑器与 Core 的页面直接加入目录 |
-  | 频率表格式 | `kit::FrequencyFormatRegistry`（HelloKitVoiceBank） | 格式 ID | `kit::FrequencyFormats`，编辑器的为 `Editor::frequencyFormats()` | frq：`BuiltinFrequencyFormats`（编辑器持有）；dio、mrq：FrequencyEditor 插件 |
-  | 渲染失败的诊断器 | `kit::SynthDiagnoserRegistry`（HelloKitSynth） | 诊断器 ID | `kit::SynthDiagnosers`，编辑器的为 `Editor::synthDiagnosers()` | `BuiltinSynthDiagnosers`（编辑器持有），moresampler 的诊断器由 FrequencyEditor 登记，见 [`SynthDiagnostics.md`](SynthDiagnostics.md) |
+  | 频率表格式 | `kit::FrequencyFormatRegistry`（HelloKitVoiceBank） | 格式 ID | `kit::FrequencyFormats`，编辑器的为 `Editor::frequencyFormats()` | frq：`BuiltinFrequencyFormats`（编辑器持有）；dio、mrq：SynthToolSupport 插件 |
+  | 渲染失败的诊断器 | `kit::SynthDiagnoserRegistry`（HelloKitSynth） | 诊断器 ID | `kit::SynthDiagnosers`，编辑器的为 `Editor::synthDiagnosers()` | `BuiltinSynthDiagnosers`（编辑器持有），moresampler 的诊断器由 SynthToolSupport 登记，见 [`SynthDiagnostics.md`](SynthDiagnostics.md) |
   | 导入驱动、导出驱动 | `kit::InterchangeReaderRegistry`、`kit::InterchangeWriterRegistry`（HelloKitInterchange） | 驱动 ID | `kit::InterchangeDrivers`，Interchange 插件的为 `InterchangeService::drivers()` | `BuiltinInterchangeDrivers`（Interchange 持有） |
   | 导入向导的步骤页 | `InterchangeStepRegistry`（Interchange 插件），以 `std::map` 保存 | 驱动的 `customStepId()` | `InterchangeService::stepPages()` | Interchange 登记 MIDI 的编码页 |
 
@@ -89,7 +89,7 @@ bin/
 lib/helloutau/plugins/
     Core/
     ClassicPluginHost/
-    FrequencyEditor/
+    SynthToolSupport/
     Interchange/
 ```
 
@@ -151,13 +151,13 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），CLAUDE.md、Roadmap.md、Status.md、Interchange.md、FrequencyMaps.md 的相应说法一并更新。
 3. ~~**加载器与 Core 插件**~~：`AppLoader`、Core 插件、`helloutau_add_native_plugin()`，程序只剩加载器。`test_AppLoader` 以测试插件覆盖参数、Core 插件的必需与三种失败、生命周期，并载入真正的 Core 插件打开窗口。
    - ~~**插件作为库与动作的扩展**~~：插件导出目标、安装头文件；`ActionContribution` / `ActionRegistration`；编辑器的清单拆为两份，经 `BuiltinActions` 由 Core 登记；TestAction 测试插件。见「编辑界面扩展：动作与命令」。
-4. ~~**试点：频率表格式与 FrequencyEditor 插件**~~：
+4. ~~**试点：频率表格式与 SynthToolSupport 插件**~~：
    - `FrequencyFormatRegistration`（HelloKitVoiceBank）：登记对象，持有一种格式，形状与 `ActionRegistration` 相同（见「注册接口」）。
    - `FrequencyFormatRegistry` 成为 `QObject`：内容来自进程级列表，按登记顺序；同一 ID 的多个格式只取先登记的，它注销后由下一个接替，与 qactionkit 对重复条目的处理一致；变化时发出 `formatsChanged()`。不再有 `add()` 与 `addBuiltinFormats()`。音源窗口的「F0」下拉框随之重建：所选格式仍在则保留，否则改选重采样器对应的格式。
-   - `BuiltinFrequencyFormats` 登记 frq，由编辑器持有。dio、mrq 由 FrequencyEditor 插件（ID `org.helloutau.frequencyeditor`，目录 `FrequencyEditor`，依赖 Core，作者定名）登记，代码也在插件中（作者 2026-10-12 决定，取代原先三种都由插件登记、代码留在 hellokit 的做法）。将来的频率表编辑界面也由它负责。需要这些格式的测试自己登记或直接构造。
+   - `BuiltinFrequencyFormats` 登记 frq，由编辑器持有。dio、mrq 由 SynthToolSupport 插件（ID `org.helloutau.synthtoolsupport`，目录 `SynthToolSupport`，依赖 Core，作者定名，2026-10-15 由 FrequencyEditor 改名）登记，代码也在插件中（作者 2026-10-12 决定，取代原先三种都由插件登记、代码留在 hellokit 的做法）。将来的频率表编辑界面也由它负责。需要这些格式的测试自己登记或直接构造。
    - 删除 `FrequencyFormatPlugin`。
-   - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 FrequencyEditor，必在其后载入。
-   - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，FrequencyEditor 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。
+   - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 SynthToolSupport，必在其后载入。
+   - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，SynthToolSupport 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。
 5. **设置**：~~用户的启用设置文件~~（`plugins.json`，见上文「设置」），~~设置对话框的「Plugins」页~~（见上文），随安装提供的全局设置（未做）。
 6. ~~**格式转换驱动**~~：`InterchangeRegistration`（HelloKitInterchange，一个导入或导出驱动）、进程级列表 `InterchangeRegistrations_p.h`、`InterchangeRegistry` 成为监听列表的 `QObject`（`driversChanged()`），`BuiltinInterchangeDrivers` 登记 MIDI 的读与写，由新的 Interchange 插件（ID `org.helloutau.interchange`，依赖 Core，作者 2026-09-30 定）持有；删除 `InterchangePlugin`。规则见 [`Interchange.md`](Interchange.md)「注册表」。
 7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → Classic Plugins」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
@@ -174,6 +174,6 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 5. 目录布局的元数据文件名沿用 `plugin.json`。
 6. IID 为 `org.OpenVPI.HelloUtau.Plugin`，常量放在 HelloUtauEditor。
 7. 程序只是加载器（`AppLoader`，不用 `Loader` 这样的名称），原来程序入口的工作由 Core 插件负责；目录为 `bin` 与 `lib/helloutau/plugins/<插件>`；程序文件名为小写的 `helloutau`，Windows 资源中的名称显式为 `HelloUtau`。
-8. 频率表插件名为 FrequencyEditor。多个格式匹配重采样器时选后载入的。
+8. 频率表插件原名 FrequencyEditor，2026-10-15 改名为 SynthToolSupport（作者决定）：它登记的是第三方合成工具的频率表格式与渲染失败的诊断器，频率表的编辑在 HelloUtauEditor 中。多个格式匹配重采样器时选后载入的。
 9. 插件可以注册自己的动作（命令），属于编辑界面扩展。插件也是库：导出目标、安装头文件，插件中库一级的内容在 `tests/auto/plugins` 中测试，不测试菜单布局。
 10. 编辑器的清单由 Core 注册：现在按方案 1 加 3（清单拆成应用层与窗口层两份，都经 Core 登记，处理函数仍在窗口中），最终目标是方案 2（清单与处理函数都在 Core 中）。

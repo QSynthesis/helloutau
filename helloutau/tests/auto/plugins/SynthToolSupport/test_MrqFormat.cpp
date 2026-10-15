@@ -9,7 +9,7 @@
 
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
-#include <FrequencyEditor/MrqFormat.h>
+#include <SynthToolSupport/MrqFormat.h>
 
 using namespace hello;
 using namespace hello::daw;

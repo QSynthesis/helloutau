@@ -12,7 +12,7 @@ namespace hello::kit {
 
     /// Registrations of the formats of this library in \a registry for the lifetime of the
     /// object: frq of resampler.exe, the format of the resampler of UTAU. The other formats are
-    /// registered by plugins, such as dio and mrq by the FrequencyEditor plugin.
+    /// registered by plugins, such as dio and mrq by the SynthToolSupport plugin.
     ///
     /// The editor owns an instance for its registry, so that frq is registered without any
     /// plugin. A test that requires the format owns its own instance.

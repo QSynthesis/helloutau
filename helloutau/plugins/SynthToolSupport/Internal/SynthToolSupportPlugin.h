@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_FREQUENCYEDITOR_INTERNAL_FREQUENCYEDITORPLUGIN_H
-#define HELLOUTAU_FREQUENCYEDITOR_INTERNAL_FREQUENCYEDITORPLUGIN_H
+#ifndef HELLOUTAU_SYNTHTOOLSUPPORT_INTERNAL_SYNTHTOOLSUPPORTPLUGIN_H
+#define HELLOUTAU_SYNTHTOOLSUPPORT_INTERNAL_SYNTHTOOLSUPPORTPLUGIN_H
 
 #include <string>
 
@@ -10,13 +10,13 @@
 
 namespace hello::daw {
 
-    /// The plugin of frequency maps: registers the formats dio and mrq, the diagnoser of
-    /// moresampler, and later the editor of the maps. The editor registers frq itself. See
+    /// The plugin that supports third-party synth tools: registers the formats dio and mrq of
+    /// frequency maps and the diagnoser of moresampler. The editor registers frq itself. See
     /// docs/FrequencyMaps.md and docs/SynthDiagnostics.md.
-    class FrequencyEditorPlugin : public stdc::pluginsystem::IPlugin {
+    class SynthToolSupportPlugin : public stdc::pluginsystem::IPlugin {
     public:
-        FrequencyEditorPlugin();
-        ~FrequencyEditorPlugin();
+        SynthToolSupportPlugin();
+        ~SynthToolSupportPlugin();
 
         bool initialize(std::string *errorMessage) override;
         void aboutToShutdown() override;
@@ -29,4 +29,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_FREQUENCYEDITOR_INTERNAL_FREQUENCYEDITORPLUGIN_H
+#endif // HELLOUTAU_SYNTHTOOLSUPPORT_INTERNAL_SYNTHTOOLSUPPORTPLUGIN_H

@@ -1,4 +1,4 @@
-#include "FrequencyEditorPlugin.h"
+#include "SynthToolSupportPlugin.h"
 
 #include <QtCore/QtGlobal>
 
@@ -9,20 +9,20 @@
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
 
-#include <FrequencyEditor/DioFormat.h>
-#include <FrequencyEditor/MoresamplerDiagnoser.h>
-#include <FrequencyEditor/MrqFormat.h>
+#include <SynthToolSupport/DioFormat.h>
+#include <SynthToolSupport/MoresamplerDiagnoser.h>
+#include <SynthToolSupport/MrqFormat.h>
 
 namespace hello::daw {
 
-    FrequencyEditorPlugin::FrequencyEditorPlugin() = default;
+    SynthToolSupportPlugin::SynthToolSupportPlugin() = default;
 
-    FrequencyEditorPlugin::~FrequencyEditorPlugin() = default;
+    SynthToolSupportPlugin::~SynthToolSupportPlugin() = default;
 
-    bool FrequencyEditorPlugin::initialize(std::string *errorMessage) {
+    bool SynthToolSupportPlugin::initialize(std::string *errorMessage) {
         if (const auto translations = kit::TranslationLoader::instance()) {
-            translations->load(QStringLiteral("FrequencyEditor"),
-                               QStringLiteral(":/helloutau/plugins/FrequencyEditor/translations"));
+            translations->load(QStringLiteral("SynthToolSupport"),
+                               QStringLiteral(":/helloutau/plugins/SynthToolSupport/translations"));
         }
         // The core plugin, on which this plugin depends, has created the editor.
         const auto loader = AppLoader::instance();
@@ -41,16 +41,16 @@ namespace hello::daw {
         return true;
     }
 
-    void FrequencyEditorPlugin::aboutToShutdown() {
+    void SynthToolSupportPlugin::aboutToShutdown() {
         m_moresampler = {};
         m_mrq = {};
         m_dio = {};
         // Removed before this library, which holds the translation, is unloaded
         if (const auto translations = kit::TranslationLoader::instance()) {
-            translations->remove(QStringLiteral("FrequencyEditor"));
+            translations->remove(QStringLiteral("SynthToolSupport"));
         }
     }
 
 }
 
-STDC_EXPORT_PLUGIN(hello::daw::FrequencyEditorPlugin)
+STDC_EXPORT_PLUGIN(hello::daw::SynthToolSupportPlugin)

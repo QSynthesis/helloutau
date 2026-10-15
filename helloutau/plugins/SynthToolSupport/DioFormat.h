@@ -1,17 +1,17 @@
-#ifndef HELLOUTAU_FREQUENCYEDITOR_DIOFORMAT_H
-#define HELLOUTAU_FREQUENCYEDITOR_DIOFORMAT_H
+#ifndef HELLOUTAU_SYNTHTOOLSUPPORT_DIOFORMAT_H
+#define HELLOUTAU_SYNTHTOOLSUPPORT_DIOFORMAT_H
 
 #include <QtCore/QCoreApplication>
 
 #include <hellokit/VoiceBank/FrequencyFormat.h>
 
-#include <FrequencyEditor/FrequencyEditorPluginGlobal.h>
+#include <SynthToolSupport/SynthToolSupportPluginGlobal.h>
 
 namespace hello::daw {
 
     /// The frequency maps of world4utau, beside the audio file as a.dio, registered by the
-    /// FrequencyEditor plugin. See docs/FrequencyMaps.md.
-    class FREQUENCYEDITORPLUGIN_EXPORT DioFormat : public kit::FrequencyFormat {
+    /// SynthToolSupport plugin. See docs/FrequencyMaps.md.
+    class SYNTHTOOLSUPPORTPLUGIN_EXPORT DioFormat : public kit::FrequencyFormat {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::DioFormat)
     public:
         static constexpr char formatId[] = "dio";
@@ -53,4 +53,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_FREQUENCYEDITOR_DIOFORMAT_H
+#endif // HELLOUTAU_SYNTHTOOLSUPPORT_DIOFORMAT_H

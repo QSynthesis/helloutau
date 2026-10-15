@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_FREQUENCYEDITOR_MRQFORMAT_H
-#define HELLOUTAU_FREQUENCYEDITOR_MRQFORMAT_H
+#ifndef HELLOUTAU_SYNTHTOOLSUPPORT_MRQFORMAT_H
+#define HELLOUTAU_SYNTHTOOLSUPPORT_MRQFORMAT_H
 
 #include <utility>
 
@@ -8,13 +8,13 @@
 
 #include <hellokit/VoiceBank/FrequencyFormat.h>
 
-#include <FrequencyEditor/FrequencyEditorPluginGlobal.h>
+#include <SynthToolSupport/SynthToolSupportPluginGlobal.h>
 
 namespace hello::daw {
 
     /// The frequency maps of moresampler, an entry named after the audio file in \c desc.mrq of
-    /// its folder, registered by the FrequencyEditor plugin. See docs/FrequencyMaps.md.
-    class FREQUENCYEDITORPLUGIN_EXPORT MrqFormat : public kit::FrequencyFormat {
+    /// its folder, registered by the SynthToolSupport plugin. See docs/FrequencyMaps.md.
+    class SYNTHTOOLSUPPORTPLUGIN_EXPORT MrqFormat : public kit::FrequencyFormat {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::MrqFormat)
     public:
         static constexpr char formatId[] = "mrq";
@@ -102,4 +102,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_FREQUENCYEDITOR_MRQFORMAT_H
+#endif // HELLOUTAU_SYNTHTOOLSUPPORT_MRQFORMAT_H

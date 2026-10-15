@@ -118,7 +118,7 @@ namespace hello::daw {
         ThemeManager *themeManager() const;
 
         /// Returns the frequency map formats that the voice bank windows read. The formats are
-        /// registered in its registry(), the built-in formats by the plugin FrequencyEditor. See
+        /// registered in its registry(), the built-in formats by the plugin SynthToolSupport. See
         /// docs/FrequencyMaps.md.
         kit::FrequencyFormats &frequencyFormats() const;
 

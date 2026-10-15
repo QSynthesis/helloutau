@@ -2,7 +2,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
-#include <FrequencyEditor/MoresamplerDiagnoser.h>
+#include <SynthToolSupport/MoresamplerDiagnoser.h>
 
 using namespace hello;
 using namespace hello::daw;
