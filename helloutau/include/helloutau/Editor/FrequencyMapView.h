@@ -81,8 +81,8 @@ namespace hello::daw {
             PenTool,    ///< Draws the frequencies as frqeditor does, and is the default.
         };
 
-        /// The lowest note number of the view, C1
-        static constexpr int lowestNote = 24;
+        /// The lowest note number of the view, C0, an octave below that of frqeditor
+        static constexpr int lowestNote = 12;
 
         /// The number of zoom levels, as in frqeditor
         static constexpr int zoomLevelCount = 7;
@@ -151,7 +151,7 @@ namespace hello::daw {
         int zoomLevel() const;
 
         /// Sets both axes to the pixels of \a level, limited to the levels, keeping the first
-        /// frame and the lowest note of the view in place. The view starts at level 0 with C1 at
+        /// frame and the lowest note of the view in place. The view starts at level 0 with C0 at
         /// the bottom.
         void setZoomLevel(int level);
 

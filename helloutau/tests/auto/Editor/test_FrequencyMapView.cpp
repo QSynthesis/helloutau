@@ -79,13 +79,14 @@ private Q_SLOTS:
         m_buffer.reset();
     }
 
-    // The view starts at zoom level 0 with C1 at the bottom and the first frame at the right of
-    // the labels, as frqeditor starts, and maps positions to frames and frequencies and back.
+    // The view starts at zoom level 0 with C0 at the bottom and the first frame at the right of
+    // the labels, and maps positions to frames and frequencies and back.
     void the_view_starts_as_frqeditor() {
         QCOMPARE(m_view->zoomLevel(), 0);
         QCOMPARE(m_view->keyAxis().pixelsPerKey, double(FrequencyMapView::semitonePixels[0]));
         QVERIFY(near(m_view->xOf(10) - m_view->xOf(0), FrequencyMapView::framePixels[0], 1e-9));
-        QVERIFY(near(m_view->keyAxis().toKey(m_view->viewport()->height()), 24, 1e-9));
+        QVERIFY(near(m_view->keyAxis().toKey(m_view->viewport()->height()),
+                     FrequencyMapView::lowestNote, 1e-9));
         QVERIFY(near(m_view->xOf(0), m_view->labelWidth(), 1e-9));
         // C8 is in view.
         QVERIFY(m_view->yOf(4186.01) > 0);
@@ -107,7 +108,8 @@ private Q_SLOTS:
         QCOMPARE(m_view->zoomLevel(), 6);
         QCOMPARE(m_view->keyAxis().pixelsPerKey, double(FrequencyMapView::semitonePixels[6]));
         QVERIFY(near(m_view->xOf(10) - m_view->xOf(0), FrequencyMapView::framePixels[6], 1e-9));
-        QVERIFY(near(m_view->keyAxis().toKey(m_view->viewport()->height()), 24, 1e-9));
+        QVERIFY(near(m_view->keyAxis().toKey(m_view->viewport()->height()),
+                     FrequencyMapView::lowestNote, 1e-9));
         QVERIFY(near(m_view->xOf(0), m_view->labelWidth(), 1e-9));
         m_view->setZoomLevel(9);
         QCOMPARE(m_view->zoomLevel(), 6);

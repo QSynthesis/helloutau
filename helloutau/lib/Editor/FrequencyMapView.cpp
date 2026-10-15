@@ -217,7 +217,7 @@ namespace hello::daw {
             decl.setKeyAxis(keyAxis);
         }
 
-        // Lets the bottom note scroll from C1 to B8, as in frqeditor, with the notes above it in
+        // Lets the bottom note scroll from C0 to B8, with the notes above it in
         // view whatever their number.
         void updateKeyRange(double pixelsPerKey) {
             stdc_decl_t;
@@ -918,7 +918,7 @@ namespace hello::daw {
             }
             painter.restore();
 
-            // A label at each C from C1 to C8, centered on its row and in the column
+            // A label at each C from C0 to C8, centered on its row and in the column
             painter.setPen(view->labelColor());
             for (int note = std::max(lowestNote, (lowest + 11) / 12 * 12); note <= highest;
                  note += 12) {
@@ -1343,7 +1343,7 @@ namespace hello::daw {
             setKeyAxis(axis);
         }
         impl.keepingBottom = false;
-        // Level 0 with C1 at the bottom, as frqeditor starts, once the view has a size
+        // Level 0 with C0 at the bottom once the view has a size
         if (!impl.placed && viewport()->height() > 0 && viewport()->width() > 0) {
             impl.placed = true;
             impl.place(0, 0, lowestNote);
