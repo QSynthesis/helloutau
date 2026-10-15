@@ -66,6 +66,10 @@
         <source>Transpose</source>
         <translation>移调</translation>
     </message>
+    <message>
+        <source>Check</source>
+        <translation>检查</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::ActionText</name>
@@ -626,6 +630,30 @@
         <translation>合成播放(&amp;S)</translation>
     </message>
     <message>
+        <source>&amp;Check Frequency Maps...</source>
+        <translation>检查频率表(&amp;C)...</translation>
+    </message>
+    <message>
+        <source>&amp;Previous Correction</source>
+        <translation>上一处修正(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Next Correction</source>
+        <translation>下一处修正(&amp;N)</translation>
+    </message>
+    <message>
+        <source>&amp;Correct</source>
+        <translation>修正(&amp;C)</translation>
+    </message>
+    <message>
+        <source>&amp;Ignore</source>
+        <translation>忽略(&amp;I)</translation>
+    </message>
+    <message>
+        <source>Correct &amp;All</source>
+        <translation>全部修正(&amp;A)</translation>
+    </message>
+    <message>
         <source>Save &amp;All</source>
         <translation>全部保存(&amp;A)</translation>
     </message>
@@ -716,6 +744,10 @@
     <message>
         <source>Frequency Map Editor Menu</source>
         <translation>频率表编辑器菜单</translation>
+    </message>
+    <message>
+        <source>&amp;Check</source>
+        <translation>检查(&amp;C)</translation>
     </message>
     <message>
         <source>Editing Toolbar</source>
@@ -984,6 +1016,38 @@
         <translation>已取消计算频谱图。</translation>
     </message>
     <message>
+        <source>Checking the frequency maps...</source>
+        <translation>正在检查频率表...</translation>
+    </message>
+    <message>
+        <source>The check was canceled. The corrections do not change.</source>
+        <translation>检查已取消，修正候选保持不变。</translation>
+    </message>
+    <message>
+        <source>The check found nothing to correct.</source>
+        <translation>检查没有发现需要修正之处。</translation>
+    </message>
+    <message>
+        <source>Check Frequency Maps</source>
+        <translation>检查频率表</translation>
+    </message>
+    <message>
+        <source>The recordings have some change of &amp;pitch, such as a vibrato, a scoop or a fall</source>
+        <translation>录音有一定的音高变化，例如颤音、上滑或下滑(&amp;P)</translation>
+    </message>
+    <message>
+        <source>The recordings &amp;start with a large change of pitch</source>
+        <translation>录音开头有较大的音高变化(&amp;S)</translation>
+    </message>
+    <message>
+        <source>The recordings &amp;end with a large change of pitch</source>
+        <translation>录音结尾有较大的音高变化(&amp;E)</translation>
+    </message>
+    <message>
+        <source>&amp;Note of the recordings:</source>
+        <translation>原音收录音阶(&amp;N)：</translation>
+    </message>
+    <message>
         <source>Save Frequency Map</source>
         <translation>保存频率表</translation>
     </message>
@@ -1002,6 +1066,10 @@
     <message>
         <source>Frequency Map</source>
         <translation>频率表</translation>
+    </message>
+    <message>
+        <source>Corrections</source>
+        <translation>修正候选</translation>
     </message>
     <message>
         <source>Modified</source>

@@ -21,6 +21,15 @@ namespace hello::daw {
         constexpr char KeySpectrogram[] = "frequencyMaps/editor/spectrogram";
         constexpr char KeyBrightness[] = "frequencyMaps/editor/brightness";
         constexpr char KeyColorScheme[] = "frequencyMaps/editor/colorScheme";
+        constexpr char KeyCheckNote[] = "frequencyMaps/check/note";
+        constexpr char KeyCheckPitchChange[] = "frequencyMaps/check/allowsPitchChange";
+        constexpr char KeyCheckChangeAtStart[] = "frequencyMaps/check/allowsChangeAtStart";
+        constexpr char KeyCheckChangeAtEnd[] = "frequencyMaps/check/allowsChangeAtEnd";
+
+        // The notes of the check, C1 to B7
+        constexpr int lowestCheckNote = 24;
+        constexpr int highestCheckNote = 107;
+        constexpr int defaultCheckNote = 60;
 
     }
 
@@ -86,6 +95,26 @@ namespace hello::daw {
         scheme = std::clamp(scheme, 0, FrequencyMapView::colorSchemeCount - 1);
         m_store.setValue(KeyColorScheme,
                          scheme != 0 ? json::Value(int64_t(scheme)) : json::Value());
+    }
+
+    kit::FrequencyMapCheck::Settings FrequencyMapSettings::checkSettings() const {
+        kit::FrequencyMapCheck::Settings settings;
+        settings.note = std::clamp(int(m_store.value(KeyCheckNote).toInt(defaultCheckNote)),
+                                   lowestCheckNote, highestCheckNote);
+        settings.allowsPitchChange = m_store.value(KeyCheckPitchChange).toBool(false);
+        settings.allowsChangeAtStart = m_store.value(KeyCheckChangeAtStart).toBool(false);
+        settings.allowsChangeAtEnd = m_store.value(KeyCheckChangeAtEnd).toBool(false);
+        return settings;
+    }
+
+    void FrequencyMapSettings::setCheckSettings(const kit::FrequencyMapCheck::Settings &settings) {
+        const int note = std::clamp(settings.note, lowestCheckNote, highestCheckNote);
+        m_store.setValue(KeyCheckNote,
+                         note != defaultCheckNote ? json::Value(int64_t(note)) : json::Value());
+        const auto flag = [](bool on) { return on ? json::Value(true) : json::Value(); };
+        m_store.setValue(KeyCheckPitchChange, flag(settings.allowsPitchChange));
+        m_store.setValue(KeyCheckChangeAtStart, flag(settings.allowsChangeAtStart));
+        m_store.setValue(KeyCheckChangeAtEnd, flag(settings.allowsChangeAtEnd));
     }
 
     bool FrequencyMapSettings::followsRenderLog() const {

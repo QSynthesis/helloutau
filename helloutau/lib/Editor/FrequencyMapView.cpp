@@ -115,6 +115,8 @@ namespace hello::daw {
         Tool tool = PenTool;
         KeyboardModifierBindings bindings{FrequencyViewKeyboardModifiers::scheme()};
         std::optional<std::pair<std::size_t, std::size_t>> selection;
+        // The corrections of the frames of the buffer, empty for none
+        std::vector<kit::FrequencyMapCheck::Correction> corrections;
         // The press and the pointer in milliseconds while the select tool drags
         std::optional<std::pair<double, double>> band;
         // The key while the key line is dragged
@@ -133,7 +135,8 @@ namespace hello::daw {
         // The milliseconds of a frame that the time axis was set for
         double frameTime = defaultFrameTime;
         QColor whiteRowColor, blackRowColor, rowLineColor, labelColor, frameLineColor, keyLineColor,
-            curveColor, selectedCurveColor, savedColor, amplitudeColor, bandColor;
+            curveColor, selectedCurveColor, savedColor, amplitudeColor, bandColor, correctionColor,
+            selectedCorrectionColor, correctionBackgroundColor;
 
         // The bar of the title and the ruler of milliseconds below it in the top margin of the
         // viewport
@@ -722,6 +725,20 @@ namespace hello::daw {
                 painter.save();
                 painter.setClipRect(
                     QRect(view->labelWidth(), 0, area.width() - view->labelWidth(), area.height()));
+                // The proposed frequencies of the corrections under the curve, as frqeditor draws
+                // them
+                if (!impl->corrections.empty()) {
+                    auto proposed = impl->buffer->map().frames;
+                    for (std::size_t i = 0; i < proposed.size(); ++i) {
+                        proposed[i].frequency =
+                            i < impl->corrections.size() && impl->corrections[i].reason !=
+                                                                kit::FrequencyMapCheck::NoCorrection
+                                ? impl->corrections[i].frequency
+                                : 0;
+                    }
+                    drawCurve(painter, *view, proposed, view->correctionColor(),
+                              view->selectedCorrectionColor(), impl);
+                }
                 drawCurve(painter, *view, impl->buffer->map().frames, view->curveColor(),
                           view->selectedCurveColor(), impl);
                 // Over the whole height, its top and bottom edges out of sight
@@ -882,6 +899,23 @@ namespace hello::daw {
             } else {
                 painter.fillRect(plot, colorOf(0, impl->colorScheme));
             }
+            // The columns of the frames with a correction
+            if (const auto corrected = impl->frames(); corrected && !impl->corrections.empty()) {
+                const auto &all = *corrected;
+                for (std::size_t i = 0; i < all.size() && i < impl->corrections.size(); ++i) {
+                    if (impl->corrections[i].reason == kit::FrequencyMapCheck::NoCorrection) {
+                        continue;
+                    }
+                    const double left = view->xOf(all[i].time);
+                    const double right =
+                        i + 1 < all.size()
+                            ? view->xOf(all[i + 1].time)
+                            : left + view->timeAxis().pixelsPerTick * impl->frameTime;
+                    painter.fillRect(QRectF(QPointF(std::floor(left), plot.top()),
+                                            QPointF(std::floor(right), plot.bottom() + 1)),
+                                     view->correctionBackgroundColor());
+                }
+            }
             painter.restore();
 
             // A label at each C from C1 to C8, centered on its row and in the column
@@ -1017,6 +1051,7 @@ namespace hello::daw {
         // The pixels of a frame stay, for the time of a frame of the new map.
         const double pixelsPerFrame = timeAxis().pixelsPerTick * impl.frameTime;
         impl.buffer = buffer;
+        impl.corrections.clear();
         impl.keyPreview.reset();
         impl.setSelection(std::nullopt);
         impl.frameTime = impl.measuredFrameTime();
@@ -1034,6 +1069,28 @@ namespace hello::daw {
     std::shared_ptr<const kit::Spectrogram> FrequencyMapView::spectrogram() const {
         stdc_impl_t;
         return impl.spectrogram;
+    }
+
+    const std::vector<kit::FrequencyMapCheck::Correction> &FrequencyMapView::corrections() const {
+        stdc_impl_t;
+        return impl.corrections;
+    }
+
+    void FrequencyMapView::setCorrections(
+        std::vector<kit::FrequencyMapCheck::Correction> corrections) {
+        stdc_impl_t;
+        impl.corrections = std::move(corrections);
+        viewport()->update();
+    }
+
+    void FrequencyMapView::scrollToFrame(std::size_t frame) {
+        stdc_impl_t;
+        if (!impl.buffer || frame >= impl.buffer->map().frames.size()) {
+            return;
+        }
+        TimeAxis axis = timeAxis();
+        axis.left = impl.buffer->map().frames[frame].time - labelWidth() / axis.pixelsPerTick;
+        setTimeAxis(axis);
     }
 
     void FrequencyMapView::setSpectrogram(std::shared_ptr<const kit::Spectrogram> spectrogram) {
@@ -1268,6 +1325,10 @@ namespace hello::daw {
     HELLO_COLOR_PROPERTY(savedColor, setSavedColor, QColor(185, 122, 87))
     HELLO_COLOR_PROPERTY(amplitudeColor, setAmplitudeColor, QColor(0, 255, 0))
     HELLO_COLOR_PROPERTY(bandColor, setBandColor, palette().color(QPalette::Highlight))
+    HELLO_COLOR_PROPERTY(correctionColor, setCorrectionColor, QColor(128, 128, 255))
+    HELLO_COLOR_PROPERTY(selectedCorrectionColor, setSelectedCorrectionColor, QColor(255, 128, 128))
+    HELLO_COLOR_PROPERTY(correctionBackgroundColor, setCorrectionBackgroundColor,
+                         QColor(255, 192, 192))
 
 #undef HELLO_COLOR_PROPERTY
 

@@ -3354,6 +3354,102 @@ private Q_SLOTS:
         QCOMPARE(map->frames.at(0).frequency, 440.0);
     }
 
+    // The check of the editing dialog proposes corrections for the frames out of the range of the
+    // note, selects them in turn, and adopts or ignores them as steps of the history of the map.
+    void the_frequency_maps_are_checked() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 1000);
+        const auto le = [](auto value) {
+            QByteArray bytes(sizeof(value), '\0');
+            qToLittleEndian(value, bytes.data());
+            return bytes;
+        };
+        // a_wav.frq at 220 Hz, loud throughout, an octave and more too high at frames 40 to 44
+        QByteArray frq("FREQ0003");
+        frq += le(qint32(10)) + le(220.0) + QByteArray(16, '\0') + le(qint32(100));
+        for (int i = 0; i < 100; ++i) {
+            frq += le(i >= 40 && i < 45 ? 880.0 : 220.0) + le(1000.0);
+        }
+        writeFile(bank / "a_wav.frq", frq.constData(), frq.size());
+        const auto e = editor();
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/resampler.exe"));
+        const auto restore = qScopeGuard([&e] { e->settings().rendering().setResampler({}); });
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        window->setCurrentRow(
+            window->entryModel()->rowOf({}, QStringLiteral("a.wav"), QStringLiteral("a")));
+
+        bool handled = false;
+        handleNextDialog<EditFrequencyMapsDialog>([&](EditFrequencyMapsDialog *dialog) {
+            const auto trigger = [dialog](const char *id) {
+                const auto action = dialog->actionContext()->action(QLatin1String(id));
+                QVERIFY(action && action->isEnabled());
+                action->trigger();
+            };
+            QTRY_COMPARE(dialog->currentFile(), 0);
+            const auto buffer = dialog->bufferOf(0);
+            QVERIFY(buffer);
+            const auto frequencyAt = [buffer](std::size_t frame) {
+                return buffer->map().frames.at(frame).frequency;
+            };
+            const auto correctedCount = [dialog] {
+                const auto corrections = dialog->correctionsOf(0);
+                return std::count_if(
+                    corrections.begin(), corrections.end(), [](const auto &correction) {
+                        return correction.reason != kit::FrequencyMapCheck::NoCorrection;
+                    });
+            };
+            using Selection = std::optional<std::pair<std::size_t, std::size_t>>;
+
+            // The check selects the first correction, a quarter of 880 Hz.
+            QVERIFY(dialog->check({}));
+            QCOMPARE(correctedCount(), 5);
+            QCOMPARE(dialog->correctionsOf(0).at(40).frequency, 220.0);
+            QCOMPARE(dialog->view()->selection(), (Selection{
+                                                      {40, 5}
+            }));
+            trigger("helloutau.frequencyMap.adoptCorrection");
+            QCOMPARE(frequencyAt(42), 220.0);
+            QCOMPARE(correctedCount(), 0);
+            QVERIFY(buffer->canUndo());
+
+            // Ignoring leaves the frames as they are.
+            trigger("helloutau.edit.undo");
+            QCOMPARE(frequencyAt(42), 880.0);
+            QVERIFY(dialog->check({}));
+            trigger("helloutau.frequencyMap.ignoreCorrection");
+            QCOMPARE(frequencyAt(42), 880.0);
+            QCOMPARE(correctedCount(), 0);
+
+            // Correct All adopts every correction, after which a check finds nothing and says so.
+            QVERIFY(dialog->check({}));
+            trigger("helloutau.frequencyMap.adoptAllCorrections");
+            QCOMPARE(frequencyAt(42), 220.0);
+            bool reported = false;
+            int tries = 0;
+            std::function<void()> answer = [&] {
+                if (const auto box =
+                        qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                    reported = true;
+                    box->close();
+                } else if (++tries < 200) {
+                    QTimer::singleShot(10, answer);
+                }
+            };
+            QTimer::singleShot(0, answer);
+            QVERIFY(dialog->check({}));
+            QVERIFY(reported);
+            QCOMPARE(correctedCount(), 0);
+
+            answerMessageBox(QMessageBox::Discard);
+            dialog->reject();
+            handled = true;
+        });
+        QVERIFY(window->editFrequencyMaps());
+        QVERIFY(handled);
+    }
+
     // The conversion writes the map of each audio file that has a map of the source format in the
     // target format, resampled to the hop of the target format, and skips the other audio files.
     void the_frequency_maps_are_converted() {

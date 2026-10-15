@@ -241,6 +241,48 @@ private Q_SLOTS:
         QVERIFY(!map.setFrequency(1, 440));
     }
 
+    // Adopting corrections writes the proposed frequencies above 0, limited, and sets the key to
+    // the mean of the voiced frames in whole cents rounded toward zero, as one step.
+    void adopting_corrections() {
+        auto source = mapOf({221, 520, 0, 445, 300});
+        source.averageFrequency = 150;
+        FrequencyMapRevisionBuffer map(source);
+        using Check = FrequencyMapCheck;
+        const std::vector<Check::Correction> corrections = {
+            {Check::OutOfRange,    260},
+            {Check::UnvoicedFrame, 1e6},
+            {Check::UnvoicedFrame, -1 },
+            {Check::NoCorrection,  0  },
+        };
+        QVERIFY(map.adoptCorrections(1, corrections));
+        QCOMPARE(frequenciesOf(map.map()),
+                 (std::vector<double>{221, 260, FrequencyMapRevisionBuffer::highestFrequency, 445,
+                                      300}));
+        const auto centsOf = [](double frequency) {
+            return int((std::log(frequency / 440.0) * 12.0 / std::log(2.0) + 69.0) * 100.0);
+        };
+        const int mean =
+            (centsOf(221) + centsOf(260) + centsOf(FrequencyMapRevisionBuffer::highestFrequency) +
+             centsOf(445) + centsOf(300)) /
+            5;
+        QVERIFY2(near(map.key(), std::pow(2.0, (mean / 100.0 - 69.0) / 12.0) * 440.0),
+                 qPrintable(QString::number(map.key())));
+        QVERIFY(map.undo());
+        QCOMPARE(frequenciesOf(map.map()), frequenciesOf(source));
+        QCOMPARE(map.key(), 150.0);
+        QVERIFY(!map.canUndo());
+
+        // Without a recorded average the key stays unrecorded.
+        FrequencyMapRevisionBuffer unrecorded(mapOf({520, 220}));
+        QVERIFY(unrecorded.adoptCorrections(0, {
+                                                   {Check::OutOfRange, 260}
+        }));
+        QVERIFY(!unrecorded.map().averageFrequency);
+        QVERIFY(!unrecorded.adoptCorrections(0, {
+                                                    {Check::NoCorrection, 0}
+        }));
+    }
+
     // An edit of frequencies changes no other value of the map.
     void a_frequency_edit_changes_no_other_value() {
         auto source = mapOf({100, 200});

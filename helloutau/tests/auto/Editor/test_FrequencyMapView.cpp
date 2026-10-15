@@ -273,6 +273,22 @@ private Q_SLOTS:
         QCOMPARE(m_view->viewport()->cursor().shape(), Qt::ArrowCursor);
     }
 
+    // The corrections stay on the view until another buffer is set, and a frame scrolled to lies
+    // at the left edge of the plot.
+    void corrections_and_scrolling() {
+        std::vector<hello::kit::FrequencyMapCheck::Correction> corrections(100);
+        corrections[10] = {hello::kit::FrequencyMapCheck::OutOfRange, 300};
+        m_view->setCorrections(corrections);
+        QCOMPARE(m_view->corrections().size(), size_t(100));
+        QVERIFY(!m_view->grab().isNull());
+        m_view->setZoomLevel(6);
+        m_view->scrollToFrame(50);
+        QVERIFY2(near(m_view->xOf(500), m_view->labelWidth(), 1),
+                 qPrintable(QString::number(m_view->xOf(500))));
+        m_view->setBuffer(m_buffer.get());
+        QVERIFY(m_view->corrections().empty());
+    }
+
     // A right drag unvoices the frames under the pointer.
     void a_right_drag_unvoices() {
         drag(pointOf(50, 200), pointOf(55, 600), Qt::RightButton);

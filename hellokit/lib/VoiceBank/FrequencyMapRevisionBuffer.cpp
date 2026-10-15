@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace hello::kit {
 
@@ -207,6 +208,42 @@ namespace hello::kit {
             }
         }
         return voiced > 0 && setKey(sum / double(voiced));
+    }
+
+    bool FrequencyMapRevisionBuffer::adoptCorrections(
+        std::size_t first, const std::vector<FrequencyMapCheck::Correction> &corrections) {
+        if (m_stroke || first >= m_map.frames.size()) {
+            return false;
+        }
+        const std::size_t count = std::min(corrections.size(), m_map.frames.size() - first);
+        std::vector<double> frequencies;
+        frequencies.reserve(count);
+        for (std::size_t i = 0; i < count; ++i) {
+            const auto &correction = corrections[i];
+            frequencies.push_back(correction.frequency > 0 ? limited(correction.frequency)
+                                                           : m_map.frames[first + i].frequency);
+        }
+        std::optional<std::optional<double>> key;
+        if (m_map.averageFrequency) {
+            // The mean in whole cents, as frqeditor computes the key after the adoption: each
+            // note is truncated to a cent, and the sum of a 32-bit unsigned register is divided
+            // without sign.
+            std::uint32_t sum = 0;
+            std::uint32_t voiced = 0;
+            for (std::size_t i = 0; i < m_map.frames.size(); ++i) {
+                const double frequency = i >= first && i < first + count
+                                             ? frequencies[i - first]
+                                             : m_map.frames[i].frequency;
+                if (frequency > lowestFrequency) {
+                    const double note = std::log(frequency / 440.0) * 12.0 / std::log(2.0) + 69.0;
+                    sum += std::uint32_t(int(note * 100.0));
+                    ++voiced;
+                }
+            }
+            const double note = voiced > 0 ? double(int(sum / voiced)) / 100.0 : 60.0;
+            key = std::optional<double>(std::pow(2.0, (note - 69.0) / 12.0) * 440.0);
+        }
+        return apply(first, frequencies, key);
     }
 
     bool FrequencyMapRevisionBuffer::flatten(double frequency) {

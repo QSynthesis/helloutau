@@ -19,7 +19,9 @@
 #include <QtGui/QActionGroup>
 #include <QtGui/QScreen>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
+#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
@@ -39,6 +41,8 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include <stdcorelib/pimpl.h>
+
+#include <stdutau/utautils.h>
 
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
@@ -126,11 +130,18 @@ namespace hello::daw {
             int sampleRate = 0;
             // The map file as it was read or last written
             FileStamp stamp;
+            // The corrections of the last check, empty for none. They stay until adopted,
+            // ignored or replaced by another check, also if the frames change.
+            std::vector<kit::FrequencyMapCheck::Correction> corrections;
         };
         std::map<int, Opened> opened;
         int current = -1;
-        // The column of the modified mark, after the columns of the caches
+        // The columns of the number of corrections and of the modified mark, after the columns
+        // of the caches
+        int correctionColumn = 0;
         int modifiedColumn = 0;
+        // The direction in which the last command moved between the corrections
+        bool correctionForward = true;
 
         QTreeWidget *list = nullptr;
         FrequencyMapView *view = nullptr;
@@ -436,9 +447,11 @@ namespace hello::daw {
                 return false;
             }
 
-            // A map left without a history is read again when it is shown again.
+            // A map left without a history and without corrections is read again when it is
+            // shown again.
             if (const auto left = openedOf(current);
-                left && current != index && !left->buffer->canUndo() && !left->buffer->canRedo()) {
+                left && current != index && !left->buffer->canUndo() && !left->buffer->canRedo() &&
+                left->corrections.empty()) {
                 opened.erase(current);
             }
             if (current != index) {
@@ -483,6 +496,9 @@ namespace hello::daw {
             message->setVisible(!reason.isEmpty());
             view->setTitle(textOf(file.path.filename()));
             view->setBuffer(currentBuffer());
+            if (const auto entry = openedOf(index)) {
+                view->setCorrections(entry->corrections);
+            }
             wavInfo->setText(wavInfoText());
             updateActions();
             return true;
@@ -567,7 +583,73 @@ namespace hello::daw {
                 item->setText(int(2 + i), presence(file.caches.value(i)));
             }
             const auto entry = openedOf(index);
+            const auto corrected = entry ? correctedCount(entry->corrections) : 0;
+            item->setText(correctionColumn, corrected > 0 ? QString::number(corrected) : QString());
             item->setText(modifiedColumn, presence(entry && entry->buffer->isModified()));
+        }
+
+        // Returns whether correction proposes a change.
+        static bool corrects(const kit::FrequencyMapCheck::Correction &correction) {
+            return correction.reason != kit::FrequencyMapCheck::NoCorrection;
+        }
+
+        // Returns the number of frames with a correction.
+        static std::size_t
+            correctedCount(const std::vector<kit::FrequencyMapCheck::Correction> &corrections) {
+            return std::size_t(std::count_if(corrections.begin(), corrections.end(), corrects));
+        }
+
+        // Returns the run of frames with a correction around frame, if frame has one.
+        static std::optional<kit::FrequencyMapCheck::Run>
+            correctionRunAt(const std::vector<kit::FrequencyMapCheck::Correction> &corrections,
+                            std::size_t frame) {
+            if (frame >= corrections.size() || !corrects(corrections[frame])) {
+                return std::nullopt;
+            }
+            kit::FrequencyMapCheck::Run run{frame, frame};
+            while (run.first > 0 && corrects(corrections[run.first - 1])) {
+                --run.first;
+            }
+            while (run.last + 1 < corrections.size() && corrects(corrections[run.last + 1])) {
+                ++run.last;
+            }
+            return run;
+        }
+
+        // Returns the first frame with a correction after the run around from, or before it if
+        // not forward, as the correction window of frqeditor finds it. Without from, the search
+        // starts at the first frame, or at the last.
+        static std::optional<std::size_t>
+            nextCorrection(const std::vector<kit::FrequencyMapCheck::Correction> &corrections,
+                           std::optional<std::size_t> from, bool forward) {
+            const auto count = std::ptrdiff_t(corrections.size());
+            const std::ptrdiff_t step = forward ? 1 : -1;
+            std::ptrdiff_t i = from ? std::ptrdiff_t(*from) : (forward ? 0 : count - 1);
+            if (from) {
+                while (i >= 0 && i < count && corrects(corrections[std::size_t(i)])) {
+                    i += step;
+                }
+            }
+            for (; i >= 0 && i < count; i += step) {
+                if (corrects(corrections[std::size_t(i)])) {
+                    return std::size_t(i);
+                }
+            }
+            return std::nullopt;
+        }
+
+        // Drops the corrections of the frames of run. After an adoption a correction without a
+        // proposed frequency stays, because the adoption left its frame as it is, as in
+        // frqeditor.
+        void dropCorrections(Opened &entry, const kit::FrequencyMapCheck::Run &run, bool adopted) {
+            for (std::size_t i = run.first; i <= run.last && i < entry.corrections.size(); ++i) {
+                if (!adopted || entry.corrections[i].frequency > 0) {
+                    entry.corrections[i] = {};
+                }
+            }
+            if (correctedCount(entry.corrections) == 0) {
+                entry.corrections.clear();
+            }
         }
 
         void updateActions() {
@@ -604,6 +686,21 @@ namespace hello::daw {
             enable("helloutau.frequencyMap.previousFile", current > 0);
             enable("helloutau.frequencyMap.nextFile", current + 1 < files.size());
             enable("helloutau.frequencyMap.synthesize", audio != nullptr);
+            bool anyCorrection = false;
+            for (const auto &[index, entry] : opened) {
+                anyCorrection = anyCorrection || !entry.corrections.empty();
+            }
+            enable("helloutau.frequencyMap.check",
+                   std::any_of(files.begin(), files.end(),
+                               [](const auto &file) { return file.hasMap; }));
+            for (const auto id : {"helloutau.frequencyMap.previousCorrection",
+                                  "helloutau.frequencyMap.nextCorrection",
+                                  "helloutau.frequencyMap.adoptAllCorrections"}) {
+                enable(id, anyCorrection);
+            }
+            const bool atCorrection = currentCorrectionRun().has_value();
+            enable("helloutau.frequencyMap.adoptCorrection", atCorrection);
+            enable("helloutau.frequencyMap.ignoreCorrection", atCorrection);
             if (const auto action =
                     actions.value(QStringLiteral("helloutau.frequencyMap.synthesize"))) {
                 playButton->setEnabled(action->isEnabled());
@@ -637,6 +734,236 @@ namespace hello::daw {
             edit([&](kit::FrequencyMapRevisionBuffer &buffer) {
                 return change(buffer, selection->first, selection->second);
             });
+        }
+
+        // Checks the map of every file that has one in the background, with the maps read so far
+        // as edited, and replaces the corrections of every map with the result. Moves to the
+        // first correction. Returns false if the user cancels, which keeps the corrections as
+        // they were.
+        bool check(const kit::FrequencyMapCheck::Settings &settings) {
+            stdc_decl_t;
+            // Copied here, because the dialog takes input until the progress dialog appears
+            struct Job {
+                int index = 0;
+                std::optional<kit::FrequencyMap> map;
+                std::optional<std::filesystem::path> mapFile;
+            };
+            struct Result {
+                int index = 0;
+                std::optional<kit::FrequencyMap> read;
+                int sampleRate = 0;
+                FileStamp stamp;
+                std::vector<kit::FrequencyMapCheck::Correction> corrections;
+            };
+            std::vector<Job> jobs;
+            for (int i = 0; i < files.size(); ++i) {
+                if (!files.at(i).hasMap) {
+                    continue;
+                }
+                const auto entry = openedOf(i);
+                jobs.push_back(
+                    {i, entry ? std::optional(entry->buffer->map()) : std::nullopt, mapFileOf(i)});
+            }
+            std::vector<std::filesystem::path> paths;
+            for (const auto &job : jobs) {
+                paths.push_back(files.at(job.index).path);
+            }
+            std::vector<Result> results;
+            const bool completed = runInBackground(
+                tr("Checking the frequency maps..."), [&](const std::function<bool()> &canceled) {
+                    for (std::size_t j = 0; j < jobs.size() && !canceled(); ++j) {
+                        const auto &job = jobs[j];
+                        kit::DiagnosticList diagnostics;
+                        const auto wave = kit::WaveAudio::read(paths[j], diagnostics);
+                        if (!wave) {
+                            continue;
+                        }
+                        Result result;
+                        result.index = job.index;
+                        auto map = job.map;
+                        if (!map) {
+                            map = format.read(paths[j], wave->sampleRate, diagnostics);
+                            if (!map) {
+                                continue;
+                            }
+                            result.read = map;
+                            result.sampleRate = wave->sampleRate;
+                            if (job.mapFile) {
+                                result.stamp = FileStamp::of(*job.mapFile);
+                            }
+                        }
+                        result.corrections = kit::FrequencyMapCheck::check(
+                            kit::FrequencyMapCheck::withAmplitudes(std::move(*map), *wave),
+                            settings);
+                        results.push_back(std::move(result));
+                    }
+                });
+            if (!completed) {
+                QMessageBox::warning(&decl, decl.windowTitle(),
+                                     tr("The check was canceled. The corrections do not change."));
+                return false;
+            }
+            for (auto &[index, entry] : opened) {
+                entry.corrections.clear();
+            }
+            for (auto &result : results) {
+                if (correctedCount(result.corrections) == 0) {
+                    result.corrections.clear();
+                }
+                auto entry = openedOf(result.index);
+                if (!entry) {
+                    if (result.corrections.empty()) {
+                        continue;
+                    }
+                    Opened created;
+                    created.buffer =
+                        std::make_unique<kit::FrequencyMapRevisionBuffer>(std::move(*result.read));
+                    created.sampleRate = result.sampleRate;
+                    created.stamp = result.stamp;
+                    entry = &opened.emplace(result.index, std::move(created)).first->second;
+                }
+                entry->corrections = std::move(result.corrections);
+            }
+            for (int i = 0; i < files.size(); ++i) {
+                updateRow(i);
+            }
+            if (const auto entry = openedOf(current)) {
+                view->setCorrections(entry->corrections);
+            }
+            if (!goToCorrection(true, true)) {
+                QMessageBox::information(&decl, decl.windowTitle(),
+                                         tr("The check found nothing to correct."));
+            }
+            updateActions();
+            return true;
+        }
+
+        // Asks for the settings of the check, as the check dialog of frqeditor does, initially
+        // those of the last check, and keeps them in the settings. Returns std::nullopt if the
+        // user cancels.
+        std::optional<kit::FrequencyMapCheck::Settings> askCheckSettings() {
+            stdc_decl_t;
+            auto settings = editor->settings().frequencyMaps().checkSettings();
+            QDialog dialog(&decl);
+            dialog.setWindowTitle(tr("Check Frequency Maps"));
+            auto note = new QComboBox();
+            // C1 to B7, as frqeditor offers them
+            for (int noteNum = 24; noteNum <= 107; ++noteNum) {
+                note->addItem(QString::fromStdString(utau::toneNumToToneName(noteNum)), noteNum);
+            }
+            note->setCurrentIndex(note->findData(settings.note));
+            auto pitchChange = new QCheckBox(
+                tr("The recordings have some change of &pitch, such as a vibrato, a scoop or a "
+                   "fall"));
+            pitchChange->setChecked(settings.allowsPitchChange);
+            auto changeAtStart =
+                new QCheckBox(tr("The recordings &start with a large change of pitch"));
+            changeAtStart->setChecked(settings.allowsChangeAtStart);
+            auto changeAtEnd =
+                new QCheckBox(tr("The recordings &end with a large change of pitch"));
+            changeAtEnd->setChecked(settings.allowsChangeAtEnd);
+            auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+            QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+            QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+            auto form = new QFormLayout(&dialog);
+            form->addRow(tr("&Note of the recordings:"), note);
+            form->addRow(pitchChange);
+            form->addRow(changeAtStart);
+            form->addRow(changeAtEnd);
+            form->addRow(buttons);
+            if (dialog.exec() != QDialog::Accepted) {
+                return std::nullopt;
+            }
+            settings.note = note->currentData().toInt();
+            settings.allowsPitchChange = pitchChange->isChecked();
+            settings.allowsChangeAtStart = changeAtStart->isChecked();
+            settings.allowsChangeAtEnd = changeAtEnd->isChecked();
+            editor->settings().frequencyMaps().setCheckSettings(settings);
+            return settings;
+        }
+
+        // Returns the run of corrections at the first selected frame of the current file.
+        std::optional<kit::FrequencyMapCheck::Run> currentCorrectionRun() {
+            const auto entry = openedOf(current);
+            const auto selection = view->selection();
+            if (!entry || !selection) {
+                return std::nullopt;
+            }
+            return correctionRunAt(entry->corrections, selection->first);
+        }
+
+        // Selects the next run of corrections in the direction of forward: in the current file
+        // after the selection, then in the other files from their ends, wrapping around. With
+        // fromStart, the search begins at the end of the first file, or of the last. Returns
+        // whether a run was found.
+        bool goToCorrection(bool forward, bool fromStart = false) {
+            correctionForward = forward;
+            const int count = int(files.size());
+            const int start = fromStart ? (forward ? 0 : count - 1) : std::max(current, 0);
+            for (int k = 0; k < count; ++k) {
+                const int index = ((start + (forward ? k : -k)) % count + count) % count;
+                const auto entry = openedOf(index);
+                if (!entry || entry->corrections.empty()) {
+                    continue;
+                }
+                std::optional<std::size_t> from;
+                if (k == 0 && !fromStart && index == current) {
+                    if (const auto selection = view->selection()) {
+                        from = selection->first;
+                    }
+                }
+                const auto found = nextCorrection(entry->corrections, from, forward);
+                if (!found) {
+                    continue;
+                }
+                if (index != current && !show(index)) {
+                    return false;
+                }
+                const auto run = *correctionRunAt(openedOf(index)->corrections, *found);
+                view->setSelection(run.first, run.last - run.first + 1);
+                // A few frames before the run stay in sight, as in frqeditor.
+                view->scrollToFrame(run.first > 5 ? run.first - 5 : 0);
+                return true;
+            }
+            return false;
+        }
+
+        // Adopts or ignores the run of corrections at the selection, then moves to the next run
+        // in the direction of the last move.
+        void resolveCorrection(bool adopt) {
+            const auto run = currentCorrectionRun();
+            if (!run) {
+                return;
+            }
+            auto &entry = *openedOf(current);
+            if (adopt) {
+                const std::vector<kit::FrequencyMapCheck::Correction> part(
+                    entry.corrections.begin() + std::ptrdiff_t(run->first),
+                    entry.corrections.begin() + std::ptrdiff_t(run->last + 1));
+                entry.buffer->adoptCorrections(run->first, part);
+            }
+            dropCorrections(entry, *run, adopt);
+            view->setCorrections(entry.corrections);
+            goToCorrection(correctionForward);
+            view->viewport()->update();
+            updateActions();
+        }
+
+        // Adopts every correction of every map, each map as one step of its history.
+        void adoptAllCorrections() {
+            for (auto &[index, entry] : opened) {
+                if (entry.corrections.empty()) {
+                    continue;
+                }
+                entry.buffer->adoptCorrections(0, entry.corrections);
+                dropCorrections(entry, {0, entry.corrections.size() - 1}, true);
+                updateRow(index);
+            }
+            if (const auto entry = openedOf(current)) {
+                view->setCorrections(entry->corrections);
+            }
+            view->viewport()->update();
+            updateActions();
         }
 
         bool save(int index) {
@@ -714,6 +1041,25 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] {
                 preview->stop();
             })->setEnabled(false);
+            addCommand(QStringLiteral("helloutau.frequencyMap.check"), [this] {
+                if (const auto settings = askCheckSettings()) {
+                    check(*settings);
+                }
+            });
+            addCommand(QStringLiteral("helloutau.frequencyMap.previousCorrection"), [this] {
+                goToCorrection(false);
+                updateActions();
+            });
+            addCommand(QStringLiteral("helloutau.frequencyMap.nextCorrection"), [this] {
+                goToCorrection(true);
+                updateActions();
+            });
+            addCommand(QStringLiteral("helloutau.frequencyMap.adoptCorrection"),
+                       [this] { resolveCorrection(true); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.ignoreCorrection"),
+                       [this] { resolveCorrection(false); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.adoptAllCorrections"),
+                       [this] { adoptAllCorrections(); });
             addCommand(QStringLiteral("helloutau.file.save"), [this] {
                 stdc_decl_t;
                 decl.save();
@@ -834,6 +1180,8 @@ namespace hello::daw {
         for (const auto &cache : caches) {
             headers.push_back(cache.name);
         }
+        headers.push_back(tr("Corrections"));
+        impl.correctionColumn = int(headers.size() - 1);
         headers.push_back(tr("Modified"));
         impl.modifiedColumn = int(headers.size() - 1);
         impl.list = new QTreeWidget();
@@ -1170,6 +1518,19 @@ namespace hello::daw {
     bool EditFrequencyMapsDialog::setCurrentFile(int index) {
         stdc_impl_t;
         return index >= 0 && index < impl.files.size() && impl.show(index);
+    }
+
+    bool EditFrequencyMapsDialog::check(const kit::FrequencyMapCheck::Settings &settings) {
+        stdc_impl_t;
+        return impl.check(settings);
+    }
+
+    std::vector<kit::FrequencyMapCheck::Correction>
+        EditFrequencyMapsDialog::correctionsOf(int index) const {
+        stdc_impl_t;
+        const auto it = impl.opened.find(index);
+        return it == impl.opened.end() ? std::vector<kit::FrequencyMapCheck::Correction>()
+                                       : it->second.corrections;
     }
 
     kit::FrequencyMapRevisionBuffer *EditFrequencyMapsDialog::bufferOf(int index) const {

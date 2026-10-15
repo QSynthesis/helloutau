@@ -3,9 +3,12 @@
 
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 #include <QtCore/QList>
 #include <QtWidgets/QDialog>
+
+#include <hellokit/VoiceBank/FrequencyMapCheck.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -113,6 +116,17 @@ namespace hello::daw {
         /// Writes every modified map in order, and stops at the first that save() does not
         /// write. Returns whether every modified map was written.
         bool saveAll();
+
+        /// Checks the map of every file that has one against \a settings in the background, the
+        /// maps read so far as edited, and replaces the corrections of every map with the
+        /// result, as the menu command does after asking for the settings. Selects the first
+        /// correction, or reports that there is none. Returns false if the user cancels the
+        /// check, which keeps the corrections as they were.
+        bool check(const kit::FrequencyMapCheck::Settings &settings);
+
+        /// Returns the corrections of the map of the file \a index from the last check, empty if
+        /// none is left.
+        std::vector<kit::FrequencyMapCheck::Correction> correctionsOf(int index) const;
 
         QTreeWidget *fileList() const;
         FrequencyMapView *view() const;

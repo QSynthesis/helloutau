@@ -5,8 +5,11 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include <QtGui/QColor>
+
+#include <hellokit/VoiceBank/FrequencyMapCheck.h>
 
 #include <helloutau/Widgets/KeyboardModifierBindings.h>
 #include <helloutau/Widgets/SceneView.h>
@@ -60,6 +63,11 @@ namespace hello::daw {
         Q_PROPERTY(QColor savedColor READ savedColor WRITE setSavedColor)
         Q_PROPERTY(QColor amplitudeColor READ amplitudeColor WRITE setAmplitudeColor)
         Q_PROPERTY(QColor bandColor READ bandColor WRITE setBandColor)
+        Q_PROPERTY(QColor correctionColor READ correctionColor WRITE setCorrectionColor)
+        Q_PROPERTY(QColor selectedCorrectionColor READ selectedCorrectionColor WRITE
+                       setSelectedCorrectionColor)
+        Q_PROPERTY(QColor correctionBackgroundColor READ correctionBackgroundColor WRITE
+                       setCorrectionBackgroundColor)
     public:
         /// The views of the editing area
         enum ViewMode {
@@ -104,6 +112,18 @@ namespace hello::daw {
         /// Returns the spectrogram that SpectrumView shows, or null.
         std::shared_ptr<const kit::Spectrogram> spectrogram() const;
         void setSpectrogram(std::shared_ptr<const kit::Spectrogram> spectrogram);
+
+        /// Returns the corrections of the frames of the buffer from a check, empty for none.
+        const std::vector<kit::FrequencyMapCheck::Correction> &corrections() const;
+
+        /// Sets the corrections of the frames of the buffer, which the view draws as frqeditor
+        /// does: the column of each frame with a correction in correctionBackgroundColor(), and
+        /// the proposed frequencies as a curve under the frames. setBuffer() clears them.
+        void setCorrections(std::vector<kit::FrequencyMapCheck::Correction> corrections);
+
+        /// Scrolls across so that \a frame is at the left edge of the plot, as far as the scene
+        /// reaches.
+        void scrollToFrame(std::size_t frame);
 
         /// Returns the name shown in the title bar, the name of the audio file.
         QString title() const;
@@ -209,6 +229,14 @@ namespace hello::daw {
         /// Returns the color of the band of a drag with the select tool, filled translucent.
         QColor bandColor() const;
         void setBandColor(const QColor &color);
+        /// Returns the colors of the proposed frequencies of the corrections, and of the columns
+        /// of the frames with a correction, after frqeditor.
+        QColor correctionColor() const;
+        void setCorrectionColor(const QColor &color);
+        QColor selectedCorrectionColor() const;
+        void setSelectedCorrectionColor(const QColor &color);
+        QColor correctionBackgroundColor() const;
+        void setCorrectionBackgroundColor(const QColor &color);
 
     Q_SIGNALS:
         /// Emitted when a drag or a double click added a step to the buffer.

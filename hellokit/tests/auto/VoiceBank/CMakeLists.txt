@@ -12,6 +12,7 @@ add_auto_test(test_FrequencyMap.cpp HelloKitVoiceBank)
 add_auto_test(test_FrequencyFormats.cpp HelloKitVoiceBank)
 add_auto_test(test_FrequencyMapConverter.cpp HelloKitVoiceBank)
 add_auto_test(test_FrequencyMapRevisionBuffer.cpp HelloKitVoiceBank)
+add_auto_test(test_FrequencyMapCheck.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceAliasRule.cpp HelloKitVoiceBank)
 
 # The test starts the watcher, whose monitor program must be built into the same directory.

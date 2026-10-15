@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <hellokit/VoiceBank/FrequencyMap.h>
+#include <hellokit/VoiceBank/FrequencyMapCheck.h>
 
 namespace hello::kit {
 
@@ -114,6 +115,15 @@ namespace hello::kit {
         /// selection in frqeditor does, as one step. Returns whether it changed, and false
         /// without a voiced frame, as setKey() does otherwise.
         bool setKeyToMean(std::size_t first, std::size_t count);
+
+        /// Writes the proposed frequencies of \a corrections, from frame \a first, as frqeditor
+        /// adopts the corrections of its check, as one step. A correction without a proposed
+        /// frequency above 0 leaves its frame as it is. If the map records an average frequency,
+        /// the step also sets it to the mean of the voiced frames on the pitch scale, in whole
+        /// cents rounded toward zero, or to C4 without a voiced frame. Returns whether a value
+        /// changed, and false while a stroke is in progress.
+        bool adoptCorrections(std::size_t first,
+                              const std::vector<FrequencyMapCheck::Correction> &corrections);
 
         /// Sets every frame and, if the map records one, the average frequency to \a frequency,
         /// as a double click on the labels of frqeditor does, as one step. The frames take the

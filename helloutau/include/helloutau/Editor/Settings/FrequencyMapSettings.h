@@ -3,6 +3,8 @@
 
 #include <QtCore/QtGlobal>
 
+#include <hellokit/VoiceBank/FrequencyMapCheck.h>
+
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace hello::daw {
@@ -58,6 +60,11 @@ namespace hello::daw {
         /// to its range. 0 by default.
         int spectrogramColorScheme() const;
         void setSpectrogramColorScheme(int scheme);
+
+        /// Returns the settings that the check of the editing dialog last used: by default C4,
+        /// with no option. The note is limited to C1 to B7, as frqeditor offers it.
+        kit::FrequencyMapCheck::Settings checkSettings() const;
+        void setCheckSettings(const kit::FrequencyMapCheck::Settings &settings);
         /// @}
 
         /// Returns whether the runs held in the log of the generation and its size limit are

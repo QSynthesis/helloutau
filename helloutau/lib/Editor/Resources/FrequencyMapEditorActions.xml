@@ -42,6 +42,22 @@
         <action id="helloutau.frequencyMap.synthesize" text="&amp;Synthesize and Play"
                 category="Playback" shortcut="Ctrl+Return" />
 
+        <!-- The check of every map against the note of the recordings, as frqeditor checks
+             them, and the corrections that it proposes. A correction is a run of frames, which
+             the commands select in turn across the files. -->
+        <action id="helloutau.frequencyMap.check" text="&amp;Check Frequency Maps..."
+                category="Check" />
+        <action id="helloutau.frequencyMap.previousCorrection" text="&amp;Previous Correction"
+                category="Check" shortcut="Shift+F3" />
+        <action id="helloutau.frequencyMap.nextCorrection" text="&amp;Next Correction"
+                category="Check" shortcut="F3" />
+        <!-- The selected correction, after which the next in the same direction is selected -->
+        <action id="helloutau.frequencyMap.adoptCorrection" text="&amp;Correct" category="Check" />
+        <action id="helloutau.frequencyMap.ignoreCorrection" text="&amp;Ignore" category="Check" />
+        <!-- Every correction of every map, each map as one step of its history -->
+        <action id="helloutau.frequencyMap.adoptAllCorrections" text="Correct &amp;All"
+                category="Check" />
+
         <!-- Every modified frequency map in order, as Save All of frqeditor -->
         <action id="helloutau.frequencyMap.saveAll" text="Save &amp;All" category="File"
                 shortcut="Ctrl+Shift+S" />
@@ -87,6 +103,7 @@
         <menu id="helloutau.frequencyMap.file" text="&amp;File" />
         <menu id="helloutau.frequencyMap.edit" text="&amp;Edit" />
         <menu id="helloutau.frequencyMap.select" text="&amp;Select" />
+        <menu id="helloutau.frequencyMap.checkMenu" text="&amp;Check" />
         <menu id="helloutau.frequencyMap.view" text="&amp;View" />
         <menu id="helloutau.frequencyMap.playback" text="&amp;Playback" />
         <!-- The tool bar below the menu bar, which the dialog places -->
@@ -127,6 +144,16 @@
                 <action id="helloutau.select.selectTool" />
                 <action id="helloutau.select.penTool" />
             </menu>
+            <menu id="helloutau.frequencyMap.checkMenu">
+                <action id="helloutau.frequencyMap.check" />
+                <separator />
+                <action id="helloutau.frequencyMap.previousCorrection" />
+                <action id="helloutau.frequencyMap.nextCorrection" />
+                <separator />
+                <action id="helloutau.frequencyMap.adoptCorrection" />
+                <action id="helloutau.frequencyMap.ignoreCorrection" />
+                <action id="helloutau.frequencyMap.adoptAllCorrections" />
+            </menu>
             <menu id="helloutau.frequencyMap.view">
                 <action id="helloutau.frequencyMap.zoomIn" />
                 <action id="helloutau.frequencyMap.zoomOut" />
@@ -161,6 +188,11 @@
             <separator />
             <action id="helloutau.frequencyMap.synthesize" />
             <action id="helloutau.playback.stop" />
+            <separator />
+            <action id="helloutau.frequencyMap.previousCorrection" />
+            <action id="helloutau.frequencyMap.nextCorrection" />
+            <action id="helloutau.frequencyMap.adoptCorrection" />
+            <action id="helloutau.frequencyMap.ignoreCorrection" />
         </menu>
     </layouts>
 </actionExtension>

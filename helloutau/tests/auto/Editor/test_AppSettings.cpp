@@ -92,6 +92,43 @@ private Q_SLOTS:
         }
     }
 
+    // The settings of the check of frequency maps persist, the note limited to C1 to B7. The
+    // defaults are not written.
+    void the_check_settings_of_frequency_maps_persist() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            AppSettings settings(file);
+            const auto defaults = settings.frequencyMaps().checkSettings();
+            QCOMPARE(defaults.note, 60);
+            QVERIFY(!defaults.allowsPitchChange);
+            QVERIFY(!defaults.allowsChangeAtStart);
+            QVERIFY(!defaults.allowsChangeAtEnd);
+            hello::kit::FrequencyMapCheck::Settings check;
+            check.note = 67;
+            check.allowsPitchChange = true;
+            check.allowsChangeAtEnd = true;
+            settings.frequencyMaps().setCheckSettings(check);
+        }
+        {
+            AppSettings settings(file);
+            const auto check = settings.frequencyMaps().checkSettings();
+            QCOMPARE(check.note, 67);
+            QVERIFY(check.allowsPitchChange);
+            QVERIFY(!check.allowsChangeAtStart);
+            QVERIFY(check.allowsChangeAtEnd);
+            settings.frequencyMaps().setCheckSettings({200});
+            QCOMPARE(settings.frequencyMaps().checkSettings().note, 107);
+            settings.frequencyMaps().setCheckSettings({});
+            for (const auto key :
+                 {"frequencyMaps/check/note", "frequencyMaps/check/allowsPitchChange",
+                  "frequencyMaps/check/allowsChangeAtStart",
+                  "frequencyMaps/check/allowsChangeAtEnd"}) {
+                QVERIFY2(settings.value(QLatin1String(key)).isUndefined(), key);
+            }
+        }
+    }
+
     // The view, the brightness and the color scheme of the editing area of frequency maps
     // persist, limited to their ranges. The defaults are not written.
     void the_editing_area_of_frequency_maps_persists() {
