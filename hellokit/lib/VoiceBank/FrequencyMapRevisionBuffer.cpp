@@ -18,9 +18,14 @@ namespace hello::kit {
     }
 
     bool FrequencyMapRevisionBuffer::isModified() const {
-        return !std::equal(m_map.frames.begin(), m_map.frames.end(), m_saved.frames.begin(),
+        return m_map.averageFrequency != m_saved.averageFrequency ||
+               !std::equal(m_map.frames.begin(), m_map.frames.end(), m_saved.frames.begin(),
                            m_saved.frames.end(),
                            [](const auto &a, const auto &b) { return a.frequency == b.frequency; });
+    }
+
+    double FrequencyMapRevisionBuffer::key() const {
+        return m_map.averageFrequency ? *m_map.averageFrequency : m_map.pitchAverage();
     }
 
     void FrequencyMapRevisionBuffer::markSaved() {
@@ -162,6 +167,61 @@ namespace hello::kit {
         return apply(start, frequencies);
     }
 
+    bool FrequencyMapRevisionBuffer::revertAll() {
+        if (m_stroke) {
+            return false;
+        }
+        std::vector<double> frequencies;
+        frequencies.reserve(m_saved.frames.size());
+        for (const auto &frame : m_saved.frames) {
+            frequencies.push_back(frame.frequency);
+        }
+        return apply(0, frequencies, m_saved.averageFrequency);
+    }
+
+    bool FrequencyMapRevisionBuffer::setFrequency(std::size_t frame, double frequency) {
+        if (m_stroke || frame >= m_map.frames.size()) {
+            return false;
+        }
+        return apply(frame, {limited(frequency)});
+    }
+
+    bool FrequencyMapRevisionBuffer::setKey(double frequency) {
+        if (m_stroke || !m_map.averageFrequency) {
+            return false;
+        }
+        // NaN as well becomes the lowest frequency, as a key not above it does in frqeditor.
+        const double key =
+            frequency > lowestFrequency ? std::min(frequency, highestFrequency) : lowestFrequency;
+        return apply(0, {}, std::optional<double>(key));
+    }
+
+    bool FrequencyMapRevisionBuffer::setKeyToMean(std::size_t first, std::size_t count) {
+        const auto [start, size] = rangeOf(first, count);
+        double sum = 0;
+        std::size_t voiced = 0;
+        for (std::size_t i = start; i < start + size; ++i) {
+            if (m_map.frames[i].frequency > lowestFrequency) {
+                sum += m_map.frames[i].frequency;
+                ++voiced;
+            }
+        }
+        return voiced > 0 && setKey(sum / double(voiced));
+    }
+
+    bool FrequencyMapRevisionBuffer::flatten(double frequency) {
+        if (m_stroke) {
+            return false;
+        }
+        std::optional<std::optional<double>> key;
+        if (m_map.averageFrequency) {
+            key = std::optional<double>(frequency > lowestFrequency
+                                            ? std::min(frequency, highestFrequency)
+                                            : lowestFrequency);
+        }
+        return apply(0, std::vector<double>(m_map.frames.size(), limited(frequency)), key);
+    }
+
     bool FrequencyMapRevisionBuffer::canUndo() const {
         return !m_stroke && m_done > 0;
     }
@@ -176,6 +236,9 @@ namespace hello::kit {
         }
         const auto &step = m_steps[--m_done];
         write(step.first, step.before);
+        if (step.key) {
+            m_map.averageFrequency = step.key->first;
+        }
         return true;
     }
 
@@ -185,6 +248,9 @@ namespace hello::kit {
         }
         const auto &step = m_steps[m_done++];
         write(step.first, step.after);
+        if (step.key) {
+            m_map.averageFrequency = step.key->second;
+        }
         return true;
     }
 
@@ -206,7 +272,8 @@ namespace hello::kit {
     }
 
     bool FrequencyMapRevisionBuffer::apply(std::size_t first,
-                                           const std::vector<double> &frequencies) {
+                                           const std::vector<double> &frequencies,
+                                           std::optional<std::optional<double>> key) {
         std::size_t begin = 0;
         std::size_t end = frequencies.size();
         while (begin < end && m_map.frames[first + begin].frequency == frequencies[begin]) {
@@ -215,7 +282,8 @@ namespace hello::kit {
         while (end > begin && m_map.frames[first + end - 1].frequency == frequencies[end - 1]) {
             --end;
         }
-        if (begin == end) {
+        const bool keyChanges = key && *key != m_map.averageFrequency;
+        if (begin == end && !keyChanges) {
             return false;
         }
         Step step;
@@ -224,10 +292,17 @@ namespace hello::kit {
             step.before.push_back(m_map.frames[first + i].frequency);
             step.after.push_back(frequencies[i]);
         }
+        if (keyChanges) {
+            step.key = std::pair(m_map.averageFrequency, *key);
+        }
         m_steps.resize(m_done);
         m_steps.push_back(std::move(step));
         m_done = m_steps.size();
-        write(m_steps.back().first, m_steps.back().after);
+        const auto &done = m_steps.back();
+        write(done.first, done.after);
+        if (done.key) {
+            m_map.averageFrequency = done.key->second;
+        }
         return true;
     }
 

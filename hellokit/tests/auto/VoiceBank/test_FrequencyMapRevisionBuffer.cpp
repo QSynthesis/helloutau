@@ -192,8 +192,57 @@ private Q_SLOTS:
         QVERIFY(!map.canUndo());
     }
 
-    // An edit changes the frequencies only.
-    void an_edit_changes_only_the_frequencies() {
+    // The key is the average frequency that the map records, limited to the lowest and the
+    // highest frequency, set as one step that undo restores. Without a recorded average the key is
+    // the pitch average and cannot be set.
+    void the_key_is_the_average_frequency() {
+        auto source = mapOf({100, 200, 0, 400});
+        source.averageFrequency = 150;
+        FrequencyMapRevisionBuffer map(source);
+        QCOMPARE(map.key(), 150.0);
+        QVERIFY(map.setKey(300));
+        QCOMPARE(map.key(), 300.0);
+        QVERIFY(map.isModified());
+        QVERIFY(map.setKey(10));
+        QCOMPARE(map.key(), FrequencyMapRevisionBuffer::lowestFrequency);
+        QVERIFY(map.setKey(1e6));
+        QCOMPARE(map.key(), FrequencyMapRevisionBuffer::highestFrequency);
+        // The mean of the voiced frames 200 and 400 among the frames 1 to 3
+        QVERIFY(map.setKeyToMean(1, 3));
+        QCOMPARE(map.key(), 300.0);
+        QVERIFY(!map.setKeyToMean(2, 1));
+        QVERIFY(map.undo());
+        QCOMPARE(map.key(), FrequencyMapRevisionBuffer::highestFrequency);
+        QVERIFY(map.revertAll());
+        QCOMPARE(map.key(), 150.0);
+        QVERIFY(!map.isModified());
+
+        FrequencyMapRevisionBuffer unrecorded(mapOf({220, 220}));
+        QCOMPARE(unrecorded.key(), unrecorded.map().pitchAverage());
+        QVERIFY(!unrecorded.setKey(300));
+        QVERIFY(!unrecorded.map().averageFrequency);
+    }
+
+    // Flattening sets every frame and the key as one step, and setting a frame changes that frame
+    // only.
+    void flattening_and_setting_frames() {
+        auto source = mapOf({100, 200, 300});
+        source.averageFrequency = 150;
+        FrequencyMapRevisionBuffer map(source);
+        QVERIFY(map.flatten(250));
+        QCOMPARE(frequenciesOf(map.map()), (std::vector<double>{250, 250, 250}));
+        QCOMPARE(map.key(), 250.0);
+        QVERIFY(map.undo());
+        QCOMPARE(frequenciesOf(map.map()), (std::vector<double>{100, 200, 300}));
+        QCOMPARE(map.key(), 150.0);
+        QVERIFY(map.setFrequency(1, 440));
+        QCOMPARE(frequenciesOf(map.map()), (std::vector<double>{100, 440, 300}));
+        QVERIFY(!map.setFrequency(3, 440));
+        QVERIFY(!map.setFrequency(1, 440));
+    }
+
+    // An edit of frequencies changes no other value of the map.
+    void a_frequency_edit_changes_no_other_value() {
         auto source = mapOf({100, 200});
         source.averageFrequency = 150;
         FrequencyMapRevisionBuffer map(source);

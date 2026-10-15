@@ -16,10 +16,11 @@ namespace hello::kit {
     /// Only the editing dialog holds the buffer. The buffer belongs to no editing session and is
     /// excluded from crash recovery, therefore the history ends with the dialog.
     ///
-    /// An edit changes the frequencies of frames and nothing else. The frames, their times and
-    /// amplitudes and the average frequency stay as read. A frame is voiced if its frequency is
-    /// above lowestFrequency, as in frqeditor. Each frequency that an edit writes is limited as
-    /// in frqeditor:
+    /// An edit changes the frequencies of frames and the average frequency, the key of frqeditor,
+    /// and nothing else. The frames, their times and amplitudes stay as read. The key is edited
+    /// only if the map records an average frequency. A frame is voiced if its frequency is above
+    /// lowestFrequency, as in frqeditor. Each frequency that an edit writes is limited as in
+    /// frqeditor:
     /// - A frequency above highestFrequency becomes highestFrequency.
     /// - A frequency not above lowestFrequency marks the frame unvoiced.
     ///
@@ -43,8 +44,13 @@ namespace hello::kit {
         /// Returns the map as last saved, or as created if not saved since.
         const FrequencyMap &savedMap() const;
 
-        /// Returns whether a frequency of map() differs from that of savedMap().
+        /// Returns whether a frequency or the average frequency of map() differs from that of
+        /// savedMap().
         bool isModified() const;
+
+        /// Returns the average frequency of map(), the key of frqeditor, or
+        /// FrequencyMap::pitchAverage() if the map records none.
+        double key() const;
 
         /// Records map() as the saved map and keeps the history.
         void markSaved();
@@ -90,6 +96,31 @@ namespace hello::kit {
         /// step. Returns whether a frequency changed, and false while a stroke is in progress.
         bool revert(std::size_t first, std::size_t count);
 
+        /// Restores the frequencies and the average frequency of the saved map, as one step.
+        /// Returns whether a value changed, and false while a stroke is in progress.
+        bool revertAll();
+
+        /// Sets the frequency of \a frame to \a frequency, as the button Set of frqeditor does, as
+        /// one step. Returns whether it changed, and false while a stroke is in progress.
+        bool setFrequency(std::size_t frame, double frequency);
+
+        /// Sets the average frequency to \a frequency, at least lowestFrequency and at most
+        /// highestFrequency, as one step. Returns whether it changed, and false if the map
+        /// records no average frequency or a stroke is in progress.
+        bool setKey(double frequency);
+
+        /// Sets the average frequency to the arithmetic mean in hertz of the voiced frames among
+        /// \a count frames from \a first, as the button that sets the key to the average of the
+        /// selection in frqeditor does, as one step. Returns whether it changed, and false
+        /// without a voiced frame, as setKey() does otherwise.
+        bool setKeyToMean(std::size_t first, std::size_t count);
+
+        /// Sets every frame and, if the map records one, the average frequency to \a frequency,
+        /// as a double click on the labels of frqeditor does, as one step. The frames take the
+        /// limited frequency, and the key takes at least lowestFrequency. Returns whether a value
+        /// changed, and false while a stroke is in progress.
+        bool flatten(double frequency);
+
         /// Returns whether a step can be undone, which requires no stroke in progress.
         bool canUndo() const;
 
@@ -106,11 +137,13 @@ namespace hello::kit {
         static double limited(double frequency);
 
     private:
-        // The frequencies of consecutive frames before and after a step
+        // The frequencies of consecutive frames before and after a step, and the average
+        // frequency before and after if the step changes it
         struct Step {
             std::size_t first = 0;
             std::vector<double> before;
             std::vector<double> after;
+            std::optional<std::pair<std::optional<double>, std::optional<double>>> key;
         };
 
         struct Stroke {
@@ -132,9 +165,11 @@ namespace hello::kit {
         // the count
         std::pair<std::size_t, std::size_t> rangeOf(std::size_t first, std::size_t count) const;
 
-        // Writes frequencies to the frames from first as one step without the unchanged frames
-        // at either end, and returns whether a frequency changed
-        bool apply(std::size_t first, const std::vector<double> &frequencies);
+        // Writes frequencies to the frames from first and key to the average frequency, if given,
+        // as one step without the unchanged frames at either end, and returns whether a value
+        // changed
+        bool apply(std::size_t first, const std::vector<double> &frequencies,
+                   std::optional<std::optional<double>> key = std::nullopt);
 
         void write(std::size_t first, const std::vector<double> &frequencies);
     };
