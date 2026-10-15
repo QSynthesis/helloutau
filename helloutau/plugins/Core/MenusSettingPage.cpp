@@ -25,10 +25,11 @@ namespace hello::daw {
 
         using Entry = QAK::ActionLayoutEntry;
 
-        // A top-level container of a kind of window, by its id and the name the tree shows
+        // A top-level container of a kind of window, by its id and the name the tree shows. A
+        // null id marks no container.
         struct TopLevelNode {
-            const char *id;
-            const char *name;
+            const char *id = nullptr;
+            const char *name = nullptr;
         };
 
         // A kind of window, by the name of its tab and its menu bar and tool bars, which the tree
@@ -52,6 +53,11 @@ namespace hello::daw {
                QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Main Menu")},
               {"helloutau.voiceBank.sampleToolBar",
                QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Sample Toolbar")}}},
+            {Editor::FrequencyMapEditorKind,
+             QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Frequency Map Editor"),
+             {{"helloutau.frequencyMapEditorMenu",
+               QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Main Menu")},
+              {}}                                                                   },
         };
 
         const WindowLayouts &layoutsOf(Editor::WindowKind kind) {
@@ -123,7 +129,7 @@ namespace hello::daw {
             }
             if (!index.parent().isValid()) {
                 for (const auto &node : layoutsOf(m_kind).nodes) {
-                    if (entry.id() == QLatin1String(node.id)) {
+                    if (node.id && entry.id() == QLatin1String(node.id)) {
                         return MenusSettingPage::tr(node.name);
                     }
                 }
@@ -429,7 +435,9 @@ namespace hello::daw {
             panel.model->setRegistry(actions);
             QVector<Entry> nodes;
             for (const auto &node : window.nodes) {
-                nodes.push_back(Entry(QLatin1String(node.id), Entry::Menu));
+                if (node.id) {
+                    nodes.push_back(Entry(QLatin1String(node.id), Entry::Menu));
+                }
             }
             panel.model->setTopLevelNodes(nodes);
             panel.model->setActionLayouts(actions->layouts());

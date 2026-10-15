@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The menus and the commands of the dialog that edits frequency maps, registered with the
+     action registry of that dialog. The commands that the windows have as well are declared again
+     here, since each kind of window has a registry of its own and the shortcuts are set apart.
+     See the editing in docs/FrequencyMaps.md. Format: docs/action-extension-spec.md in
+     QActionKit. -->
+<actionExtension>
+    <version>1.0</version>
+    <id>helloutau.frequencyMapEditor</id>
+
+    <configuration>
+        <vars>
+            <var key="APP_NAME" value="HelloUtau" />
+        </vars>
+        <translationContext
+            text="hello::daw::ActionText"
+            category="hello::daw::ActionCategory"
+            description="hello::daw::ActionDescription"
+        />
+    </configuration>
+
+    <items>
+        <!-- The commands that the windows have as well -->
+        <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
+        <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
+        <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />
+        <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
+                shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
+        <action id="helloutau.select.selectAll" text="Select &amp;All" category="Select"
+                shortcut="Ctrl+A" />
+        <action id="helloutau.select.deselect" text="Desele&amp;ct" category="Select"
+                shortcut="Ctrl+Shift+A" />
+        <action id="helloutau.view.zoomInTime" text="Zoom In &amp;Horizontally" category="View" />
+        <action id="helloutau.view.zoomOutTime" text="Zoom Out Horizontall&amp;y" category="View" />
+        <action id="helloutau.view.zoomInKeys" text="Zoom In &amp;Vertically" category="View" />
+        <action id="helloutau.view.zoomOutKeys" text="Zoom Out Verticall&amp;y" category="View" />
+
+        <!-- Every modified frequency map in order, as Save All of frqeditor -->
+        <action id="helloutau.frequencyMap.saveAll" text="Save &amp;All" category="File"
+                shortcut="Ctrl+Shift+S" />
+        <!-- The current frequency map as last saved, as one step of its history -->
+        <action id="helloutau.frequencyMap.revert" text="Re&amp;vert to Saved" category="Edit" />
+        <!-- The voiced frames of the selection, as the buttons of frqeditor -->
+        <action id="helloutau.frequencyMap.multiplyBy2" text="Multiply by &amp;2" category="Edit" />
+        <action id="helloutau.frequencyMap.divideBy2" text="&amp;Divide by 2" category="Edit" />
+        <action id="helloutau.frequencyMap.multiplyBy3" text="Multiply by &amp;3" category="Edit" />
+        <action id="helloutau.frequencyMap.divideBy3" text="D&amp;ivide by 3" category="Edit" />
+        <action id="helloutau.frequencyMap.unvoice" text="&amp;Unvoice" category="Edit" />
+        <!-- Linear in hertz between the ends of the selection, as the avg button of frqeditor -->
+        <action id="helloutau.frequencyMap.interpolate" text="I&amp;nterpolate" category="Edit" />
+        <action id="helloutau.frequencyMap.showSpectrogram" text="Show &amp;Spectrogram"
+                category="View" />
+        <!-- The audio files of the list, as Ctrl+Up and Ctrl+Down of frqeditor -->
+        <action id="helloutau.frequencyMap.previousFile" text="&amp;Previous File"
+                category="View" shortcut="Ctrl+Up" />
+        <action id="helloutau.frequencyMap.nextFile" text="&amp;Next File" category="View"
+                shortcut="Ctrl+Down" />
+
+        <menu id="helloutau.frequencyMapEditorMenu" topLevel="true" />
+        <menu id="helloutau.frequencyMap.file" text="&amp;File" />
+        <menu id="helloutau.frequencyMap.edit" text="&amp;Edit" />
+        <menu id="helloutau.frequencyMap.select" text="&amp;Select" />
+        <menu id="helloutau.frequencyMap.view" text="&amp;View" />
+    </items>
+
+    <layouts>
+        <menu id="helloutau.frequencyMapEditorMenu">
+            <menu id="helloutau.frequencyMap.file">
+                <action id="helloutau.file.save" />
+                <action id="helloutau.frequencyMap.saveAll" />
+                <separator />
+                <action id="helloutau.file.close" />
+            </menu>
+            <menu id="helloutau.frequencyMap.edit">
+                <action id="helloutau.edit.undo" />
+                <action id="helloutau.edit.redo" />
+                <separator />
+                <action id="helloutau.frequencyMap.revert" />
+                <separator />
+                <action id="helloutau.frequencyMap.multiplyBy2" />
+                <action id="helloutau.frequencyMap.divideBy2" />
+                <action id="helloutau.frequencyMap.multiplyBy3" />
+                <action id="helloutau.frequencyMap.divideBy3" />
+                <action id="helloutau.frequencyMap.unvoice" />
+                <action id="helloutau.frequencyMap.interpolate" />
+            </menu>
+            <menu id="helloutau.frequencyMap.select">
+                <action id="helloutau.select.selectAll" />
+                <action id="helloutau.select.deselect" />
+            </menu>
+            <menu id="helloutau.frequencyMap.view">
+                <action id="helloutau.view.zoomInTime" />
+                <action id="helloutau.view.zoomOutTime" />
+                <action id="helloutau.view.zoomInKeys" />
+                <action id="helloutau.view.zoomOutKeys" />
+                <action id="helloutau.frequencyMap.showSpectrogram" />
+                <separator />
+                <action id="helloutau.frequencyMap.previousFile" />
+                <action id="helloutau.frequencyMap.nextFile" />
+            </menu>
+        </menu>
+    </layouts>
+</actionExtension>

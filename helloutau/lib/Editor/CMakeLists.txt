@@ -9,8 +9,8 @@ file(GLOB_RECURSE _hdr "${CMAKE_CURRENT_SOURCE_DIR}/../../include/helloutau/Edit
 qm_find_qt(Core Gui Widgets)
 
 # The menus, the tool bars and the commands of each kind of window, compiled by AEC into
-# ProjectActions.qak.h, VoiceBankActions.qak.h and their sources. BuiltinActions registers each
-# with the action registry of its kind of window.
+# ProjectActions.qak.h, VoiceBankActions.qak.h, FrequencyMapEditorActions.qak.h and their sources.
+# BuiltinActions registers each with the action registry of its kind of window.
 qak_add_action_extension(_project_actions_src Resources/ProjectActions.xml
     FUNCTION projectActions
     NAMESPACE hello::daw
@@ -19,7 +19,11 @@ qak_add_action_extension(_actions_src Resources/VoiceBankActions.xml
     FUNCTION voiceBankActions
     NAMESPACE hello::daw
 )
-list(APPEND _actions_src ${_project_actions_src})
+qak_add_action_extension(_frequency_map_actions_src Resources/FrequencyMapEditorActions.xml
+    FUNCTION frequencyMapEditorActions
+    NAMESPACE hello::daw
+)
+list(APPEND _actions_src ${_project_actions_src} ${_frequency_map_actions_src})
 
 # The built-in theme, under :/helloutau/themes, and the icons of the commands, under
 # :/helloutau/icons

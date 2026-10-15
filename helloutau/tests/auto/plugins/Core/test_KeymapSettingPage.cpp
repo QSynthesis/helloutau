@@ -139,9 +139,9 @@ private Q_SLOTS:
                  QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
     }
 
-    // Each window kind has its own tab and an Other group for commands in no menu. A command of
-    // both kinds, Undo, has shortcuts in each apart from the other. A shortcut conflicts within
-    // one kind alone, and keymap.json has a section for each kind.
+    // Each window kind has its own tab, and the windows have an Other group for commands in no
+    // menu. A command of every kind, Undo, has shortcuts in each apart from the others. A
+    // shortcut conflicts within one kind alone, and keymap.json has a section for each kind.
     void each_kind_of_window_has_its_own_keymap() {
         using Command = KeymapSettingPage::Command;
         QTemporaryDir dir;
@@ -179,6 +179,16 @@ private Q_SLOTS:
                  (QList<Command>{
                      {Editor::ProjectWindowKind, QStringLiteral("helloutau.edit.insertNote")}
         }));
+        // The dialog that edits frequency maps has a tab and commands of its own.
+        QCOMPARE(tabs->count(), int(std::size(Editor::windowKinds)));
+        QVERIFY(qobject_cast<QTreeWidget *>(tabs->widget(Editor::FrequencyMapEditorKind)));
+        const Command saveAll{Editor::FrequencyMapEditorKind,
+                              QStringLiteral("helloutau.frequencyMap.saveAll")};
+        QVERIFY(isDeclared(*e, saveAll.kind, saveAll.id));
+        QCOMPARE(page.conflicts(saveAll, QKeySequence(Qt::CTRL | Qt::Key_S)),
+                 (QList<Command>{
+                     {Editor::FrequencyMapEditorKind, QStringLiteral("helloutau.file.save")}
+        }));
 
         const auto undo = QStringLiteral("helloutau.edit.undo");
         const QKeySequence key(Qt::CTRL | Qt::ALT | Qt::Key_Z);
@@ -188,6 +198,8 @@ private Q_SLOTS:
         QCOMPARE(e->actionRegistry(Editor::ProjectWindowKind)->actionShortcuts(undo),
                  (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_Z), key}));
         QCOMPARE(e->actionRegistry(Editor::VoiceBankWindowKind)->actionShortcuts(undo),
+                 QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_Z)});
+        QCOMPARE(e->actionRegistry(Editor::FrequencyMapEditorKind)->actionShortcuts(undo),
                  QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_Z)});
 
         QFile file(dir.filePath(QStringLiteral("keymap.json")));
@@ -204,6 +216,10 @@ private Q_SLOTS:
                     .value(QStringLiteral("shortcuts"))
                     .toArray()
                     .isEmpty());
+        QVERIFY(object.value(QStringLiteral("frequencyMapEditor"))
+                    .toObject()
+                    .value(QStringLiteral("shortcuts"))
+                    .isArray());
     }
 
     // An option of modifiers is named as the platform writes the modifiers of a shortcut.

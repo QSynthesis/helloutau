@@ -45,6 +45,7 @@
 #include "DiagnosticBox.h"
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
+#include "FrequencyViewModifiers.h"
 #include "KeymapFile.h"
 #include "NoteViewModifiers.h"
 #include "ParameterViewModifiers.h"
@@ -260,6 +261,10 @@ namespace hello::daw {
                 }
                 registries[Editor::VoiceBankWindowKind]->removeExtension(extension);
             }
+            if (const auto extension =
+                    contribution->extension(QLatin1String(Editor::frequencyMapEditorName))) {
+                registries[Editor::FrequencyMapEditorKind]->removeExtension(extension);
+            }
             updateContexts();
         }
 
@@ -274,11 +279,11 @@ namespace hello::daw {
 
         // The registries with the keys of their sections in the keymap and layout files
         QList<std::pair<QString, QAK::ActionRegistry *>> sections() const {
-            return {
-                {Editor::nameOf(Editor::ProjectWindowKind),   registries[Editor::ProjectWindowKind]},
-                {Editor::nameOf(Editor::VoiceBankWindowKind),
-                 registries[Editor::VoiceBankWindowKind]                                           },
-            };
+            QList<std::pair<QString, QAK::ActionRegistry *>> result;
+            for (const auto kind : Editor::windowKinds) {
+                result.push_back({Editor::nameOf(kind), registries[kind]});
+            }
+            return result;
         }
 
         // The sections of the keymap file in the order of the kinds of window, with the
@@ -547,6 +552,9 @@ namespace hello::daw {
         if (kind == ProjectWindowKind) {
             return {&NoteViewModifiers::scheme(), &ParameterViewModifiers::scheme()};
         }
+        if (kind == FrequencyMapEditorKind) {
+            return {&FrequencyViewModifiers::scheme()};
+        }
         return {};
     }
 
@@ -640,7 +648,14 @@ namespace hello::daw {
     }
 
     QString Editor::nameOf(WindowKind kind) {
-        return QLatin1String(kind == VoiceBankWindowKind ? voiceBankWindowName : projectWindowName);
+        switch (kind) {
+            case VoiceBankWindowKind:
+                return QLatin1String(voiceBankWindowName);
+            case FrequencyMapEditorKind:
+                return QLatin1String(frequencyMapEditorName);
+            default:
+                return QLatin1String(projectWindowName);
+        }
     }
 
     ThemeManager *Editor::themeManager() const {

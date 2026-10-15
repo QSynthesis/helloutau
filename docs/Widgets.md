@@ -349,15 +349,15 @@
 
 **Keymap 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Keymap）：
 
-- **每种窗口一个 action registry**（作者 2026-10-01 定）：QActionKit 默认一个应用只有一种窗口，这种窗口对应一个 registry，它的每个实例是一个 context。HelloUtau 有两种窗口，因此 `Editor::actionRegistry(WindowKind)` 为工程窗口与音源窗口各给一个 registry，各有自己的清单（`ProjectActions.xml`、`VoiceBankActions.xml`）、布局、快捷键与用户改动。两种窗口共有的命令（新建、打开、撤销、查找、设置等）在两份清单中各声明一次，其快捷键因此各自独立（作者决定）。插件的 `ActionContribution::extension()` 按窗口种类的名称（`Editor::projectWindowName`、`Editor::voiceBankWindowName`）为每种窗口给出各自的扩展，ClassicPluginHost 与 Interchange 只给工程窗口。
-- 两种窗口「Project Window」「Voice Bank Window」各占一个标签页（作者 2026-10-10 接受），每个标签页是该窗口的一棵命令树。搜索栏在标签页之上，两种窗口共用，右侧的按钮作用于当前标签页的命令。命令树按该窗口的菜单栏逐级列出命令，组（group）的命令直接列在其菜单下，最后是该窗口自己的「Other」，列出它不在菜单中的命令（如工程窗口的 Classic Plugins at Pointer，N 键）。两种窗口共有的命令在两边各出现一次，分别设定。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
+- **每种窗口一个 action registry**（作者 2026-10-01 定）：QActionKit 默认一个应用只有一种窗口，这种窗口对应一个 registry，它的每个实例是一个 context。HelloUtau 有三种窗口：工程窗口、音源窗口，以及编辑频率表的对话框（作者 2026-10-15 决定，见 [`FrequencyMaps.md`](FrequencyMaps.md)「编辑」）。`Editor::actionRegistry(WindowKind)` 为每种各给一个 registry，各有自己的清单（`ProjectActions.xml`、`VoiceBankActions.xml`、`FrequencyMapEditorActions.xml`）、布局、快捷键与用户改动。几种窗口共有的命令（新建、打开、撤销、查找、设置等）在各自的清单中各声明一次，其快捷键因此各自独立（作者决定）。插件的 `ActionContribution::extension()` 按窗口种类的名称（`Editor::projectWindowName`、`Editor::voiceBankWindowName`、`Editor::frequencyMapEditorName`）为每种窗口给出各自的扩展，ClassicPluginHost 与 Interchange 只给工程窗口。
+- 每种窗口各占一个标签页「Project Window」「Voice Bank Window」「Frequency Map Editor」（作者 2026-10-10 接受），每个标签页是该窗口的一棵命令树。搜索栏在标签页之上，各种窗口共用，右侧的按钮作用于当前标签页的命令。命令树按该窗口的菜单栏逐级列出命令，组（group）的命令直接列在其菜单下，最后是该窗口自己的「Other」，列出它不在菜单中的命令（如工程窗口的 Classic Plugins at Pointer，N 键）。几种窗口共有的命令在各自的标签页中各出现一次，分别设定。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
 - 顶部可按名称搜索（译文与英文原文都参与匹配），也可在「Shortcut」框中按下快捷键，只留有该快捷键的命令。
 - 「Add Shortcut...」（双击也可）打开录键对话框，按下的键已分给其他命令时当场列出它们，确定后询问「Remove」从它们移除或「Leave」保留二者。「Remove Shortcut」删除快捷键，有多个时从菜单中选。「Reset」恢复该命令清单中的快捷键，「Restore Defaults」恢复全部命令。右键菜单有同样的操作。
-- 冲突只在同一种窗口的命令之间判断，即同一个 registry 之内，与菜单布局无关。两种窗口各自使用的键（如空格、Ins）因此不算冲突。
+- 冲突只在同一种窗口的命令之间判断，即同一个 registry 之内，与菜单布局无关。不同种类的窗口各自使用的键（如空格、Ins）因此不算冲突。
 - 页面只改动副本，「Apply」与「OK」时交给两个 registry，更新所有窗口，并写入 `keymap.json`。
 - **存储**：`settings.json` 同目录下单独的 `keymap.json`（作者要求不与设置、插件设置放在一起），每种窗口一节，只记与清单不同的命令，形如 `{"version": 1, "projectWindow": {"shortcuts": [{"id": ..., "keys": [...]}]}, "voiceBankWindow": {...}}`，空列表表示该命令没有快捷键。`version` 是格式的版本号（`KeymapFile::version`），所记的快捷键或修饰键不再能按原样应用时（例如动作或角色改名后）加一。版本不同或没有版本号的文件整份不读，不做迁移（作者 2026-10-09 决定，与 `actionLayouts.json` 相同）。启动时读入，文件无法读作快捷键表时忽略并警告，按清单的快捷键运行。未载入的插件的命令所记的快捷键保留在文件中。
 - **修饰键**（作者 2026-10-08、2026-10-09 决定）：鼠标与滚轮操作所用的修饰键全部可配置，卷帘中不写死任何修饰键。命令树下方按当前标签页的窗口种类显示该种窗口的修饰键配置。
-  - **方案**（`ModifierScheme`，HelloUtauWidgets）：一个面板一个方案，由一个描述类声明（工程窗口为音符区 `NoteViewModifiers` 与参数区 `ParameterViewModifiers`）。不同方案互不相干，修饰键可以相同。不同窗口种类的配置各存一份。一个面板沿用另一个面板的配置时，在描述类中注明，不另设：参数区的滚轮沿用音符区，时间轴拖动播放头时沿用音符区的「关闭音符吸附」。
+  - **方案**（`ModifierScheme`，HelloUtauWidgets）：一个面板一个方案，由一个描述类声明（工程窗口为音符区 `NoteViewModifiers` 与参数区 `ParameterViewModifiers`，编辑频率表的对话框为编辑区 `FrequencyViewModifiers`）。不同方案互不相干，修饰键可以相同。不同窗口种类的配置各存一份。一个面板沿用另一个面板的配置时，在描述类中注明，不另设：参数区的滚轮沿用音符区，时间轴拖动播放头时沿用音符区的「关闭音符吸附」。
   - **场景**：哪个鼠标键、按在什么部位、用什么工具，例如「选择工具下左键按在音符末端」，与修饰键无关。每个场景有一张**单击表**与一张**拖动表**，滚轮场景只有一张表。按下后指针移动超过 `QApplication::startDragDistance()` 即为拖动，按那一刻按住的修饰键查拖动表。未超过就松开即为单击，按松开时按住的修饰键查单击表。没有单击表的场景没有阈值，第一次移动即开始拖动，以便微调与连续绘制。与修饰键无关的反应可以在按下时立即发生，例如按住未选中的音符即选中它。
   - **启动条件与操作**：表中每一项是一个操作及其启动条件，即一组修饰键。选定的操作执行到松开鼠标为止，之后松开或改按修饰键都不改变操作，也不能切换到其他操作。
   - **开关**：操作进行中随按随松，按住即开，松开即关。每次判断时，从当前按住的键中去掉启动条件与已走过的进阶所用的键，剩下的键恰好等于本阶段若干开关的键之和时，这些开关打开、其余关闭，否则各开关保持原状。
@@ -372,7 +372,7 @@
 
 **Menus and Toolbars 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Menus and Toolbars，位于 Appearance & Behavior 下）：
 
-- 每种窗口一个标签页「Project Window」「Voice Bank Window」，各有自己 registry 的布局。树的顶层是该窗口的菜单栏与工具栏：工程窗口为「Main Menu」「Main Toolbar」，音源窗口为「Main Menu」「Sample Toolbar」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线与伸缩空白以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
+- 每种窗口一个标签页「Project Window」「Voice Bank Window」「Frequency Map Editor」，各有自己 registry 的布局。树的顶层是该窗口的菜单栏与工具栏：工程窗口为「Main Menu」「Main Toolbar」，音源窗口为「Main Menu」「Sample Toolbar」，编辑频率表的对话框只有「Main Menu」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线与伸缩空白以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
 - 右侧按钮：「Add Action...」（从可搜索的列表中选一个动作、菜单或组，以清单声明的形态加在当前条目之后，当前项是菜单或工具栏时加在其末尾。列表中不含可添加条目的目录不显示）、「Add Separator」、「Remove」、「Move Up」「Move Down」（在所在菜单内移动），以及「Restore Defaults」。菜单栏与工具栏本身不能删除或移动。
 - 编辑经 QActionKit 的 `ActionLayoutsModel`，它按清单检查每次改动：条目须已声明，形态须为声明的类型所允许，不能形成环。不被允许的改动不生效并提示。
 - **菜单与组的形态切换**：`ActionLayoutsModel` 支持在布局中将 menu 改为 group 或反之，但 JetBrains IDE 的设置页没有这一操作，因此暂不提供（作者 2026-10-11 定）。

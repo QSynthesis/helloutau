@@ -12,6 +12,10 @@
         <translation>音源窗口</translation>
     </message>
     <message>
+        <source>Frequency Map Editor</source>
+        <translation>频率表编辑器</translation>
+    </message>
+    <message>
         <source>None</source>
         <translation>无</translation>
     </message>
@@ -129,6 +133,10 @@
     <message>
         <source>Sample Toolbar</source>
         <translation>样本工具栏</translation>
+    </message>
+    <message>
+        <source>Frequency Map Editor</source>
+        <translation>频率表编辑器</translation>
     </message>
     <message>
         <source>Separator</source>

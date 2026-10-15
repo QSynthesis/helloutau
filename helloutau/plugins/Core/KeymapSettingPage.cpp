@@ -47,10 +47,13 @@ namespace hello::daw {
         const WindowLayout windowLayouts[] = {
             {Editor::ProjectWindowKind,
              QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Project Window"),
-             "helloutau.mainMenu"     },
+             "helloutau.mainMenu"              },
             {Editor::VoiceBankWindowKind,
              QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Voice Bank Window"),
-             "helloutau.voiceBankMenu"},
+             "helloutau.voiceBankMenu"         },
+            {Editor::FrequencyMapEditorKind,
+             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Frequency Map Editor"),
+             "helloutau.frequencyMapEditorMenu"},
         };
 
         QString textOf(const QList<QKeySequence> &keys) {

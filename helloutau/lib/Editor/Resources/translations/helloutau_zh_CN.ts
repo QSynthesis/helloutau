@@ -617,6 +617,50 @@
         <source>&amp;UST...</source>
         <translation>UST(&amp;U)...</translation>
     </message>
+    <message>
+        <source>Save &amp;All</source>
+        <translation>全部保存(&amp;A)</translation>
+    </message>
+    <message>
+        <source>Re&amp;vert to Saved</source>
+        <translation>恢复为已保存的内容(&amp;V)</translation>
+    </message>
+    <message>
+        <source>Multiply by &amp;2</source>
+        <translation>乘以 2(&amp;2)</translation>
+    </message>
+    <message>
+        <source>&amp;Divide by 2</source>
+        <translation>除以 2(&amp;D)</translation>
+    </message>
+    <message>
+        <source>Multiply by &amp;3</source>
+        <translation>乘以 3(&amp;3)</translation>
+    </message>
+    <message>
+        <source>D&amp;ivide by 3</source>
+        <translation>除以 3(&amp;I)</translation>
+    </message>
+    <message>
+        <source>&amp;Unvoice</source>
+        <translation>设为无声(&amp;U)</translation>
+    </message>
+    <message>
+        <source>I&amp;nterpolate</source>
+        <translation>插值(&amp;N)</translation>
+    </message>
+    <message>
+        <source>&amp;Previous File</source>
+        <translation>上一个文件(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Next File</source>
+        <translation>下一个文件(&amp;N)</translation>
+    </message>
+    <message>
+        <source>Frequency Map Editor Menu</source>
+        <translation>频率表编辑器菜单</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::AppLoader</name>
@@ -1070,6 +1114,49 @@
     <message>
         <source>The number of generation threads is a positive whole number, or Automatic.</source>
         <translation>生成线程数须为正整数，或为「自动」。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::FrequencyViewModifiers</name>
+    <message>
+        <source>Frequency Map Area</source>
+        <translation>频率表编辑区</translation>
+    </message>
+    <message>
+        <source>Wheel: Scroll Vertically</source>
+        <translation>滚轮：纵向滚动</translation>
+    </message>
+    <message>
+        <source>Wheel: Scroll Horizontally</source>
+        <translation>滚轮：横向滚动</translation>
+    </message>
+    <message>
+        <source>Wheel: Zoom Time</source>
+        <translation>滚轮：横向缩放</translation>
+    </message>
+    <message>
+        <source>Wheel: Zoom Keys</source>
+        <translation>滚轮：纵向缩放</translation>
+    </message>
+    <message>
+        <source>Drag: Draw</source>
+        <translation>拖动：绘制</translation>
+    </message>
+    <message>
+        <source>Drag: Select Frames</source>
+        <translation>拖动：选择帧</translation>
+    </message>
+    <message>
+        <source>Right Drag: Unvoice</source>
+        <translation>右键拖动：设为无声</translation>
+    </message>
+    <message>
+        <source>Drag: Zoom</source>
+        <translation>拖动：缩放</translation>
+    </message>
+    <message>
+        <source>Zoom: Lock Direction</source>
+        <translation>缩放：锁定方向</translation>
     </message>
 </context>
 <context>

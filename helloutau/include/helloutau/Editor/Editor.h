@@ -57,10 +57,12 @@ namespace hello::daw {
         enum WindowKind {
             ProjectWindowKind,
             VoiceBankWindowKind,
+            FrequencyMapEditorKind, ///< The dialog that edits frequency maps
         };
 
         /// The kinds of window in the order in which the settings list them
-        static constexpr WindowKind windowKinds[] = {ProjectWindowKind, VoiceBankWindowKind};
+        static constexpr WindowKind windowKinds[] = {ProjectWindowKind, VoiceBankWindowKind,
+                                                     FrequencyMapEditorKind};
 
         /// \name Names of the kinds of window
         ///
@@ -69,6 +71,7 @@ namespace hello::daw {
         /// @{
         static constexpr char projectWindowName[] = "projectWindow";
         static constexpr char voiceBankWindowName[] = "voiceBankWindow";
+        static constexpr char frequencyMapEditorName[] = "frequencyMapEditor";
         /// @}
 
         /// Returns the name of \a kind.
