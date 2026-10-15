@@ -750,7 +750,7 @@ namespace hello::daw {
                         return nullptr;
                     }
                     if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
-                        return std::make_unique<ZoomGesture>(state, position, *activation);
+                        return state->zoomGesture(position, *activation);
                     }
                     return std::make_unique<VibratoGesture>(state, index, part, position);
                 },
@@ -790,7 +790,7 @@ namespace hello::daw {
                     return nullptr;
                 }
                 if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
-                    return std::make_unique<ZoomGesture>(state, position, *activation);
+                    return state->zoomGesture(position, *activation);
                 }
                 if (!state->selectedPoints.contains(id)) {
                     state->selectPoints({id});
@@ -844,7 +844,7 @@ namespace hello::daw {
                         return nullptr;
                     }
                     if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
-                        return std::make_unique<ZoomGesture>(state, position, *activation);
+                        return state->zoomGesture(position, *activation);
                     }
                     return std::make_unique<DrawGesture>(state, position, *activation);
                 },
@@ -865,7 +865,7 @@ namespace hello::daw {
                     return nullptr;
                 }
                 if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
-                    return std::make_unique<ZoomGesture>(state, position, *activation);
+                    return state->zoomGesture(position, *activation);
                 }
                 return std::make_unique<BandGesture>(
                     state, position, NoteViewKeyboardModifiers::Role(activation->operation));
@@ -920,7 +920,7 @@ namespace hello::daw {
                     return nullptr;
                 }
                 if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
-                    return std::make_unique<ZoomGesture>(state, position, *activation);
+                    return state->zoomGesture(position, *activation);
                 }
                 if (end) {
                     state->selectOnly(index);

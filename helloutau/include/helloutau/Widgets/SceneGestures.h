@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 
 #include <QtCore/QPointF>
 
@@ -10,6 +11,8 @@
 #include <helloutau/Widgets/SceneGesture.h>
 
 namespace hello::daw {
+
+    class SceneView;
 
     /// A press that becomes a click or a drag. A move farther than
     /// QApplication::startDragDistance() from the press starts the drag: the drag function
@@ -38,6 +41,33 @@ namespace hello::daw {
         bool m_started = false;
         // The gesture of the drag, if the drag started and the drag function returned a gesture
         std::unique_ptr<SceneGesture> m_gesture;
+    };
+
+    /// A drag that zooms both axes of a view about the point where it began. While the lock
+    /// function returns true, the drag zooms one axis only, the axis along which the pointer moves
+    /// first after the lock turns on. Each pixel of the drag multiplies the scale by 1.01, and
+    /// nothing is undone on cancel.
+    class HELLOUTAU_WIDGETS_EXPORT SceneZoomGesture : public SceneGesture {
+    public:
+        /// Returns whether the drag is locked to one axis with the modifiers held.
+        using LockFunction = std::function<bool(Qt::KeyboardModifiers)>;
+
+        SceneZoomGesture(SceneView *view, QPointF position, LockFunction locked);
+        ~SceneZoomGesture();
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override;
+        void cancel() override;
+
+    private:
+        SceneView *m_view;
+        QPointF m_origin;
+        QPointF m_last;
+        LockFunction m_locked;
+        // Where the lock turned on, and the axis that the lock zooms once the pointer has moved
+        // far enough from there
+        std::optional<QPointF> m_lockOrigin;
+        std::optional<Qt::Orientation> m_orientation;
     };
 
 }

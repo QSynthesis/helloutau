@@ -875,7 +875,7 @@ namespace hello::daw {
                     return nullptr;
                 }
                 if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
-                    return std::make_unique<ZoomGesture>(this, position, *activation);
+                    return zoomGesture(position, *activation);
                 }
                 return std::make_unique<BendGesture>(this, position, erases);
             },
@@ -886,6 +886,16 @@ namespace hello::daw {
         PianoRollState::activate(NoteViewKeyboardModifiers::Scene scene,
                                  Qt::KeyboardModifiers modifiers) const {
         return noteModifiers.activate(scene, modifiers);
+    }
+
+    std::unique_ptr<SceneGesture>
+        PianoRollState::zoomGesture(QPointF position,
+                                    KeyboardModifierBindings::Activation activation) {
+        return std::make_unique<SceneZoomGesture>(
+            view, position, [this, activation](Qt::KeyboardModifiers modifiers) mutable {
+                noteModifiers.updateToggles(activation, modifiers);
+                return activation.isOn(NoteViewKeyboardModifiers::DragZoomAxisLock);
+            });
     }
 
     std::unique_ptr<SceneGesture> PianoRollState::spanPress(QPointF position) {

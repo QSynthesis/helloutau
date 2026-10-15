@@ -176,7 +176,6 @@ namespace hello::daw {
         class PointGesture;
         class VibratoGesture;
         class BendGesture;
-        class ZoomGesture;
 
         kit::ProjectSession *session = nullptr;
         kit::TrackTimeline *timeline = nullptr;
@@ -324,6 +323,12 @@ namespace hello::daw {
         /// KeyboardModifierBindings::activate()
         std::optional<KeyboardModifierBindings::Activation>
             activate(NoteViewKeyboardModifiers::Scene scene, Qt::KeyboardModifiers modifiers) const;
+
+        /// Returns the drag that zooms the view about position (DragZoom of
+        /// NoteViewKeyboardModifiers), locked to one axis while DragZoomAxisLock of activation is
+        /// on
+        std::unique_ptr<SceneGesture> zoomGesture(QPointF position,
+                                                  KeyboardModifierBindings::Activation activation);
 
         /// Returns a right press at position, whose click and drag select a span of time as the
         /// SpanScene of NoteViewKeyboardModifiers selects

@@ -25,50 +25,6 @@ namespace hello::daw {
 
     }
 
-    void PianoRollState::ZoomGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
-        m_state->noteModifiers.updateToggles(m_activation, modifiers);
-        const bool locked = m_activation.isOn(NoteViewKeyboardModifiers::DragZoomAxisLock);
-        if (!locked) {
-            m_lockOrigin.reset();
-            m_orientation.reset();
-        } else if (!m_lockOrigin) {
-            m_lockOrigin = m_last;
-        }
-        if (locked && !m_orientation) {
-            const QPointF distance = position - *m_lockOrigin;
-            if (distance.manhattanLength() < QApplication::startDragDistance()) {
-                return;
-            }
-            m_orientation =
-                std::abs(distance.x()) >= std::abs(distance.y()) ? Qt::Horizontal : Qt::Vertical;
-        }
-        const double horizontal = position.x() - m_last.x();
-        const double vertical = position.y() - m_last.y();
-        m_last = position;
-        if (locked) {
-            const double delta = *m_orientation == Qt::Horizontal ? horizontal : vertical;
-            if (delta == 0)
-                return;
-            const double factor = std::pow(1.01, delta);
-            if (*m_orientation == Qt::Horizontal)
-                m_state->view->zoomTime(factor, m_origin.x());
-            else
-                m_state->view->zoomKeys(factor, m_origin.y());
-        } else {
-            if (horizontal != 0)
-                m_state->view->zoomTime(std::pow(1.01, horizontal), m_origin.x());
-            if (vertical != 0)
-                m_state->view->zoomKeys(std::pow(1.01, vertical), m_origin.y());
-        }
-    }
-
-    void PianoRollState::ZoomGesture::release(QPointF position, Qt::KeyboardModifiers modifiers) {
-        move(position, modifiers);
-    }
-
-    void PianoRollState::ZoomGesture::cancel() {
-    }
-
     void PianoRollState::MoveGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(modifiers);
         if (!m_dragging) {

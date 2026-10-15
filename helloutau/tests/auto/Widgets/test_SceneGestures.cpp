@@ -1,3 +1,4 @@
+#include <cmath>
 #include <memory>
 
 #include <QtCore/QStringList>
@@ -5,6 +6,7 @@
 #include <QtWidgets/QApplication>
 
 #include <helloutau/Widgets/SceneGestures.h>
+#include <helloutau/Widgets/SceneView.h>
 
 using namespace hello::daw;
 
@@ -136,6 +138,37 @@ private Q_SLOTS:
         press.move(QPointF(far(), 0), Qt::NoModifier);
         press.cancel();
         QCOMPARE(m_log.last(), QStringLiteral("cancel"));
+    }
+
+    // A zoom drag zooms both axes about its origin, and only the axis of the first move while
+    // locked.
+    void a_zoom_drag_keeps_its_origin() {
+        SceneView view;
+        view.resize(800, 600);
+        view.setTickRange(0, 100000);
+        view.setTimeScaleRange(0.001, 100);
+        view.setKeyScaleRange(1, 100);
+        view.setTimeAxis({0.1, 1000});
+        view.setKeyAxis({20, 100});
+        const QPointF origin(200, 100);
+        const double tick = view.timeAxis().toTick(origin.x());
+        const double key = view.keyAxis().toKey(origin.y());
+
+        bool locked = false;
+        SceneZoomGesture zoom(&view, origin, [&locked](Qt::KeyboardModifiers) { return locked; });
+        zoom.move(origin + QPointF(10, 5), Qt::NoModifier);
+        QVERIFY(qAbs(view.timeAxis().pixelsPerTick - 0.1 * std::pow(1.01, 10)) < 1e-9);
+        QVERIFY(qAbs(view.keyAxis().pixelsPerKey - 20 * std::pow(1.01, 5)) < 1e-9);
+        QVERIFY(qAbs(view.timeAxis().toTick(origin.x()) - tick) < 1e-6);
+        QVERIFY(qAbs(view.keyAxis().toKey(origin.y()) - key) < 1e-6);
+
+        // Locked, the first move past the start distance chooses the horizontal axis.
+        locked = true;
+        const double keyScale = view.keyAxis().pixelsPerKey;
+        zoom.move(origin + QPointF(10 + far(), 6), Qt::NoModifier);
+        zoom.release(origin + QPointF(30 + far(), 30), Qt::NoModifier);
+        QCOMPARE(view.keyAxis().pixelsPerKey, keyScale);
+        QVERIFY(qAbs(view.timeAxis().pixelsPerTick - 0.1 * std::pow(1.01, 30 + far())) < 1e-9);
     }
 };
 

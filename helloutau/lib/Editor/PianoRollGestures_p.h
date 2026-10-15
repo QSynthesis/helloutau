@@ -17,31 +17,6 @@
 
 namespace hello::daw {
 
-    /// A drag that zooms both axes around the point where it began (DragZoom of
-    /// NoteViewKeyboardModifiers). While DragZoomAxisLock is on, it zooms one axis only, the axis
-    /// along which the pointer moves first after the lock turns on.
-    class PianoRollState::ZoomGesture : public SceneGesture {
-    public:
-        ZoomGesture(PianoRollState *state, QPointF position,
-                    const KeyboardModifierBindings::Activation &activation)
-            : m_state(state), m_origin(position), m_last(position), m_activation(activation) {
-        }
-
-        void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
-        void release(QPointF position, Qt::KeyboardModifiers modifiers) override;
-        void cancel() override;
-
-    private:
-        PianoRollState *m_state;
-        QPointF m_origin;
-        QPointF m_last;
-        KeyboardModifierBindings::Activation m_activation;
-        // Where the lock turned on, and the axis that the lock zooms once the pointer has moved
-        // far enough from there
-        std::optional<QPointF> m_lockOrigin;
-        std::optional<Qt::Orientation> m_orientation;
-    };
-
     /// A drag of the selected notes: vertically transposes them, horizontally moves them in the
     /// sequence to the boundary between notes nearest to where they are dragged. A selection with
     /// gaps is first extended to the run of notes it spans, see step 4 in docs/Widgets.md.
