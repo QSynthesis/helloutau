@@ -58,7 +58,8 @@
         <action id="helloutau.frequencyMap.divideBy2" text="&amp;Divide by 2" category="Edit" />
         <action id="helloutau.frequencyMap.multiplyBy3" text="Multiply by &amp;3" category="Edit" />
         <action id="helloutau.frequencyMap.divideBy3" text="D&amp;ivide by 3" category="Edit" />
-        <action id="helloutau.frequencyMap.unvoice" text="&amp;Unvoice" category="Edit" />
+        <action id="helloutau.frequencyMap.unvoice" text="&amp;Unvoice" category="Edit"
+                shortcut="Del" />
         <!-- Linear in hertz between the ends of the selection, as the avg button of frqeditor -->
         <action id="helloutau.frequencyMap.interpolate" text="I&amp;nterpolate" category="Edit" />
         <!-- Both axes by one of the seven zoom levels, as in frqeditor -->
