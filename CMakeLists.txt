@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
-set(HELLO_VERSION 0.1.7.0)
+set(HELLO_VERSION 0.1.8.0)
 
 project(helloutau
     VERSION ${HELLO_VERSION}
