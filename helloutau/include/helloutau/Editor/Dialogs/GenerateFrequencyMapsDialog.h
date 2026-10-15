@@ -8,7 +8,9 @@
 #include <QtWidgets/QDialog>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
+#include <helloutau/Editor/Settings/FrequencyMapSettings.h>
 
+class QComboBox;
 class QDialogButtonBox;
 class QLabel;
 class QPushButton;
@@ -21,11 +23,15 @@ namespace hello::daw {
     /// the settings generates. The files are listed with the presence of their maps in the format
     /// of that resampler, and of each analysis cache of the format in a column of its own. A
     /// checked file with a map has its map generated again, or only its analysis caches if the
-    /// settings specify so. A checked file without a map has its map generated.
+    /// regeneration of the dialog specifies so. A checked file without a map has its map
+    /// generated.
     ///
     /// The selected files are checked initially, or the files without a map if none is selected.
     /// A tri-state box checks or unchecks every file, and a button checks exactly the files
-    /// without a map. The dialog changes no file.
+    /// without a map. The regeneration is chosen in a combo box below the summary for this
+    /// generation only, initially the regeneration of the settings. The combo box and its note
+    /// are hidden if the format has no analysis caches. The dialog changes no file and no
+    /// setting.
     class HELLOUTAU_EDITOR_EXPORT GenerateFrequencyMapsDialog : public QDialog {
         Q_OBJECT
     public:
@@ -44,28 +50,36 @@ namespace hello::daw {
 
         /// Creates the dialog for \a files of the voice bank at \a root, with the maps in the
         /// format named \a formatName, whose analysis caches are named \a cacheNames, such as
-        /// LLSM. \a cachesOnly specifies that a file with a map has only its analysis caches
-        /// generated again. The paths of the files are shown relative to \a root, or whole if
-        /// they have no path relative to \a root, as on another drive.
+        /// LLSM. \a regeneration is the initial regeneration, usually that of the settings. The
+        /// paths of the files are shown relative to \a root, or whole if they have no path
+        /// relative to \a root, as on another drive.
         GenerateFrequencyMapsDialog(QList<File> files, const std::filesystem::path &root,
                                     const QString &formatName, const QStringList &cacheNames,
-                                    bool cachesOnly, QWidget *parent = nullptr);
+                                    FrequencyMapSettings::Regeneration regeneration,
+                                    QWidget *parent = nullptr);
         ~GenerateFrequencyMapsDialog();
 
         /// Returns the checked files, absolute paths in the order of the files.
         QList<std::filesystem::path> checkedFiles() const;
 
+        /// Returns the regeneration chosen in the combo box, or
+        /// FrequencyMapSettings::MapsAndCaches if the format has no analysis caches.
+        FrequencyMapSettings::Regeneration regeneration() const;
+
         FileCheckList *fileList() const;
         /// Returns the button that checks exactly the files without a map
         QPushButton *checkMissingButton() const;
+        /// Returns the combo box of the regeneration, hidden if the format has no analysis caches
+        QComboBox *regenerationBox() const;
         QDialogButtonBox *buttonBox() const;
 
     private:
         QList<File> m_files;
-        bool m_cachesOnly;
+        bool m_hasCaches;
 
         FileCheckList *m_list;
         QPushButton *m_checkMissing;
+        QComboBox *m_regeneration;
         QLabel *m_summary;
         QDialogButtonBox *m_buttons;
 

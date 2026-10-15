@@ -1673,14 +1673,6 @@ namespace hello::daw {
             return std::pair(resampler, format);
         }
 
-        // Returns whether only the analysis caches of an existing map are removed and generated
-        // again, which requires a format with caches
-        bool regeneratesCachesOnly(const kit::FrequencyFormat &format) const {
-            return !format.analysisCaches().isEmpty() &&
-                   editor->settings().frequencyMaps().regeneration() ==
-                       FrequencyMapSettings::CachesOnly;
-        }
-
         enum Generation {
             MapsOnly,      // The missing maps
             CachesOnly,    // The analysis caches of every audio file, and the missing maps
@@ -2731,16 +2723,22 @@ namespace hello::daw {
             QMessageBox::information(this, title, tr("The voice bank has no audio files."));
             return false;
         }
-        GenerateFrequencyMapsDialog dialog(std::move(files), impl.document->rootPath(),
-                                           format->name(), cacheNamesOf(*format),
-                                           impl.regeneratesCachesOnly(*format), this);
+        GenerateFrequencyMapsDialog dialog(
+            std::move(files), impl.document->rootPath(), format->name(), cacheNamesOf(*format),
+            impl.editor->settings().frequencyMaps().regeneration(), this);
         if (dialog.exec() != QDialog::Accepted) {
             return false;
         }
-        return generateFrequencyMaps(dialog.checkedFiles());
+        return generateFrequencyMaps(dialog.checkedFiles(), dialog.regeneration());
     }
 
     bool VoiceBankWindow::generateFrequencyMaps(const QList<std::filesystem::path> &wavs) {
+        stdc_impl_t;
+        return generateFrequencyMaps(wavs, impl.editor->settings().frequencyMaps().regeneration());
+    }
+
+    bool VoiceBankWindow::generateFrequencyMaps(const QList<std::filesystem::path> &wavs,
+                                                FrequencyMapSettings::Regeneration regeneration) {
         stdc_impl_t;
         const auto title = tr("Generate Frequency Maps");
         const auto tools = impl.generationTools(title);
@@ -2764,7 +2762,10 @@ namespace hello::daw {
             }
         }
 
-        const bool cachesOnly = !present.empty() && impl.regeneratesCachesOnly(*format);
+        // Only the analysis caches of an existing map are removed and generated again, which
+        // requires a format with caches.
+        const bool cachesOnly = !present.empty() && !format->analysisCaches().isEmpty() &&
+                                regeneration == FrequencyMapSettings::CachesOnly;
         kit::DiagnosticList diagnostics;
         bool removed = true;
         for (const auto &[folder, names] : present) {

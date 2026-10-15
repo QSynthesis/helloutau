@@ -3434,6 +3434,25 @@ private Q_SLOTS:
         QVERIFY(window->generateFrequencyMaps(audioOf(bank)));
         QCOMPARE(read(bank / "a.dio"), std::string("dio"));
         QCOMPARE(read(bank / "a.star"), std::string("star"));
+
+        // The regeneration chosen in the dialog applies to this generation only. It is initially
+        // that of the settings, and the settings keep their value.
+        writeFile(bank / "a.dio", "old");
+        writeFile(bank / "a.star", "old");
+        auto initial = FrequencyMapSettings::CachesOnly;
+        handleNextDialog<GenerateFrequencyMapsDialog>(
+            [&initial](GenerateFrequencyMapsDialog *dialog) {
+                initial = dialog->regeneration();
+                const auto box = dialog->regenerationBox();
+                box->setCurrentIndex(box->findData(FrequencyMapSettings::CachesOnly));
+                dialog->fileList()->checkWhere([](int) { return true; });
+                dialog->accept();
+            });
+        QVERIFY(window->generateFrequencyMaps());
+        QCOMPARE(initial, FrequencyMapSettings::MapsAndCaches);
+        QCOMPARE(read(bank / "a.dio"), std::string("old"));
+        QCOMPARE(read(bank / "a.star"), std::string("star"));
+        QCOMPARE(e->settings().frequencyMaps().regeneration(), FrequencyMapSettings::MapsAndCaches);
     }
 
     // The page of the frequency maps sets the generation threads apart from the rendering

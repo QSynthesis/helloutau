@@ -1090,6 +1090,22 @@
         <source>Check &amp;Missing</source>
         <translation>勾选缺失的项(&amp;M)</translation>
     </message>
+    <message>
+        <source>Remove the frequency maps and their analysis caches</source>
+        <translation>删除频率表及其分析缓存</translation>
+    </message>
+    <message>
+        <source>Remove only the analysis caches, and keep the frequency maps</source>
+        <translation>只删除分析缓存，保留频率表</translation>
+    </message>
+    <message>
+        <source>This choice applies to this generation only. The default is set in Regenerating on the Frequency Maps page of the settings.</source>
+        <translation>此选择只对本次生成有效。缺省值在设置的「频率表」页的「重新生成时」中设置。</translation>
+    </message>
+    <message>
+        <source>&amp;Regenerating:</source>
+        <translation>重新生成时(&amp;R)：</translation>
+    </message>
     <message numerus="yes">
         <source>%n missing frequency map(s) will be generated.</source>
         <translation>

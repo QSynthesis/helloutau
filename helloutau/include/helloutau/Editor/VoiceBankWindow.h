@@ -10,6 +10,7 @@
 
 #include <helloutau/Editor/Dialogs/VoiceBankTranscodingDialog.h>
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
+#include <helloutau/Editor/Settings/FrequencyMapSettings.h>
 
 class QComboBox;
 class QLineEdit;
@@ -191,22 +192,26 @@ namespace hello::daw {
         bool convertEncodings(const VoiceBankTranscodingDialog::Conversion &conversion);
 
         /// Opens GenerateFrequencyMapsDialog for the audio files of the voice bank, those of the
-        /// folders not read included, and generates the frequency maps of the checked files as
-        /// the overload does. Returns false if the voice bank has no audio files, the dialog is
-        /// canceled or a map is not generated.
+        /// folders not read included, and generates the frequency maps of the checked files with
+        /// the regeneration chosen in the dialog as the overload does. Returns false if the voice
+        /// bank has no audio files, the dialog is canceled or a map is not generated.
         bool generateFrequencyMaps();
+
+        /// \overload for the audio files \a wavs , absolute paths, without the dialog, with
+        /// FrequencyMapSettings::regeneration().
+        bool generateFrequencyMaps(const QList<std::filesystem::path> &wavs);
 
         /// \overload for the audio files \a wavs , absolute paths, without the dialog.
         ///
         /// Generates the frequency maps with the resampler of the settings, in the format of that
         /// resampler, with a progress dialog that cancels the generation, with the threads of
         /// FrequencyMapSettings::threadCount(). The map of a file that has one is first removed
-        /// with its analysis caches, or only the caches are removed if
-        /// FrequencyMapSettings::regeneration() specifies so and the format has caches. See the
-        /// generation in docs/FrequencyMaps.md.
+        /// with its analysis caches, or only the caches are removed if \a regeneration specifies
+        /// so and the format has caches. See the generation in docs/FrequencyMaps.md.
         ///
         /// \return whether every map was generated
-        bool generateFrequencyMaps(const QList<std::filesystem::path> &wavs);
+        bool generateFrequencyMaps(const QList<std::filesystem::path> &wavs,
+                                   FrequencyMapSettings::Regeneration regeneration);
 
         /// Opens RemoveFrequencyMapsDialog for the audio files of the voice bank, those of the
         /// folders not read included, and removes the frequency maps of the checked files as the

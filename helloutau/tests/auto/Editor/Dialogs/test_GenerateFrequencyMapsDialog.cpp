@@ -1,4 +1,5 @@
 #include <QtTest/QTest>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeWidget>
@@ -26,6 +27,9 @@ namespace {
 
     const QStringList cacheNames{QStringLiteral("LLSM")};
 
+    constexpr auto mapsAndCaches = FrequencyMapSettings::MapsAndCaches;
+    constexpr auto cachesOnly = FrequencyMapSettings::CachesOnly;
+
 }
 
 class test_GenerateFrequencyMapsDialog : public QObject {
@@ -35,7 +39,7 @@ private Q_SLOTS:
     // Without a selection, the files without a map are checked.
     void the_missing_maps_are_checked_without_a_selection() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "mrq", cacheNames,
-                                           false);
+                                           mapsAndCaches);
         QCOMPARE(dialog.checkedFiles(),
                  (QList<fs::path>{fs::path("C:/bank/b.wav"), fs::path("C:/bank/sub/c.wav")}));
         QCOMPARE(dialog.fileList()->rowCount(), 3);
@@ -44,7 +48,7 @@ private Q_SLOTS:
     // With a selection, the selected files are checked, whether they have a map or not.
     void the_selected_files_are_checked() {
         GenerateFrequencyMapsDialog dialog(filesOf(true, true), "C:/bank", "mrq", cacheNames,
-                                           false);
+                                           mapsAndCaches);
         QCOMPARE(dialog.checkedFiles(),
                  (QList<fs::path>{fs::path("C:/bank/a.wav"), fs::path("C:/bank/sub/c.wav")}));
     }
@@ -52,7 +56,7 @@ private Q_SLOTS:
     // A button checks exactly the files without a map, and the box checks every file.
     void a_button_checks_the_missing_maps() {
         GenerateFrequencyMapsDialog dialog(filesOf(true, false), "C:/bank", "mrq", cacheNames,
-                                           false);
+                                           mapsAndCaches);
         QCOMPARE(dialog.checkedFiles(), QList<fs::path>{fs::path("C:/bank/a.wav")});
         dialog.checkMissingButton()->click();
         QCOMPARE(dialog.checkedFiles(),
@@ -66,7 +70,7 @@ private Q_SLOTS:
     void each_cache_has_a_column() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "dio",
                                            {QStringLiteral("STAR"), QStringLiteral("PLATINUM")},
-                                           false);
+                                           mapsAndCaches);
         const auto tree = dialog.fileList()->tree();
         QCOMPARE(tree->columnCount(), 4);
         QCOMPARE(tree->headerItem()->text(2), QStringLiteral("STAR"));
@@ -90,13 +94,31 @@ private Q_SLOTS:
     // The generation requires a checked file.
     void the_generation_requires_a_file() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "mrq", cacheNames,
-                                           true);
+                                           cachesOnly);
         const auto ok = dialog.buttonBox()->button(QDialogButtonBox::Ok);
         QVERIFY(ok->isEnabled());
         dialog.fileList()->checkWhere([](int) { return false; });
         QVERIFY(!ok->isEnabled());
         dialog.fileList()->setChecked(0, true);
         QVERIFY(ok->isEnabled());
+    }
+
+    // The regeneration is initially the given one, and follows the combo box.
+    void the_box_chooses_the_regeneration() {
+        GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "mrq", cacheNames,
+                                           cachesOnly);
+        const auto box = dialog.regenerationBox();
+        QVERIFY(!box->isHidden());
+        QCOMPARE(dialog.regeneration(), cachesOnly);
+        box->setCurrentIndex(box->findData(mapsAndCaches));
+        QCOMPARE(dialog.regeneration(), mapsAndCaches);
+    }
+
+    // Without analysis caches, the box is hidden and the maps are removed.
+    void the_box_is_hidden_without_caches() {
+        GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "frq", {}, cachesOnly);
+        QVERIFY(dialog.regenerationBox()->isHidden());
+        QCOMPARE(dialog.regeneration(), mapsAndCaches);
     }
 };
 
