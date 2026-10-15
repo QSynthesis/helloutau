@@ -3929,7 +3929,7 @@ private Q_SLOTS:
         handleNextDialog<GenerateFrequencyMapsDialog>(
             [&initial](GenerateFrequencyMapsDialog *dialog) {
                 initial = dialog->regeneration();
-                dialog->removeMapsOnRegenerationBox()->setChecked(false);
+                dialog->removeMapsAndCachesOnGenerationBox()->setChecked(false);
                 dialog->fileList()->checkWhere([](int) { return true; });
                 dialog->accept();
             });
@@ -3976,8 +3976,8 @@ private Q_SLOTS:
         });
         QVERIFY(!page->isModified());
         page->threadCountBox()->setEditText(QStringLiteral("3"));
-        QVERIFY(page->removeMapsOnRegenerationBox()->isChecked());
-        page->removeMapsOnRegenerationBox()->setChecked(false);
+        QVERIFY(page->removeMapsAndCachesOnGenerationBox()->isChecked());
+        page->removeMapsAndCachesOnGenerationBox()->setChecked(false);
         QVERIFY(page->isModified());
         QString error;
         QVERIFY(page->apply(&error));

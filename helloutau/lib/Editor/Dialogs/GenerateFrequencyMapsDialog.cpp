@@ -67,15 +67,16 @@ namespace hello::daw {
         }
 
         // The text of the setting. The choice applies to this generation only.
-        m_removeMapsOnRegeneration =
-            new QCheckBox(tr("Also remove the &frequency maps when regenerating"));
-        m_removeMapsOnRegeneration->setChecked(regeneration == FrequencyMapSettings::MapsAndCaches);
-        m_removeMapsOnRegeneration->setVisible(m_hasCaches);
-        auto removeMapsOnRegenerationNote =
+        m_removeMapsAndCachesOnGeneration = new QCheckBox(
+            tr("Remove the existing &frequency maps and analysis caches before generating"));
+        m_removeMapsAndCachesOnGeneration->setChecked(regeneration ==
+                                                      FrequencyMapSettings::MapsAndCaches);
+        m_removeMapsAndCachesOnGeneration->setVisible(m_hasCaches);
+        auto removeMapsAndCachesOnGenerationNote =
             new QLabel(tr("This choice applies to this generation only. The default is set on the "
                           "Frequency Maps page of the settings."));
-        removeMapsOnRegenerationNote->setWordWrap(true);
-        removeMapsOnRegenerationNote->setVisible(m_hasCaches);
+        removeMapsAndCachesOnGenerationNote->setWordWrap(true);
+        removeMapsAndCachesOnGenerationNote->setVisible(m_hasCaches);
 
         m_summary = new QLabel();
         m_summary->setWordWrap(true);
@@ -85,14 +86,14 @@ namespace hello::daw {
         layout->addWidget(format);
         layout->addWidget(m_list, 1);
         layout->addWidget(m_summary);
-        layout->addWidget(m_removeMapsOnRegeneration);
-        layout->addWidget(removeMapsOnRegenerationNote);
+        layout->addWidget(m_removeMapsAndCachesOnGeneration);
+        layout->addWidget(removeMapsAndCachesOnGenerationNote);
         layout->addWidget(m_buttons);
         resize(640, 560);
 
         connect(m_list, &FileCheckList::checkedChanged, this,
                 &GenerateFrequencyMapsDialog::updateSummary);
-        connect(m_removeMapsOnRegeneration, &QCheckBox::toggled, this,
+        connect(m_removeMapsAndCachesOnGeneration, &QCheckBox::toggled, this,
                 &GenerateFrequencyMapsDialog::updateSummary);
         connect(m_buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(m_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -110,7 +111,7 @@ namespace hello::daw {
     }
 
     FrequencyMapSettings::Regeneration GenerateFrequencyMapsDialog::regeneration() const {
-        return m_hasCaches && !m_removeMapsOnRegeneration->isChecked()
+        return m_hasCaches && !m_removeMapsAndCachesOnGeneration->isChecked()
                    ? FrequencyMapSettings::CachesOnly
                    : FrequencyMapSettings::MapsAndCaches;
     }
@@ -123,8 +124,8 @@ namespace hello::daw {
         return m_checkMissing;
     }
 
-    QCheckBox *GenerateFrequencyMapsDialog::removeMapsOnRegenerationBox() const {
-        return m_removeMapsOnRegeneration;
+    QCheckBox *GenerateFrequencyMapsDialog::removeMapsAndCachesOnGenerationBox() const {
+        return m_removeMapsAndCachesOnGeneration;
     }
 
     QDialogButtonBox *GenerateFrequencyMapsDialog::buttonBox() const {

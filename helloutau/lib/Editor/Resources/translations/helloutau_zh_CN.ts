@@ -1335,8 +1335,8 @@
         <translation>同时生成频率表的重采样器个数，与渲染线程数分开设置。</translation>
     </message>
     <message>
-        <source>An analysis cache holds the frequencies of an audio file, which the resampler reads in place of the frequency map. If the box is unchecked, only the caches are removed, and the resampler writes them again from the frequency maps, for example after the maps were edited elsewhere. The maps of a format without caches are removed regardless.</source>
-        <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。不勾选时只删除分析缓存，重采样器按频率表重新写出缓存，例如频率表在别处编辑之后。格式没有分析缓存时，频率表照常删除。</translation>
+        <source>An analysis cache holds the frequencies of an audio file, which the resampler reads in place of the frequency map. If the box is unchecked, only the analysis caches are removed. A resampler that keeps an existing frequency map, such as moresampler, then writes the caches again from the maps, for example after the maps were edited elsewhere. The frequency maps of a format without caches are removed regardless.</source>
+        <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。不勾选时只删除分析缓存。保留已有频率表的重采样器（如 moresampler）随后按频率表重新写出缓存，例如频率表在别处编辑之后。格式没有分析缓存时，频率表照常删除。</translation>
     </message>
     <message>
         <source>Editing</source>
@@ -1395,8 +1395,8 @@
         <translation>音源窗口以重采样器生成频率表的方式与频率表的编辑方式，以及各重采样器保留的分析缓存。</translation>
     </message>
     <message>
-        <source>Also remove the &amp;frequency maps when regenerating</source>
-        <translation>重新生成时一并删除频率表(&amp;F)</translation>
+        <source>Remove the existing &amp;frequency maps and analysis caches before generating</source>
+        <translation>生成频率表时，先删除频率表和分析缓存再生成(&amp;F)</translation>
     </message>
     <message>
         <source>Frequency Map</source>
@@ -1520,8 +1520,8 @@
         <translation>勾选缺失的项(&amp;M)</translation>
     </message>
     <message>
-        <source>Also remove the &amp;frequency maps when regenerating</source>
-        <translation>重新生成时一并删除频率表(&amp;F)</translation>
+        <source>Remove the existing &amp;frequency maps and analysis caches before generating</source>
+        <translation>生成频率表时，先删除频率表和分析缓存再生成(&amp;F)</translation>
     </message>
     <message>
         <source>This choice applies to this generation only. The default is set on the Frequency Maps page of the settings.</source>
