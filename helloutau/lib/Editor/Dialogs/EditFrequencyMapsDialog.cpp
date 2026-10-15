@@ -1387,7 +1387,7 @@ namespace hello::daw {
         // Wide enough to show the whole list beside the right side with an editing area of
         // editingWidth, within the screen. If the screen is narrower, the list is narrowed so that
         // the right side keeps its least width. A resize changes the right side only.
-        constexpr int editingWidth = 300;
+        constexpr int editingWidth = 600;
         const QRect available = (parent ? parent->screen() : screen())->availableGeometry();
         const auto margins = layout->contentsMargins();
         const int listWidth = impl.list->header()->length() + 2 * impl.list->frameWidth() +
