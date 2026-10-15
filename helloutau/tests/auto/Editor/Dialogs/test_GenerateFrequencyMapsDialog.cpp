@@ -1,5 +1,5 @@
 #include <QtTest/QTest>
-#include <QtWidgets/QComboBox>
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeWidget>
@@ -103,21 +103,22 @@ private Q_SLOTS:
         QVERIFY(ok->isEnabled());
     }
 
-    // The regeneration is initially the given one, and follows the combo box.
+    // The regeneration is initially the given one, and follows the check box.
     void the_box_chooses_the_regeneration() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "mrq", cacheNames,
                                            cachesOnly);
-        const auto box = dialog.regenerationBox();
+        const auto box = dialog.cachesOnlyBox();
         QVERIFY(!box->isHidden());
+        QVERIFY(box->isChecked());
         QCOMPARE(dialog.regeneration(), cachesOnly);
-        box->setCurrentIndex(box->findData(mapsAndCaches));
+        box->setChecked(false);
         QCOMPARE(dialog.regeneration(), mapsAndCaches);
     }
 
     // Without analysis caches, the box is hidden and the maps are removed.
     void the_box_is_hidden_without_caches() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "frq", {}, cachesOnly);
-        QVERIFY(dialog.regenerationBox()->isHidden());
+        QVERIFY(dialog.cachesOnlyBox()->isHidden());
         QCOMPARE(dialog.regeneration(), mapsAndCaches);
     }
 };

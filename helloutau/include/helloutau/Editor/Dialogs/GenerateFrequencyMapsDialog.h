@@ -10,7 +10,7 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 #include <helloutau/Editor/Settings/FrequencyMapSettings.h>
 
-class QComboBox;
+class QCheckBox;
 class QDialogButtonBox;
 class QLabel;
 class QPushButton;
@@ -28,8 +28,8 @@ namespace hello::daw {
     ///
     /// The selected files are checked initially, or the files without a map if none is selected.
     /// A tri-state box checks or unchecks every file, and a button checks exactly the files
-    /// without a map. The regeneration is chosen in a combo box below the summary for this
-    /// generation only, initially the regeneration of the settings. The combo box and its note
+    /// without a map. The regeneration is chosen in a check box below the summary for this
+    /// generation only, initially the regeneration of the settings. The check box and its note
     /// are hidden if the format has no analysis caches. The dialog changes no file and no
     /// setting.
     class HELLOUTAU_EDITOR_EXPORT GenerateFrequencyMapsDialog : public QDialog {
@@ -62,15 +62,16 @@ namespace hello::daw {
         /// Returns the checked files, absolute paths in the order of the files.
         QList<std::filesystem::path> checkedFiles() const;
 
-        /// Returns the regeneration chosen in the combo box, or
-        /// FrequencyMapSettings::MapsAndCaches if the format has no analysis caches.
+        /// Returns FrequencyMapSettings::CachesOnly if cachesOnlyBox() is checked and the format
+        /// has analysis caches, or else FrequencyMapSettings::MapsAndCaches.
         FrequencyMapSettings::Regeneration regeneration() const;
 
         FileCheckList *fileList() const;
         /// Returns the button that checks exactly the files without a map
         QPushButton *checkMissingButton() const;
-        /// Returns the combo box of the regeneration, hidden if the format has no analysis caches
-        QComboBox *regenerationBox() const;
+        /// Returns the box that keeps the maps and removes only the analysis caches, hidden if
+        /// the format has no analysis caches
+        QCheckBox *cachesOnlyBox() const;
         QDialogButtonBox *buttonBox() const;
 
     private:
@@ -79,7 +80,7 @@ namespace hello::daw {
 
         FileCheckList *m_list;
         QPushButton *m_checkMissing;
-        QComboBox *m_regeneration;
+        QCheckBox *m_cachesOnly;
         QLabel *m_summary;
         QDialogButtonBox *m_buttons;
 

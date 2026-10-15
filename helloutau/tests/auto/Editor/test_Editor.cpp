@@ -3443,8 +3443,7 @@ private Q_SLOTS:
         handleNextDialog<GenerateFrequencyMapsDialog>(
             [&initial](GenerateFrequencyMapsDialog *dialog) {
                 initial = dialog->regeneration();
-                const auto box = dialog->regenerationBox();
-                box->setCurrentIndex(box->findData(FrequencyMapSettings::CachesOnly));
+                dialog->cachesOnlyBox()->setChecked(true);
                 dialog->fileList()->checkWhere([](int) { return true; });
                 dialog->accept();
             });
@@ -3491,8 +3490,8 @@ private Q_SLOTS:
         });
         QVERIFY(!page->isModified());
         page->threadCountBox()->setEditText(QStringLiteral("3"));
-        page->regenerationBox()->setCurrentIndex(
-            page->regenerationBox()->findData(FrequencyMapSettings::CachesOnly));
+        QVERIFY(!page->cachesOnlyBox()->isChecked());
+        page->cachesOnlyBox()->setChecked(true);
         QVERIFY(page->isModified());
         QString error;
         QVERIFY(page->apply(&error));

@@ -1,9 +1,8 @@
 #include "GenerateFrequencyMapsDialog.h"
 
 #include <QtCore/QDir>
-#include <QtWidgets/QComboBox>
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
@@ -64,22 +63,16 @@ namespace hello::daw {
             m_list->checkWhere(missing);
         }
 
-        // The items of the setting. The choice applies to this generation only.
-        m_regeneration = new QComboBox();
-        m_regeneration->addItem(tr("Remove the frequency maps and their analysis caches"),
-                                FrequencyMapSettings::MapsAndCaches);
-        m_regeneration->addItem(tr("Remove only the analysis caches, and keep the frequency maps"),
-                                FrequencyMapSettings::CachesOnly);
-        m_regeneration->setCurrentIndex(m_regeneration->findData(regeneration));
-        auto regenerationNote =
-            new QLabel(tr("This choice applies to this generation only. The default is set in "
-                          "Regenerating on the Frequency Maps page of the settings."));
-        regenerationNote->setWordWrap(true);
-        auto regenerationForm = new QFormLayout();
-        regenerationForm->addRow(tr("&Regenerating:"), m_regeneration);
-        regenerationForm->addRow(regenerationNote);
-        regenerationForm->setRowVisible(m_regeneration, m_hasCaches);
-        regenerationForm->setRowVisible(regenerationNote, m_hasCaches);
+        // The text of the setting. The choice applies to this generation only.
+        m_cachesOnly = new QCheckBox(
+            tr("When regenerating, remove only the analysis caches and &keep the frequency maps"));
+        m_cachesOnly->setChecked(regeneration == FrequencyMapSettings::CachesOnly);
+        m_cachesOnly->setVisible(m_hasCaches);
+        auto cachesOnlyNote =
+            new QLabel(tr("This choice applies to this generation only. The default is set on the "
+                          "Frequency Maps page of the settings."));
+        cachesOnlyNote->setWordWrap(true);
+        cachesOnlyNote->setVisible(m_hasCaches);
 
         m_summary = new QLabel();
         m_summary->setWordWrap(true);
@@ -89,13 +82,14 @@ namespace hello::daw {
         layout->addWidget(format);
         layout->addWidget(m_list, 1);
         layout->addWidget(m_summary);
-        layout->addLayout(regenerationForm);
+        layout->addWidget(m_cachesOnly);
+        layout->addWidget(cachesOnlyNote);
         layout->addWidget(m_buttons);
         resize(640, 560);
 
         connect(m_list, &FileCheckList::checkedChanged, this,
                 &GenerateFrequencyMapsDialog::updateSummary);
-        connect(m_regeneration, &QComboBox::currentIndexChanged, this,
+        connect(m_cachesOnly, &QCheckBox::toggled, this,
                 &GenerateFrequencyMapsDialog::updateSummary);
         connect(m_buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(m_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -113,9 +107,8 @@ namespace hello::daw {
     }
 
     FrequencyMapSettings::Regeneration GenerateFrequencyMapsDialog::regeneration() const {
-        return m_hasCaches
-                   ? FrequencyMapSettings::Regeneration(m_regeneration->currentData().toInt())
-                   : FrequencyMapSettings::MapsAndCaches;
+        return m_hasCaches && m_cachesOnly->isChecked() ? FrequencyMapSettings::CachesOnly
+                                                        : FrequencyMapSettings::MapsAndCaches;
     }
 
     FileCheckList *GenerateFrequencyMapsDialog::fileList() const {
@@ -126,8 +119,8 @@ namespace hello::daw {
         return m_checkMissing;
     }
 
-    QComboBox *GenerateFrequencyMapsDialog::regenerationBox() const {
-        return m_regeneration;
+    QCheckBox *GenerateFrequencyMapsDialog::cachesOnlyBox() const {
+        return m_cachesOnly;
     }
 
     QDialogButtonBox *GenerateFrequencyMapsDialog::buttonBox() const {

@@ -16,6 +16,15 @@
 
 namespace hello::daw {
 
+    namespace {
+
+        FrequencyMapSettings::Regeneration regenerationOf(const QCheckBox *cachesOnly) {
+            return cachesOnly->isChecked() ? FrequencyMapSettings::CachesOnly
+                                           : FrequencyMapSettings::MapsAndCaches;
+        }
+
+    }
+
     FrequencyMapSettingPage::FrequencyMapSettingPage(AppSettings &settings,
                                                      const kit::FrequencyFormats &formats,
                                                      QObject *parent)
@@ -39,14 +48,11 @@ namespace hello::daw {
         generationForm->addRow(tr("Generation &threads:"), m_threads);
         generationForm->addRow(note(tr("The number of resamplers that generate frequency maps at "
                                        "once, apart from the rendering threads.")));
-        m_regeneration = new QComboBox();
-        m_regeneration->addItem(tr("Remove the frequency maps and their analysis caches"),
-                                FrequencyMapSettings::MapsAndCaches);
-        m_regeneration->addItem(tr("Remove only the analysis caches, and keep the frequency maps"),
-                                FrequencyMapSettings::CachesOnly);
-        m_regeneration->setCurrentIndex(
-            m_regeneration->findData(m_settings.frequencyMaps().regeneration()));
-        generationForm->addRow(tr("&Regenerating:"), m_regeneration);
+        m_cachesOnly = new QCheckBox(
+            tr("When regenerating, remove only the analysis caches and &keep the frequency maps"));
+        m_cachesOnly->setChecked(m_settings.frequencyMaps().regeneration() ==
+                                 FrequencyMapSettings::CachesOnly);
+        generationForm->addRow(m_cachesOnly);
         generationForm->addRow(
             note(tr("An analysis cache holds the frequencies of an audio file, which the resampler "
                     "reads in place of the frequency map. Removing only the caches makes the "
@@ -104,8 +110,7 @@ namespace hello::daw {
         connect(&m_formats, &kit::FrequencyFormats::formatsChanged, m_caches,
                 [this] { fillCaches(); });
         connect(m_threads, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);
-        connect(m_regeneration, &QComboBox::currentIndexChanged, this,
-                &SettingPage::modifiedChanged);
+        connect(m_cachesOnly, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
         connect(m_removeCachesOnSave, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
         connect(m_followRenderLog, &QCheckBox::toggled, this, updateLog);
         connect(m_followRenderLog, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
@@ -139,12 +144,12 @@ namespace hello::daw {
     }
 
     bool FrequencyMapSettingPage::isModified() const {
-        if (!m_threads || !m_regeneration || !m_followRenderLog) {
+        if (!m_threads || !m_cachesOnly || !m_followRenderLog) {
             return false;
         }
         const auto &maps = m_settings.frequencyMaps();
         return threadCountOf(m_threads) != maps.threadCount() ||
-               m_regeneration->currentData().toInt() != maps.regeneration() ||
+               regenerationOf(m_cachesOnly) != maps.regeneration() ||
                m_removeCachesOnSave->isChecked() != maps.removesCachesOnSave() ||
                m_followRenderLog->isChecked() != maps.followsRenderLog() ||
                m_logMode->currentData().toBool() != maps.isLogAccumulated() ||
@@ -169,8 +174,7 @@ namespace hello::daw {
         }
         auto &maps = m_settings.frequencyMaps();
         maps.setThreadCount(*threads);
-        maps.setRegeneration(
-            FrequencyMapSettings::Regeneration(m_regeneration->currentData().toInt()));
+        maps.setRegeneration(regenerationOf(m_cachesOnly));
         maps.setRemovesCachesOnSave(m_removeCachesOnSave->isChecked());
         maps.setFollowsRenderLog(m_followRenderLog->isChecked());
         maps.setLogAccumulated(m_logMode->currentData().toBool());
@@ -183,8 +187,8 @@ namespace hello::daw {
         return m_threads;
     }
 
-    QComboBox *FrequencyMapSettingPage::regenerationBox() const {
-        return m_regeneration;
+    QCheckBox *FrequencyMapSettingPage::cachesOnlyBox() const {
+        return m_cachesOnly;
     }
 
     QCheckBox *FrequencyMapSettingPage::removeCachesOnSaveBox() const {

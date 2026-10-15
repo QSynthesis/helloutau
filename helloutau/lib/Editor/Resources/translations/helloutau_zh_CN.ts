@@ -996,18 +996,6 @@
         <translation>同时生成频率表的重采样器个数，与渲染线程数分开设置。</translation>
     </message>
     <message>
-        <source>Remove the frequency maps and their analysis caches</source>
-        <translation>删除频率表及其分析缓存</translation>
-    </message>
-    <message>
-        <source>Remove only the analysis caches, and keep the frequency maps</source>
-        <translation>只删除分析缓存，保留频率表</translation>
-    </message>
-    <message>
-        <source>&amp;Regenerating:</source>
-        <translation>重新生成时(&amp;R)：</translation>
-    </message>
-    <message>
         <source>An analysis cache holds the frequencies of an audio file, which the resampler reads in place of the frequency map. Removing only the caches makes the resampler write them again from the frequency maps, for example after the maps were edited elsewhere. Without caches, the maps are removed.</source>
         <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。只删除缓存时，重采样器按频率表重新写出缓存，例如频率表在别处编辑之后。没有缓存的格式删除频率表。</translation>
     </message>
@@ -1068,6 +1056,10 @@
         <translation>音源窗口以重采样器生成频率表的方式与频率表的编辑，以及各重采样器保留的分析缓存。</translation>
     </message>
     <message>
+        <source>When regenerating, remove only the analysis caches and &amp;keep the frequency maps</source>
+        <translation>重新生成时只删除分析缓存，保留频率表(&amp;K)</translation>
+    </message>
+    <message>
         <source>Frequency Map</source>
         <translation>频率表</translation>
     </message>
@@ -1103,20 +1095,12 @@
         <translation>勾选缺失的项(&amp;M)</translation>
     </message>
     <message>
-        <source>Remove the frequency maps and their analysis caches</source>
-        <translation>删除频率表及其分析缓存</translation>
+        <source>When regenerating, remove only the analysis caches and &amp;keep the frequency maps</source>
+        <translation>重新生成时只删除分析缓存，保留频率表(&amp;K)</translation>
     </message>
     <message>
-        <source>Remove only the analysis caches, and keep the frequency maps</source>
-        <translation>只删除分析缓存，保留频率表</translation>
-    </message>
-    <message>
-        <source>This choice applies to this generation only. The default is set in Regenerating on the Frequency Maps page of the settings.</source>
-        <translation>此选择只对本次生成有效。缺省值在设置的「频率表」页的「重新生成时」中设置。</translation>
-    </message>
-    <message>
-        <source>&amp;Regenerating:</source>
-        <translation>重新生成时(&amp;R)：</translation>
+        <source>This choice applies to this generation only. The default is set on the Frequency Maps page of the settings.</source>
+        <translation>此选择只对本次生成有效。缺省值在设置的「频率表」页中设置。</translation>
     </message>
     <message numerus="yes">
         <source>%n missing frequency map(s) will be generated.</source>

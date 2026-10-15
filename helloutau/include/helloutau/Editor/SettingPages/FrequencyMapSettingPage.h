@@ -35,7 +35,9 @@ namespace hello::daw {
         bool apply(QString *error) override;
 
         QComboBox *threadCountBox() const;
-        QComboBox *regenerationBox() const;
+        /// Returns the box that keeps the maps on regenerating and removes only the analysis
+        /// caches, FrequencyMapSettings::CachesOnly
+        QCheckBox *cachesOnlyBox() const;
         QCheckBox *removeCachesOnSaveBox() const;
 
         /// The box that makes the log of the generation follow the render log, and the boxes
@@ -56,7 +58,7 @@ namespace hello::daw {
         AppSettings &m_settings;
         const kit::FrequencyFormats &m_formats;
         QPointer<QComboBox> m_threads;
-        QPointer<QComboBox> m_regeneration;
+        QPointer<QCheckBox> m_cachesOnly;
         QPointer<QCheckBox> m_removeCachesOnSave;
         QPointer<QCheckBox> m_followRenderLog;
         QPointer<QComboBox> m_logMode;
