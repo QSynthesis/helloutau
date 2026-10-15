@@ -155,7 +155,7 @@
                 shortcut="Z" />
         <action id="helloutau.view.goToStart" text="Go to &amp;Start" category="View"
                 shortcut="Ctrl+Home" />
-        <action id="helloutau.view.goToEnd" text="Go to &amp;End" category="View"
+        <action id="helloutau.view.goToEnd" text="G&amp;o to End" category="View"
                 shortcut="Ctrl+End" />
         <action id="helloutau.view.goToFirstNote" text="Go to &amp;First Note" category="View"
                 shortcut="Home" />
@@ -164,9 +164,9 @@
         <action id="helloutau.view.zoomInTime" text="Zoom In &amp;Horizontally" category="View" />
         <action id="helloutau.view.zoomOutTime" text="Zoom Out Horizontall&amp;y" category="View" />
         <action id="helloutau.view.zoomInKeys" text="Zoom In &amp;Vertically" category="View" />
-        <action id="helloutau.view.zoomOutKeys" text="Zoom Out Verticall&amp;y" category="View" />
+        <action id="helloutau.view.zoomOutKeys" text="&amp;Zoom Out Vertically" category="View" />
         <!-- Filled by the window with the regions of the project, each of which it loads -->
-        <action id="helloutau.view.loadRegion" text="&amp;Load Region" category="View"
+        <action id="helloutau.view.loadRegion" text="Loa&amp;d Region" category="View"
                 triggerable="false" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="Help"
                 shortcuts="Ctrl+Shift+P;F1" />

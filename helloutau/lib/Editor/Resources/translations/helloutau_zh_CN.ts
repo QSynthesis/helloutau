@@ -198,8 +198,8 @@
         <translation>插入条目(&amp;I)...</translation>
     </message>
     <message>
-        <source>D&amp;uplicate Entries</source>
-        <translation>创建条目副本(&amp;U)</translation>
+        <source>Du&amp;plicate Entries</source>
+        <translation>创建条目副本(&amp;P)</translation>
     </message>
     <message>
         <source>Duplicate &amp;with Rule...</source>
@@ -210,8 +210,8 @@
         <translation>重命名别名(&amp;A)...</translation>
     </message>
     <message>
-        <source>Include Audio &amp;Files</source>
-        <translation>收录音频文件(&amp;F)</translation>
+        <source>In&amp;clude Audio Files</source>
+        <translation>收录音频文件(&amp;C)</translation>
     </message>
     <message>
         <source>&amp;Open in File Manager</source>
@@ -250,8 +250,8 @@
         <translation>从指针处播放(&amp;N)</translation>
     </message>
     <message>
-        <source>&amp;Synthesize Note</source>
-        <translation>合成音符(&amp;S)</translation>
+        <source>S&amp;ynthesize Note</source>
+        <translation>合成音符(&amp;Y)</translation>
     </message>
     <message>
         <source>Show &amp;Spectrogram</source>
@@ -262,8 +262,8 @@
         <translation>音源信息(&amp;I)</translation>
     </message>
     <message>
-        <source>Con&amp;vert Encoding...</source>
-        <translation>转换编码(&amp;V)...</translation>
+        <source>Conver&amp;t Encoding...</source>
+        <translation>转换编码(&amp;T)...</translation>
     </message>
     <message>
         <source>Read Again in &amp;Encoding...</source>
@@ -542,8 +542,8 @@
         <translation>跳转到开始(&amp;S)</translation>
     </message>
     <message>
-        <source>Go to &amp;End</source>
-        <translation>跳转到结束(&amp;E)</translation>
+        <source>G&amp;o to End</source>
+        <translation>跳转到结束(&amp;O)</translation>
     </message>
     <message>
         <source>Go to &amp;First Note</source>
@@ -559,19 +559,19 @@
     </message>
     <message>
         <source>Zoom Out Horizontall&amp;y</source>
-        <translation>横向缩小(&amp;O)</translation>
+        <translation>横向缩小(&amp;Y)</translation>
     </message>
     <message>
         <source>Zoom In &amp;Vertically</source>
         <translation>纵向放大(&amp;V)</translation>
     </message>
     <message>
-        <source>Zoom Out Verticall&amp;y</source>
-        <translation>纵向缩小(&amp;U)</translation>
+        <source>&amp;Zoom Out Vertically</source>
+        <translation>纵向缩小(&amp;Z)</translation>
     </message>
     <message>
-        <source>&amp;Load Region</source>
-        <translation>载入区间(&amp;L)</translation>
+        <source>Loa&amp;d Region</source>
+        <translation>载入区间(&amp;D)</translation>
     </message>
     <message>
         <source>&amp;Play or Pause</source>
@@ -630,8 +630,8 @@
         <translation>UST(&amp;U)...</translation>
     </message>
     <message>
-        <source>&amp;Synthesize and Play</source>
-        <translation>合成播放(&amp;S)</translation>
+        <source>Synthesize and &amp;Play</source>
+        <translation>合成播放(&amp;P)</translation>
     </message>
     <message>
         <source>&amp;Check Frequency Maps...</source>
@@ -646,8 +646,8 @@
         <translation>下一处修正(&amp;N)</translation>
     </message>
     <message>
-        <source>&amp;Correct</source>
-        <translation>修正(&amp;C)</translation>
+        <source>C&amp;orrect</source>
+        <translation>修正(&amp;O)</translation>
     </message>
     <message>
         <source>&amp;Ignore</source>
@@ -694,8 +694,8 @@
         <translation>除以 3(&amp;I)</translation>
     </message>
     <message>
-        <source>&amp;Unvoice</source>
-        <translation>设为无声(&amp;U)</translation>
+        <source>Unv&amp;oice</source>
+        <translation>设为无声(&amp;O)</translation>
     </message>
     <message>
         <source>I&amp;nterpolate</source>

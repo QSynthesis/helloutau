@@ -41,7 +41,7 @@
              or the audio file as it is with $direct=True, or a stop of the playback. The button
              Play of the preview triggers this command. Return of the main keyboard and Enter of
              the keypad are distinct keys. -->
-        <action id="helloutau.frequencyMap.synthesize" text="&amp;Synthesize and Play"
+        <action id="helloutau.frequencyMap.synthesize" text="Synthesize and &amp;Play"
                 category="Playback" shortcuts="Ctrl+Return;Ctrl+Enter" />
 
         <!-- The check of every map against the note of the recordings, as frqeditor does, and
@@ -54,7 +54,7 @@
         <action id="helloutau.frequencyMap.nextCorrection" text="&amp;Next Correction"
                 category="Check" shortcut="F3" />
         <!-- The selected correction, after which the next in the same direction is selected -->
-        <action id="helloutau.frequencyMap.adoptCorrection" text="&amp;Correct" category="Check" />
+        <action id="helloutau.frequencyMap.adoptCorrection" text="C&amp;orrect" category="Check" />
         <action id="helloutau.frequencyMap.ignoreCorrection" text="&amp;Ignore" category="Check" />
         <!-- Every correction of every map, each map as one step of its history -->
         <action id="helloutau.frequencyMap.adoptAllCorrections" text="Correct &amp;All"
@@ -79,7 +79,7 @@
         <action id="helloutau.frequencyMap.divideBy2" text="&amp;Divide by 2" category="Edit" />
         <action id="helloutau.frequencyMap.multiplyBy3" text="Multiply by &amp;3" category="Edit" />
         <action id="helloutau.frequencyMap.divideBy3" text="D&amp;ivide by 3" category="Edit" />
-        <action id="helloutau.frequencyMap.unvoice" text="&amp;Unvoice" category="Edit"
+        <action id="helloutau.frequencyMap.unvoice" text="Unv&amp;oice" category="Edit"
                 shortcut="Del" />
         <!-- Linear in hertz between the ends of the selection, as the avg button of frqeditor -->
         <action id="helloutau.frequencyMap.interpolate" text="I&amp;nterpolate" category="Edit" />

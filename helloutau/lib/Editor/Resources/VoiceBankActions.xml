@@ -74,7 +74,7 @@
         <action id="helloutau.voiceBank.insertEntry" text="&amp;Insert Entry..." category="Edit"
                 shortcut="Ins" />
         <!-- A copy of each selected entry, its alias followed by a free number -->
-        <action id="helloutau.voiceBank.duplicateEntries" text="D&amp;uplicate Entries"
+        <action id="helloutau.voiceBank.duplicateEntries" text="Du&amp;plicate Entries"
                 category="Edit" shortcut="Ctrl+D" />
         <!-- A copy of each selected entry, its alias derived by a rule -->
         <action id="helloutau.voiceBank.duplicateWithRule" text="Duplicate &amp;with Rule..."
@@ -83,7 +83,7 @@
         <action id="helloutau.voiceBank.renameAliases" text="Rename &amp;Aliases..."
                 category="Edit" />
         <!-- An entry with an empty alias for each selected audio file without one -->
-        <action id="helloutau.voiceBank.includeAudio" text="Include Audio &amp;Files"
+        <action id="helloutau.voiceBank.includeAudio" text="In&amp;clude Audio Files"
                 category="Edit" />
         <!-- The folder of the audio file of the current entry, with the file selected -->
         <action id="helloutau.voiceBank.openInFileManager" text="&amp;Open in File Manager"
@@ -111,7 +111,7 @@
         <!-- A note of the current entry by the resampler of the settings, at the pitch and of
              the length beside the waveform. Return of the main keyboard and Enter of the keypad
              are distinct keys. -->
-        <action id="helloutau.voiceBank.synthesize" text="&amp;Synthesize Note" category="Playback"
+        <action id="helloutau.voiceBank.synthesize" text="S&amp;ynthesize Note" category="Playback"
                 shortcuts="Ctrl+Return;Ctrl+Enter" />
         <!-- The spectrogram of the audio in place of its waveform -->
         <action id="helloutau.voiceBank.showSpectrogram" text="Show &amp;Spectrogram"
@@ -120,7 +120,7 @@
         <action id="helloutau.voiceBank.showInfo" text="Voice Bank &amp;Info" category="View" />
         <!-- The folder chosen in the tree: its files saved in another encoding, the text staying,
              or read again in another encoding, the bytes staying -->
-        <action id="helloutau.voiceBank.convertCharset" text="Con&amp;vert Encoding..."
+        <action id="helloutau.voiceBank.convertCharset" text="Conver&amp;t Encoding..."
                 category="Edit" />
         <action id="helloutau.voiceBank.rereadCharset" text="Read Again in &amp;Encoding..."
                 category="Edit" />
