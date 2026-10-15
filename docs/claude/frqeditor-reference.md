@@ -31,4 +31,4 @@
 
 ## 须另行解决的问题
 
-- **pmk 没有公开资料。** TIPS（ScientistB）没有公开源码，格式的依据只有 masao 提供的非公开示例。本仓库的代码注释只引用公开资料，实现 pmk 时注释的来源写法须由作者决定。frc 同样没有任何公开资料。详见 qfrqeditor 仓库的 `docs/20260928-public-sources.md`。
+- **pmk 没有公开资料。** TIPS（ScientistB）没有公开源码，格式的依据只有 masao 提供的非公开示例。本仓库的代码注释只引用公开资料，实现 pmk 时注释的来源写法须由作者决定。frc 同样没有任何公开资料。详见 qfrqeditor 仓库的 `docs/20260928-public-sources.md`。作者 2026-10-15 决定：两种格式写在 SynthToolSupport 插件中，注释只描述布局与行为，不注明出处，见 [`FrequencyMaps.md`](../FrequencyMaps.md)「闭源与无公开资料的格式」。

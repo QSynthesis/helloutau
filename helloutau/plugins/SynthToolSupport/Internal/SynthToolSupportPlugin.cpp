@@ -10,8 +10,10 @@
 #include <helloutau/Editor/Editor.h>
 
 #include <SynthToolSupport/DioFormat.h>
+#include <SynthToolSupport/FrcFormat.h>
 #include <SynthToolSupport/MoresamplerDiagnoser.h>
 #include <SynthToolSupport/MrqFormat.h>
+#include <SynthToolSupport/PmkFormat.h>
 
 namespace hello::daw {
 
@@ -35,7 +37,9 @@ namespace hello::daw {
         }
         auto &formats = editor->frequencyFormats().registry();
         m_dio = kit::FrequencyFormatRegistry::Add<DioFormat>(formats, DioFormat::formatId, {});
+        m_frc = kit::FrequencyFormatRegistry::Add<FrcFormat>(formats, FrcFormat::formatId, {});
         m_mrq = kit::FrequencyFormatRegistry::Add<MrqFormat>(formats, MrqFormat::formatId, {});
+        m_pmk = kit::FrequencyFormatRegistry::Add<PmkFormat>(formats, PmkFormat::formatId, {});
         m_moresampler = kit::SynthDiagnoserRegistry::Add<MoresamplerDiagnoser>(
             editor->synthDiagnosers().registry(), MoresamplerDiagnoser::diagnoserId, {});
         return true;
@@ -43,7 +47,9 @@ namespace hello::daw {
 
     void SynthToolSupportPlugin::aboutToShutdown() {
         m_moresampler = {};
+        m_pmk = {};
         m_mrq = {};
+        m_frc = {};
         m_dio = {};
         // Removed before this library, which holds the translation, is unloaded
         if (const auto translations = kit::TranslationLoader::instance()) {

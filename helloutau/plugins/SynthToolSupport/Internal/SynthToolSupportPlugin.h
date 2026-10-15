@@ -10,8 +10,8 @@
 
 namespace hello::daw {
 
-    /// The plugin that supports third-party synth tools: registers the formats dio and mrq of
-    /// frequency maps and the diagnoser of moresampler. The editor registers frq itself. See
+    /// The plugin that supports third-party synth tools: registers the formats dio, frc, mrq and
+    /// pmk of frequency maps and the diagnoser of moresampler. The editor registers frq itself. See
     /// docs/FrequencyMaps.md and docs/SynthDiagnostics.md.
     class SynthToolSupportPlugin : public stdc::pluginsystem::IPlugin {
     public:
@@ -23,7 +23,9 @@ namespace hello::daw {
 
     private:
         kit::FrequencyFormatRegistry::AddFactory m_dio;
+        kit::FrequencyFormatRegistry::AddFactory m_frc;
         kit::FrequencyFormatRegistry::AddFactory m_mrq;
+        kit::FrequencyFormatRegistry::AddFactory m_pmk;
         kit::SynthDiagnoserRegistry::AddFactory m_moresampler;
     };
 

@@ -17,6 +17,21 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::FrcFormat</name>
+    <message>
+        <source>frc (model4)</source>
+        <translation>frc (model4)</translation>
+    </message>
+    <message>
+        <source>The file is no frequency map of the format, or it is incomplete.</source>
+        <translation>此文件不是该格式的频率表，或文件不完整。</translation>
+    </message>
+    <message>
+        <source>The format records an amplitude for each frame, and the map lacks amplitudes.</source>
+        <translation>该格式为每帧记录振幅，而该频率表没有振幅。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::MoresamplerDiagnoser</name>
     <message>
         <source>Clear the render cache after the change, because the fragments already written remain placeholders.</source>
@@ -86,6 +101,21 @@
     <message>
         <source>The sample rate of the audio file is unknown.</source>
         <translation>音频文件的采样率未知。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::PmkFormat</name>
+    <message>
+        <source>pmk (TIPS)</source>
+        <translation>pmk (TIPS)</translation>
+    </message>
+    <message>
+        <source>The file is no frequency map of the format, or it is incomplete.</source>
+        <translation>此文件不是该格式的频率表，或文件不完整。</translation>
+    </message>
+    <message>
+        <source>The format records a frame every %1 samples at %2 Hz, and the period of the frames is %3 samples.</source>
+        <translation>该格式在 %2 Hz 下每 %1 个样本记录一帧，而帧间隔为 %3 个样本。</translation>
     </message>
 </context>
 </TS>

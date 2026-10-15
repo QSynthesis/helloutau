@@ -110,7 +110,9 @@
 #include <helloutau/Widgets/TimelineRuler.h>
 
 #include <SynthToolSupport/DioFormat.h>
+#include <SynthToolSupport/FrcFormat.h>
 #include <SynthToolSupport/MrqFormat.h>
+#include <SynthToolSupport/PmkFormat.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -391,8 +393,8 @@ private:
     // The launcher of the application, in which a restart is scheduled
     kit::ExitLauncher m_launcher;
     // The registrations of the formats of frequency maps that the plugin SynthToolSupport
-    // registers, dio and mrq of each editor that editor() created. A registration that outlives
-    // its editor removes nothing.
+    // registers, dio, frc, mrq and pmk of each editor that editor() created. A registration that
+    // outlives its editor removes nothing.
     mutable std::vector<kit::FrequencyFormatRegistry::AddFactory> m_formats;
 
     // An editor with the menus, the commands and the frequency map formats that the core
@@ -408,7 +410,11 @@ private:
         m_formats.push_back(
             kit::FrequencyFormatRegistry::Add<DioFormat>(formats, DioFormat::formatId, {}));
         m_formats.push_back(
+            kit::FrequencyFormatRegistry::Add<FrcFormat>(formats, FrcFormat::formatId, {}));
+        m_formats.push_back(
             kit::FrequencyFormatRegistry::Add<MrqFormat>(formats, MrqFormat::formatId, {}));
+        m_formats.push_back(
+            kit::FrequencyFormatRegistry::Add<PmkFormat>(formats, PmkFormat::formatId, {}));
         return e;
     }
 

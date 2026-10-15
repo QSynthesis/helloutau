@@ -177,12 +177,16 @@ dio 的采样率不按 qfrqeditor 由帧间隔反推（`hop × 44100 / 256` 取�
 
 之后作者决定插件只有一种原生插件（[`Plugins.md`](Plugins.md)），频率表格式随之改为它的一个扩展点，`FrequencyFormatPlugin` 已删除，由登记对象 `FrequencyFormatRegistration` 取代；多个格式匹配重采样器时后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
 
-**格式的位置**（作者 2026-09-30 定，2026-10-12 实施）：每种格式各占一个源文件。UTAU 自带的 frq 留在库中（`BuiltinFrequencyFormats`），由编辑器自己登记，因此没有任何插件时也有 frq，与「都不匹配时为 frq」一致（作者 2026-10-12 决定）。dio 与 mrq 移到 SynthToolSupport 插件（`DioFormat`、`MrqFormat`），由插件登记。各格式共用的读取放在 `FrequencyFormat` 的保护成员中（读文件、报告损坏、按附属文件批量查询），二进制数据的读写用 `kit::BinaryStream`（HelloKitSupport，可选大小端，说明了不用 `QDataStream` 的理由）。
+**格式的位置**（作者 2026-09-30 定，2026-10-12 实施）：每种格式各占一个源文件。UTAU 自带的 frq 留在库中（`BuiltinFrequencyFormats`），由编辑器自己登记，因此没有任何插件时也有 frq，与「都不匹配时为 frq」一致（作者 2026-10-12 决定）。dio 与 mrq 移到 SynthToolSupport 插件（`DioFormat`、`MrqFormat`），由插件登记。frc 与 pmk 同在该插件中（`FrcFormat`、`PmkFormat`，2026-10-15）。各格式共用的读取放在 `FrequencyFormat` 的保护成员中（读文件、报告损坏、按附属文件批量查询），二进制数据的读写用 `kit::BinaryStream`（HelloKitSupport，可选大小端，说明了不用 `QDataStream` 的理由）。
 
 ### 闭源与无公开资料的格式
 
 - **vs4ufrq** 须经 Windows 上的 `vslib.dll`（1.52 及以上的 64 位版本，作者已定）。建议做成可选的驱动：找不到 `vslib.dll` 时不注册，其他平台上不可用。
-- **frc、pmk** 没有公开资料，而本仓库的注释只引用公开资料（`frqeditor-reference.md`「须另行解决的问题」）。**待定 6**：内置这两种格式时注释的来源怎么写；或者不内置，由插件提供（问题三的抽象正好使之可行）。
+- **frc、pmk** 没有公开资料。作者 2026-10-15 决定（待定 6）：两种格式写在 SynthToolSupport 插件中（`FrcFormat`、`PmkFormat`），注释只描述布局与行为（「as model4 writes it」「as frqeditor reads it」），不注明出处。依据为 qfrqeditor 对 frqeditor 的分析（qfrqeditor 的 `docs/20260928-frq-load-path.md`、`docs/20260928-frq-save-path.md`）：
+  - frc：布局与 frq 相同，文件名为 `a_wav.frc`，16 字节保留区为 `m4` 加 6 个空格再加 8 个零字节。已有文件的保留区原样保留，与 frq 相同。重采样器为 `model4*.exe`。
+  - pmk：文件头 `13 00`，`double` 基准周期，`int32` 标记数，每个标记为 `int32` 周期末的位置与 `int32` 周期，均为 44100 Hz 下的采样数，文件名为 `a_wav.pmk`，重采样器为 `tips*.exe`。读取时每 256 个采样（44100 Hz）一帧，取覆盖帧起点的标记的周期，周期小于 50 为无声，帧数延伸到最后一个周期的末尾，与 frqeditor 相同。不记录振幅。平均频率为 44100 除以基准周期，基准周期小于 50 时为 0。
+  - pmk 的写出照 frqeditor：每帧按其频率连续写周期标记，直至越过帧末，55 Hz 及以下写为 49 个采样的无声周期，平均频率不超过 55 Hz 时基准周期写 0。平均频率未变时保留原文件的基准周期，因为基准周期换算为频率再换回时末位可能不同。
+  - 与 frqeditor 不同之处：pmk 的帧间隔按音频的采样率换算（`hopOf()` 为 256 × 采样率 / 44100），因此 44100 Hz 以外的音频，帧与音频的时间仍然对齐。标记的下标不越界，与 masao 的示例相同。帧数超过标记数的 256 倍的文件视为损坏，以限制构造的文件所占的内存。频率高于 44100 Hz 的帧按 1 个采样的周期写出，以限制每帧的标记数。
 
 ## 分析缓存
 
@@ -279,8 +283,8 @@ moresampler 等重采样器把从 wav 分析出的结果保存为缓存，其中
 3. **生成**（2026-10-12 完成，见上文「生成与检查」）：以设置中的重采样器生成、生成缺少的、重新生成全部、删除，并行且可取消。
 4. **编辑**：`FrequencyMapRevisionBuffer`、编辑对话框、曲线的手势、逐文件的撤销与保存、磁盘变化的核对，见「编辑」（2026-10-15 完成）。
 5. **检查与修正**（2026-10-15 完成）：见上文「检查与修正」。
-6. **转换与其余格式**：格式间转换（2026-10-14 完成，见「转换」），vs4ufrq（Windows，可选），frc、pmk 按待定 6 的结论。
-7. **插件**（2026-10-12 完成）：格式由原生插件经扩展点 `kit::FrequencyFormatRegistry` 登记，dio 与 mrq 由 SynthToolSupport 插件登记，见上文「格式的位置」与 [`Plugins.md`](Plugins.md) 实施步骤 4。
+6. **转换与其余格式**：格式间转换（2026-10-14 完成，见「转换」），vs4ufrq（Windows，可选，以后做），frc、pmk（2026-10-15 完成，由 SynthToolSupport 插件登记）。
+7. **插件**（2026-10-12 完成）：格式由原生插件经扩展点 `kit::FrequencyFormatRegistry` 登记，dio、frc、mrq 与 pmk 由 SynthToolSupport 插件登记，见上文「格式的位置」与 [`Plugins.md`](Plugins.md) 实施步骤 4。
 8. **缩略图**：不做（作者 2026-10-15 决定）。
 
 ## 待作者决定的问题
@@ -290,5 +294,5 @@ moresampler 等重采样器把从 wav 分析出的结果保存为缓存，其中
 3. ~~撤销~~：作者 2026-10-15 定为每个频率表各自独立，只在编辑对话框打开期间有效。
 4. ~~保存~~：作者 2026-10-15 定为在编辑对话框中单独保存，与音源无关。
 5. ~~格式插件~~：作者定为新增第六种插件，已写入 `note.md`。
-6. frc、pmk：内置时注释的来源怎么写，或不内置而留给插件。
+6. ~~frc、pmk~~：作者 2026-10-15 定为写在 SynthToolSupport 插件中，注释只描述布局，见「闭源与无公开资料的格式」。
 7. ~~FFT~~：作者交我决定，自写。

@@ -1,6 +1,7 @@
-# The library-level content of SynthToolSupport: the formats dio and mrq, and the diagnoser of
-# moresampler.
-foreach(_test test_DioFormat test_MrqFormat test_MoresamplerDiagnoser)
+# The library-level content of SynthToolSupport: the formats dio, frc, mrq and pmk, and the
+# diagnoser of moresampler.
+foreach(_test test_DioFormat test_FrcFormat test_MrqFormat test_PmkFormat
+              test_MoresamplerDiagnoser)
     add_auto_test(${_test}.cpp SynthToolSupportPlugin)
     # The plugin is in its own directory of the plugins, not beside the tests.
     set_property(TEST ${_test} APPEND PROPERTY ENVIRONMENT_MODIFICATION

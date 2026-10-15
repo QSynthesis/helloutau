@@ -450,8 +450,10 @@ Mode2 打开时，「手绘音高工具」按选择工具处理，不绘制 Mode
 | frq | `resampler.exe` | `a_wav.frq` | 无 |
 | dio | world4utau（`w4u*.exe`、`world4utau*.exe`） | `a.dio` | `a.star`、`a.platinum` |
 | mrq | moresampler（`moresampler*.exe`） | 文件夹中的 `desc.mrq` | `a.wav.llsm` |
+| frc | model4（`model4*.exe`） | `a_wav.frc` | 无 |
+| pmk | TIPS（`tips*.exe`） | `a_wav.pmk` | 无 |
 
-重采样器按文件名对应格式，不区分大小写，都不匹配时为 frq。dio 与 mrq 由 SynthToolSupport 插件提供。分析缓存是重采样器从音频文件分析出的结果，其中含有基频，重采样器合成时读取缓存而不读取频率表。
+重采样器按文件名对应格式，不区分大小写，都不匹配时为 frq。dio、mrq、frc 与 pmk 由 SynthToolSupport 插件提供。分析缓存是重采样器从音频文件分析出的结果，其中含有基频，重采样器合成时读取缓存而不读取频率表。
 
 - 样本工具栏的「F0」框选择显示哪种格式的频率表，默认为「音频渲染」页中重采样器对应的格式。当前行的音频文件没有该格式的频率表时，项目名后显示「（无）」。所选格式的频率表以曲线画在波形上，每个 C 画一条虚线并标出音名。选择「无」时不显示曲线。
 - 「视图 > 显示频谱图」以频谱图代替波形，曲线与音名线照常画出。
