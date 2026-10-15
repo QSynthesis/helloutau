@@ -224,6 +224,40 @@ private Q_SLOTS:
         QCOMPARE(m_view->selection(), std::nullopt);
     }
 
+    // The title bar and the time ruler lie above the viewport across its width, the ruler right
+    // above the viewport. The labeled marks of the ruler are 1, 2 or 5 times a power of ten
+    // milliseconds apart, the least interval that keeps them apart.
+    void the_time_ruler_marks_milliseconds() {
+        const auto ruler = m_view->timeRuler();
+        const auto bar = m_view->titleBar();
+        QVERIFY(ruler->isVisible());
+        QVERIFY(bar->isVisible());
+        QVERIFY(ruler->height() > 0);
+        QCOMPARE(ruler->geometry().bottom() + 1, m_view->viewport()->geometry().top());
+        QCOMPARE(bar->geometry().bottom() + 1, ruler->geometry().top());
+        QCOMPARE(ruler->width(), m_view->viewport()->width());
+        QCOMPARE(bar->width(), m_view->viewport()->width());
+        m_view->setTitle(QStringLiteral("a.wav"));
+        QVERIFY(!ruler->grab().isNull());
+        QVERIFY(!bar->grab().isNull());
+        QCOMPARE(FrequencyMapView::rulerInterval(1, 50), 50.0);
+        QCOMPARE(FrequencyMapView::rulerInterval(4, 50), 20.0);
+        QCOMPARE(FrequencyMapView::rulerInterval(0.3, 50), 200.0);
+        QCOMPARE(FrequencyMapView::rulerInterval(0.2, 50), 500.0);
+        QCOMPARE(FrequencyMapView::rulerInterval(100, 50), 0.5);
+    }
+
+    // The controls of the view lie right of the labels, and stay there with another font.
+    void the_controls_are_right_of_the_labels() {
+        QVERIFY(m_view->viewButton()->geometry().left() >= m_view->labelWidth());
+        auto font = m_view->font();
+        font.setPointSizeF(font.pointSizeF() * 3);
+        m_view->setFont(font);
+        QVERIFY(m_view->viewButton()->geometry().left() >= m_view->labelWidth());
+        QVERIFY(m_view->brightnessButton()->geometry().left() >
+                m_view->viewButton()->geometry().left());
+    }
+
     // The pen shows a cursor of its own over the plot, which stays visible over the rows, and the
     // select tool shows the arrow.
     void the_pen_has_a_cursor_of_its_own() {

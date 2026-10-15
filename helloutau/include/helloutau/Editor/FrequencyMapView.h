@@ -34,7 +34,8 @@ namespace hello::daw {
     /// button \c s in the corner switches the view, and opens the color schemes on a right click.
     /// The button \c * beside it shows the brightness slider.
     ///
-    /// The left drags depend on tool(). The drags follow the bindings of
+    /// Above the editing area a bar shows the title, and a ruler below the bar marks the time in
+    /// milliseconds. The left drags depend on tool(). The drags follow the bindings of
     /// FrequencyViewKeyboardModifiers:
     /// - Draw and Unvoice write the frames under the pointer as one stroke of the buffer, which
     ///   Escape cancels.
@@ -104,7 +105,7 @@ namespace hello::daw {
         std::shared_ptr<const kit::Spectrogram> spectrogram() const;
         void setSpectrogram(std::shared_ptr<const kit::Spectrogram> spectrogram);
 
-        /// Returns the name drawn at the top left, the name of the audio file.
+        /// Returns the name shown in the title bar, the name of the audio file.
         QString title() const;
         void setTitle(const QString &title);
 
@@ -163,6 +164,19 @@ namespace hello::daw {
         /// Returns the width of the column of labels at the left.
         int labelWidth() const;
 
+        /// Returns the bar at the top that shows title() at the left and the unit of the time
+        /// ruler at the right.
+        QWidget *titleBar() const;
+
+        /// Returns the ruler of milliseconds between the title bar and the editing area, which
+        /// follows the time axis.
+        QWidget *timeRuler() const;
+
+        /// Returns the milliseconds between two labeled marks of the time ruler: the least of 1,
+        /// 2 and 5 times a power of ten that puts the marks at least \a spacing pixels apart at
+        /// \a pixelsPerMillisecond.
+        static double rulerInterval(double pixelsPerMillisecond, double spacing);
+
         /// Returns the button that switches the view.
         QToolButton *viewButton() const;
 
@@ -209,6 +223,8 @@ namespace hello::daw {
 
     protected:
         void resizeEvent(QResizeEvent *event) override;
+        void changeEvent(QEvent *event) override;
+
         /// Returns a black cross with a white outline for Qt::CrossCursor, the cursor of the pen,
         /// which stays visible over the rows and the spectrogram.
         QCursor cursorOf(Qt::CursorShape shape) const override;

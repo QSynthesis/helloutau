@@ -135,6 +135,10 @@ namespace hello::daw {
         QColor whiteRowColor, blackRowColor, rowLineColor, labelColor, frameLineColor, keyLineColor,
             curveColor, selectedCurveColor, savedColor, amplitudeColor, bandColor;
 
+        // The bar of the title and the ruler of milliseconds below it in the top margin of the
+        // viewport
+        QWidget *titleBar = nullptr;
+        QWidget *ruler = nullptr;
         QToolButton *viewButton = nullptr;
         QToolButton *brightnessButton = nullptr;
         QSlider *brightnessSlider = nullptr;
@@ -376,13 +380,12 @@ namespace hello::daw {
         void createControls() {
             stdc_decl_t;
             // The button 2003, the button 2004 and the trackbar 2005 of frqeditor over the top
-            // left corner
+            // left corner, placed by placeWidgets()
             viewButton = new QToolButton(decl.viewport());
             viewButton->setText(QStringLiteral("s"));
             viewButton->setCheckable(true);
             viewButton->setToolTip(tr("Show Spectrogram"));
             viewButton->setContextMenuPolicy(Qt::CustomContextMenu);
-            viewButton->setGeometry(18, 18, 20, 20);
             QObject::connect(viewButton, &QToolButton::toggled, &decl, [this](bool checked) {
                 stdc_decl_t;
                 decl.setViewMode(checked ? SpectrumView : KeyRowsView);
@@ -412,7 +415,6 @@ namespace hello::daw {
             brightnessButton = new QToolButton(decl.viewport());
             brightnessButton->setText(QStringLiteral("*"));
             brightnessButton->setToolTip(tr("Brightness"));
-            brightnessButton->setGeometry(41, 22, 16, 16);
             brightnessButton->hide();
 
             brightnessSlider = new QSlider(Qt::Vertical, decl.viewport());
@@ -423,7 +425,6 @@ namespace hello::daw {
             brightnessSlider->setInvertedAppearance(true);
             // An opaque background, so that the ticks are not drawn over the spectrogram
             brightnessSlider->setAutoFillBackground(true);
-            brightnessSlider->setGeometry(41, 38, 24, 70);
             brightnessSlider->hide();
             QObject::connect(brightnessButton, &QToolButton::clicked, &decl, [this] {
                 brightnessSlider->setVisible(!brightnessSlider->isVisible());
@@ -438,11 +439,116 @@ namespace hello::daw {
             syncControls();
         }
 
+        // Returns the height of the title bar and of the time ruler, a line of text with a margin.
+        int rowHeight() const {
+            return _decl->fontMetrics().height() + 6;
+        }
+
+        // Places the title bar and the time ruler in the top margin of the viewport, the ruler
+        // right above the viewport, and the controls of the view right of the labels with the
+        // offsets of frqeditor.
+        void placeWidgets() {
+            const QRect area = _decl->viewport()->geometry();
+            const int height = rowHeight();
+            titleBar->setGeometry(area.left(), area.top() - 2 * height, area.width(), height);
+            ruler->setGeometry(area.left(), area.top() - height, area.width(), height);
+            const int left = _decl->labelWidth() + 4;
+            viewButton->setGeometry(left, 18, 20, 20);
+            brightnessButton->setGeometry(left + 23, 22, 16, 16);
+            brightnessSlider->setGeometry(left + 23, 38, 24, 70);
+        }
+
+        class TitleBar;
+        class TimeRuler;
         class StrokeGesture;
         class SelectGesture;
         class KeyGesture;
         class BackgroundLayer;
         class CurveLayer;
+    };
+
+    // The bar above the time ruler with the title, the name of the audio file
+    class FrequencyMapView::Impl::TitleBar : public QWidget {
+    public:
+        TitleBar(Impl *impl, QWidget *parent) : QWidget(parent), m_impl(impl) {
+        }
+
+    protected:
+        void paintEvent(QPaintEvent *event) override {
+            Q_UNUSED(event);
+            const auto view = m_impl->_decl;
+            QPainter painter(this);
+            painter.fillRect(rect(), view->whiteRowColor());
+            painter.setPen(view->rowLineColor());
+            painter.drawLine(QPointF(0, height() - 0.5), QPointF(width(), height() - 0.5));
+            // The unit of the time ruler at the right end, and the title in the rest
+            const QRect text = rect().adjusted(4, 0, -4, 0);
+            const QString unit = FrequencyMapView::tr("ms");
+            const int unitWidth = fontMetrics().horizontalAdvance(unit);
+            painter.setPen(view->labelColor());
+            painter.drawText(text, Qt::AlignRight | Qt::AlignVCenter | Qt::TextSingleLine, unit);
+            const QRect title = text.adjusted(0, 0, -unitWidth - fontMetrics().height(), 0);
+            painter.setPen(palette().color(QPalette::Text));
+            painter.drawText(
+                title, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+                fontMetrics().elidedText(m_impl->title, Qt::ElideRight, title.width()));
+        }
+
+    private:
+        Impl *m_impl;
+    };
+
+    // The ruler of milliseconds above the viewport, with a labeled mark at each interval of
+    // FrequencyMapView::rulerInterval() and unlabeled marks between them
+    class FrequencyMapView::Impl::TimeRuler : public QWidget {
+    public:
+        TimeRuler(Impl *impl, QWidget *parent) : QWidget(parent), m_impl(impl) {
+        }
+
+    protected:
+        void paintEvent(QPaintEvent *event) override {
+            Q_UNUSED(event);
+            const auto view = m_impl->_decl;
+            QPainter painter(this);
+            painter.fillRect(rect(), view->whiteRowColor());
+            painter.setPen(view->rowLineColor());
+            painter.drawLine(QPointF(0, height() - 0.5), QPointF(width(), height() - 0.5));
+            const int labels = view->labelWidth();
+            painter.setPen(view->labelColor());
+
+            const double pixels = view->timeAxis().pixelsPerTick;
+            const auto &metrics = fontMetrics();
+            const int labelWidth =
+                metrics.horizontalAdvance(QStringLiteral("00000")) + metrics.height();
+            const double interval = rulerInterval(pixels, labelWidth);
+            // Four marks between labeled marks 2 times a power of ten apart, and five otherwise
+            const double mantissa = interval / std::pow(10, std::floor(std::log10(interval)));
+            const int divisions = std::lround(mantissa) == 2 ? 4 : 5;
+            const double step = interval / divisions;
+            const bool unlabeled = step * pixels >= 4;
+            // The decimals of a label, for an interval below a millisecond
+            const int decimals = std::max(0, -int(std::floor(std::log10(interval) + 1e-9)));
+            painter.setClipRect(QRect(labels, 0, width() - labels, height()));
+            const double first = std::max(0.0, view->timeAxis().toTick(labels));
+            const double last = view->timeAxis().toTick(width());
+            for (auto i = qint64(std::ceil(first / step)); i * step <= last; ++i) {
+                const bool labeled = i % divisions == 0;
+                if (!labeled && !unlabeled) {
+                    continue;
+                }
+                const double x = std::floor(view->xOf(i * step)) + 0.5;
+                const double top = labeled ? height() * 0.4 : height() * 0.7;
+                painter.drawLine(QPointF(x, top), QPointF(x, height()));
+                if (labeled) {
+                    painter.drawText(QRectF(x + 3, 0, labelWidth, height() * 0.75),
+                                     Qt::AlignLeft | Qt::AlignVCenter,
+                                     QString::number(i * step, 'f', decimals));
+                }
+            }
+        }
+
+    private:
+        Impl *m_impl;
     };
 
     // A stroke of the buffer, which draws the frequency under the pointer, or unvoices the frames
@@ -560,7 +666,7 @@ namespace hello::daw {
         Impl *m_impl;
     };
 
-    // The frames of the map, the selected ones in their own color, and the title
+    // The frames of the map, the selected ones in their own color
     class FrequencyMapView::Impl::CurveLayer : public SceneLayer {
     public:
         explicit CurveLayer(Impl *impl) : m_impl(impl) {
@@ -629,16 +735,6 @@ namespace hello::daw {
                     painter.drawRect(QRectF(QPointF(left, -1), QPointF(right, area.height() + 1)));
                 }
                 painter.restore();
-            }
-            if (!impl->title.isEmpty()) {
-                const auto rect = area.adjusted(1, 1, -1, -1);
-                painter.setPen(view->labelColor());
-                painter.setBackgroundMode(Qt::OpaqueMode);
-                painter.setBackground(view->whiteRowColor());
-                painter.drawText(
-                    rect, Qt::AlignLeft | Qt::AlignTop | Qt::TextSingleLine,
-                    view->fontMetrics().elidedText(impl->title, Qt::ElideRight, rect.width()));
-                painter.setBackgroundMode(Qt::TransparentMode);
             }
         }
 
@@ -788,7 +884,7 @@ namespace hello::daw {
             }
             painter.restore();
 
-            // A label at each C from C1 to C8, vertically centered on its row
+            // A label at each C from C1 to C8, centered on its row and in the column
             painter.setPen(view->labelColor());
             for (int note = std::max(lowestNote, (lowest + 11) / 12 * 12); note <= highest;
                  note += 12) {
@@ -796,7 +892,7 @@ namespace hello::daw {
                     break;
                 }
                 const QRectF row(QPointF(0, keys.toY(note + 1)), QPointF(labels, keys.toY(note)));
-                painter.drawText(row.adjusted(1, -20, 0, 20), Qt::AlignLeft | Qt::AlignVCenter,
+                painter.drawText(row.adjusted(0, -20, 0, 20), Qt::AlignHCenter | Qt::AlignVCenter,
                                  QStringLiteral("C%1").arg(note / 12 - 1));
             }
 
@@ -866,9 +962,13 @@ namespace hello::daw {
         addLayer(std::make_unique<Impl::BackgroundLayer>(&impl));
         addLayer(std::make_unique<Impl::CurveLayer>(&impl));
         impl.createControls();
+        impl.titleBar = new Impl::TitleBar(&impl, this);
+        impl.ruler = new Impl::TimeRuler(&impl, this);
+        setViewportMargins(0, 2 * impl.rowHeight(), 0, 0);
         connect(this, &SceneView::timeAxisChanged, this, [this] {
             stdc_impl_t;
             impl.updateRange();
+            impl.ruler->update();
         });
         connect(this, &SceneView::keyAxisChanged, this, [this] {
             stdc_impl_t;
@@ -951,7 +1051,7 @@ namespace hello::daw {
     void FrequencyMapView::setTitle(const QString &title) {
         stdc_impl_t;
         impl.title = title;
-        viewport()->update();
+        impl.titleBar->update();
     }
 
     FrequencyMapView::ViewMode FrequencyMapView::viewMode() const {
@@ -1092,7 +1192,31 @@ namespace hello::daw {
     }
 
     int FrequencyMapView::labelWidth() const {
-        return fontMetrics().horizontalAdvance(QStringLiteral("C0"));
+        const auto &metrics = fontMetrics();
+        return metrics.horizontalAdvance(QStringLiteral("C0")) + metrics.height();
+    }
+
+    QWidget *FrequencyMapView::titleBar() const {
+        stdc_impl_t;
+        return impl.titleBar;
+    }
+
+    QWidget *FrequencyMapView::timeRuler() const {
+        stdc_impl_t;
+        return impl.ruler;
+    }
+
+    double FrequencyMapView::rulerInterval(double pixelsPerMillisecond, double spacing) {
+        const double least = spacing / pixelsPerMillisecond;
+        double power = std::pow(10, std::floor(std::log10(least)));
+        for (;;) {
+            for (const int mantissa : {1, 2, 5}) {
+                if (mantissa * power >= least) {
+                    return mantissa * power;
+                }
+            }
+            power *= 10;
+        }
     }
 
     QToolButton *FrequencyMapView::viewButton() const {
@@ -1121,6 +1245,8 @@ namespace hello::daw {
         stdc_impl_t;                                                                               \
         impl.NAME = color;                                                                         \
         viewport()->update();                                                                      \
+        impl.titleBar->update();                                                                   \
+        impl.ruler->update();                                                                      \
     }
 
     // The rows and the labels follow the palette, which in a light theme gives the white and
@@ -1160,6 +1286,16 @@ namespace hello::daw {
         if (!impl.placed && viewport()->height() > 0 && viewport()->width() > 0) {
             impl.placed = true;
             impl.place(0, 0, lowestNote);
+        }
+        impl.placeWidgets();
+    }
+
+    void FrequencyMapView::changeEvent(QEvent *event) {
+        stdc_impl_t;
+        SceneView::changeEvent(event);
+        if (event->type() == QEvent::FontChange) {
+            setViewportMargins(0, 2 * impl.rowHeight(), 0, 0);
+            impl.placeWidgets();
         }
     }
 

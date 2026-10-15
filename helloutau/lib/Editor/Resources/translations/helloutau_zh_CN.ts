@@ -1370,6 +1370,10 @@
         <source>Brightness</source>
         <translation>亮度</translation>
     </message>
+    <message>
+        <source>ms</source>
+        <translation>毫秒</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::FrequencyViewKeyboardModifiers</name>
