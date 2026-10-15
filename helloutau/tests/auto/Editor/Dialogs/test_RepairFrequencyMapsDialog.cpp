@@ -167,10 +167,11 @@ private Q_SLOTS:
         }
     }
 
-    // With misdecoded names restored, a file of a single audio file takes the name that the format
-    // derives from the restored name of the audio file, and a file of several audio files, or a
-    // file that the format does not derive from its audio file, keeps its name in the restored
-    // folder. The folder 偆 and the audio file 偁.wav restore as い and あ.wav.
+    // With misdecoded names restored, a file that holds the maps of one audio file takes the name
+    // that the format derives from the restored name of that audio file, and a file that holds
+    // the maps of several audio files, or a file that the format does not derive from its audio
+    // file, keeps its name in the restored folder. The folder 偆 and the audio file 偁.wav
+    // restore as い and あ.wav.
     void the_files_are_named_as_restored() {
         const fs::path root("C:/bank");
         const auto folder = root / fs::path(u"偆");

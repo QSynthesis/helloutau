@@ -35,8 +35,8 @@ namespace hello::daw {
         using ShownPath = std::function<std::filesystem::path(const std::filesystem::path &)>;
 
         /// Lists \a files of \a format, each named relative to \a root. With \a shownPathOf, a
-        /// file of one audio file takes the name that the format derives from the restored name
-        /// of the audio file, and another file is named in its restored folder.
+        /// file that holds the maps of one audio file takes the name that the format derives from
+        /// the restored name of that audio file, and another file is named in its restored folder.
         RepairFrequencyMapsDialog(const kit::FrequencyFormat &format,
                                   const std::filesystem::path &root, Files files,
                                   ShownPath shownPathOf = {}, QWidget *parent = nullptr);
