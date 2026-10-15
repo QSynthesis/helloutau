@@ -38,9 +38,10 @@
 
         <!-- The audio file synthesized by the resampler of the settings with the map as edited,
              or the audio file as it is with $direct=True, or a stop of the playback. The button
-             Play of the preview triggers this command. -->
+             Play of the preview triggers this command. Return of the main keyboard and Enter of
+             the keypad are distinct keys. -->
         <action id="helloutau.frequencyMap.synthesize" text="&amp;Synthesize and Play"
-                category="Playback" shortcut="Ctrl+Return" />
+                category="Playback" shortcuts="Ctrl+Return;Ctrl+Enter" />
 
         <!-- The check of every map against the note of the recordings, as frqeditor checks
              them, and the corrections that it proposes. A correction is a run of frames, which

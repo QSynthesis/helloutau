@@ -84,8 +84,7 @@
                 category="Edit" />
         <!-- An entry with an empty alias for each selected audio file without one -->
         <action id="helloutau.voiceBank.includeAudio" text="Include Audio &amp;Files"
-                category="Edit" />
-        <!-- A value of the current entry at the time under the pointer, while the pointer is over
+                category="Edit" />        <!-- A value of the current entry at the time under the pointer, while the pointer is over
              the waveform. The keys are those of OpenUtau -->
         <action id="helloutau.voiceBank.setOffset" text="&amp;Offset" category="Set at Pointer"
                 shortcut="1" />
@@ -107,9 +106,10 @@
         <action id="helloutau.voiceBank.playFromPointer" text="Play from Poi&amp;nter"
                 category="Playback" shortcut="P" />
         <!-- A note of the current entry by the resampler of the settings, at the pitch and of
-             the length beside the waveform -->
+             the length beside the waveform. Return of the main keyboard and Enter of the keypad
+             are distinct keys. -->
         <action id="helloutau.voiceBank.synthesize" text="&amp;Synthesize Note" category="Playback"
-                shortcut="Ctrl+Return" />
+                shortcuts="Ctrl+Return;Ctrl+Enter" />
         <!-- The spectrogram of the audio in place of its waveform -->
         <action id="helloutau.voiceBank.showSpectrogram" text="Show &amp;Spectrogram"
                 category="View" />

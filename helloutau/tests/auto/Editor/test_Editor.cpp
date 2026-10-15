@@ -383,6 +383,29 @@ namespace {
         return path;
     }
 
+    // Counts the shortcut events of the object that it filters and stops them.
+    class ShortcutCounter : public QObject {
+    public:
+        ShortcutCounter(int *count, int *ambiguous) : m_count(count), m_ambiguous(ambiguous) {
+        }
+
+        bool eventFilter(QObject *watched, QEvent *event) override {
+            Q_UNUSED(watched);
+            if (event->type() != QEvent::Shortcut) {
+                return false;
+            }
+            ++*m_count;
+            if (static_cast<QShortcutEvent *>(event)->isAmbiguous()) {
+                ++*m_ambiguous;
+            }
+            return true;
+        }
+
+    private:
+        int *m_count;
+        int *m_ambiguous;
+    };
+
 }
 
 class test_Editor : public QObject {
@@ -3358,6 +3381,87 @@ private Q_SLOTS:
         QVERIFY(map);
         QCOMPARE(map->frames.size(), size_t(100));
         QCOMPARE(map->frames.at(0).frequency, 440.0);
+    }
+
+    // Each shortcut of Synthesize and Play, including Enter of the keypad, reaches the command
+    // from each part of the dialog that takes the focus. The shortcut events are counted and not
+    // delivered, so that nothing plays.
+    void the_shortcut_of_the_synthesis_reaches_its_command() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 1000);
+        const auto le = [](auto value) {
+            QByteArray bytes(sizeof(value), '\0');
+            qToLittleEndian(value, bytes.data());
+            return bytes;
+        };
+        QByteArray frq("FREQ0003");
+        frq += le(qint32(10)) + le(220.0) + QByteArray(16, '\0') + le(qint32(100));
+        for (int i = 0; i < 100; ++i) {
+            frq += le(220.0) + le(1.0);
+        }
+        writeFile(bank / "a_wav.frq", frq.constData(), frq.size());
+        const auto e = editor();
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/resampler.exe"));
+        const auto restore = qScopeGuard([&e] { e->settings().rendering().setResampler({}); });
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        window->setCurrentRow(
+            window->entryModel()->rowOf({}, QStringLiteral("a.wav"), QStringLiteral("a")));
+
+        bool handled = false;
+        handleNextDialog<EditFrequencyMapsDialog>([&](EditFrequencyMapsDialog *dialog) {
+            QTRY_COMPARE(dialog->currentFile(), 0);
+            dialog->activateWindow();
+            QVERIFY(QTest::qWaitForWindowActive(dialog));
+            const auto action = dialog->actionContext()->action(
+                QStringLiteral("helloutau.frequencyMap.synthesize"));
+            QVERIFY(action && action->isEnabled());
+            const auto shortcuts = action->shortcuts();
+            QVERIFY(!shortcuts.isEmpty());
+            int count = 0;
+            int ambiguous = 0;
+            ShortcutCounter counter(&count, &ambiguous);
+            action->installEventFilter(&counter);
+            const QList<std::pair<const char *, QWidget *>> targets{
+                {"file list",  dialog->fileList() },
+                {"key edit",   dialog->keyEdit()  },
+                {"frame list", dialog->frameList()},
+                {"view",       dialog->view()     },
+            };
+            for (const auto &[name, widget] : targets) {
+                widget->setFocus();
+                QTRY_VERIFY(widget->hasFocus());
+                for (const auto &shortcut : shortcuts) {
+                    // Enter is the key of the keypad, which reports the keypad modifier.
+                    const auto key = shortcut[0].key();
+                    const auto modifiers = shortcut[0].keyboardModifiers();
+                    QList<std::pair<Qt::Key, Qt::KeyboardModifiers>> presses{
+                        {key, key == Qt::Key_Enter ? modifiers | Qt::KeypadModifier : modifiers}
+                    };
+                    // Return of the main keyboard works from the keypad as well.
+                    if (key == Qt::Key_Return) {
+                        presses.push_back({Qt::Key_Enter, modifiers | Qt::KeypadModifier});
+                    }
+                    for (const auto &[pressed, with] : presses) {
+                        const int before = count;
+                        QTest::keyClick(widget, pressed, with);
+                        if (count != before + 1) {
+                            QFAIL(qPrintable(QStringLiteral("%1 from the %2")
+                                                 .arg(QKeySequence(pressed | with).toString(),
+                                                      QLatin1String(name))));
+                        }
+                    }
+                }
+            }
+            QCOMPARE(ambiguous, 0);
+            action->removeEventFilter(&counter);
+
+            dialog->reject();
+            handled = true;
+        });
+        QVERIFY(window->editFrequencyMaps());
+        QVERIFY(handled);
     }
 
     // The check of the editing dialog proposes corrections for the frames out of the range of the
