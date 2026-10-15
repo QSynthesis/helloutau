@@ -77,6 +77,10 @@ namespace hello::daw {
         /// The time of the audio file heard, while play() plays it.
         std::optional<double> position() const;
 
+        /// Returns the time heard in the synthesized note in milliseconds, or \c std::nullopt
+        /// unless the note plays.
+        std::optional<double> notePosition() const;
+
         /// The note last synthesized, as the resampler wrote it.
         std::shared_ptr<const kit::WaveAudio> synthesized() const;
 

@@ -139,6 +139,8 @@ namespace hello::daw {
         // Where the audio file plays from, while it does, and the rate it plays at
         std::optional<double> playedFrom;
         int deviceRate = 0;
+        // Set while the synthesized note plays
+        bool playingNote = false;
 
         void setState(State value) {
             stdc_decl_t;
@@ -174,6 +176,7 @@ namespace hello::daw {
                 return;
             }
             synthesized = done->audio;
+            playingNote = true;
             kit::DiagnosticList diagnostics;
             if (!start(std::move(done->samples), done->audio->channels, done->deviceRate,
                        diagnostics)) {
@@ -191,6 +194,7 @@ namespace hello::daw {
             stdc_impl_t;
             if (impl.state == Playing) {
                 impl.playedFrom.reset();
+                impl.playingNote = false;
                 impl.setState(Stopped);
             }
         });
@@ -200,6 +204,7 @@ namespace hello::daw {
             stdc_impl_t;
             if (impl.state == Playing) {
                 impl.playedFrom.reset();
+                impl.playingNote = false;
                 impl.setState(Stopped);
             }
             kit::DiagnosticList diagnostics;
@@ -313,6 +318,7 @@ namespace hello::daw {
         stdc_impl_t;
         impl.job.reset();
         impl.playedFrom.reset();
+        impl.playingNote = false;
         impl.output->stop();
         impl.setState(Stopped);
     }
@@ -324,6 +330,15 @@ namespace hello::daw {
         }
         const double heard = impl.output->heardPosition().value_or(0);
         return *impl.playedFrom + heard * 1000 / std::max(1, impl.deviceRate);
+    }
+
+    std::optional<double> SamplePreview::notePosition() const {
+        stdc_impl_t;
+        if (impl.state != Playing || !impl.playingNote) {
+            return std::nullopt;
+        }
+        const double heard = impl.output->heardPosition().value_or(0);
+        return heard * 1000 / std::max(1, impl.deviceRate);
     }
 
     std::shared_ptr<const kit::WaveAudio> SamplePreview::synthesized() const {

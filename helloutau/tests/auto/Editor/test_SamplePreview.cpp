@@ -146,8 +146,15 @@ private Q_SLOTS:
         const auto arguments = synthTool->arguments();
         QCOMPARE(fs::path(arguments.at(0).toStdU16String()), sample.path);
         QCOMPARE(arguments.at(2), QStringLiteral("D4"));
+        // The note reports its own position, if an output device plays it, and no position in
+        // the audio file.
+        if (preview.state() == SamplePreview::Playing) {
+            QVERIFY(preview.notePosition().has_value());
+            QVERIFY(!preview.position().has_value());
+        }
         preview.stop();
         QCOMPARE(preview.state(), SamplePreview::Stopped);
+        QVERIFY(!preview.notePosition().has_value());
     }
 
     // The flags and the modulation of the options reach the resampler in their places of the
