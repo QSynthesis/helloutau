@@ -65,16 +65,16 @@ namespace hello::daw {
         /// Returns the checked files, absolute paths in the order of the files.
         QList<std::filesystem::path> checkedFiles() const;
 
-        /// Returns FrequencyMapSettings::CachesOnly if cachesOnlyBox() is checked and the format
-        /// has analysis caches, or else FrequencyMapSettings::MapsAndCaches.
+        /// Returns FrequencyMapSettings::CachesOnly if removeMapsOnRegenerationBox() is unchecked
+        /// and the format has analysis caches, or else FrequencyMapSettings::MapsAndCaches.
         FrequencyMapSettings::Regeneration regeneration() const;
 
         FileCheckList *fileList() const;
         /// Returns the button that checks exactly the files without a map
         QPushButton *checkMissingButton() const;
-        /// Returns the box that keeps the maps and removes only the analysis caches, hidden if
-        /// the format has no analysis caches
-        QCheckBox *cachesOnlyBox() const;
+        /// Returns the box that removes the maps together with the analysis caches on
+        /// regenerating, hidden if the format has no analysis caches
+        QCheckBox *removeMapsOnRegenerationBox() const;
         QDialogButtonBox *buttonBox() const;
 
     private:
@@ -83,7 +83,7 @@ namespace hello::daw {
 
         FileCheckList *m_list;
         QPushButton *m_checkMissing;
-        QCheckBox *m_cachesOnly;
+        QCheckBox *m_removeMapsOnRegeneration;
         QLabel *m_summary;
         QDialogButtonBox *m_buttons;
 

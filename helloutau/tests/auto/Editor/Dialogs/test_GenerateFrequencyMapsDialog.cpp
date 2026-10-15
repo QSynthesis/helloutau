@@ -107,18 +107,18 @@ private Q_SLOTS:
     void the_box_chooses_the_regeneration() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "mrq", cacheNames,
                                            cachesOnly);
-        const auto box = dialog.cachesOnlyBox();
+        const auto box = dialog.removeMapsOnRegenerationBox();
         QVERIFY(!box->isHidden());
-        QVERIFY(box->isChecked());
+        QVERIFY(!box->isChecked());
         QCOMPARE(dialog.regeneration(), cachesOnly);
-        box->setChecked(false);
+        box->setChecked(true);
         QCOMPARE(dialog.regeneration(), mapsAndCaches);
     }
 
     // Without analysis caches, the box is hidden and the maps are removed.
     void the_box_is_hidden_without_caches() {
         GenerateFrequencyMapsDialog dialog(filesOf(false, false), "C:/bank", "frq", {}, cachesOnly);
-        QVERIFY(dialog.cachesOnlyBox()->isHidden());
+        QVERIFY(dialog.removeMapsOnRegenerationBox()->isHidden());
         QCOMPARE(dialog.regeneration(), mapsAndCaches);
     }
 };
