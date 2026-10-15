@@ -1072,6 +1072,10 @@
         <source>Save the modified frequency maps before closing?</source>
         <translation>关闭之前是否保存已修改的频率表？</translation>
     </message>
+    <message>
+        <source>Do not save</source>
+        <translation>不保存</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::Editor</name>

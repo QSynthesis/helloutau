@@ -1299,11 +1299,14 @@ namespace hello::daw {
             anyModified = anyModified || entry.buffer->isModified();
         }
         if (anyModified) {
-            const auto answer = QMessageBox::question(
-                this, tr("Edit Frequency Maps"),
-                tr("Save the modified frequency maps before closing?"),
-                QMessageBox::SaveAll | QMessageBox::Discard | QMessageBox::Cancel,
-                QMessageBox::SaveAll);
+            // The button that discards is named as in the project window.
+            QMessageBox box(QMessageBox::Question, tr("Edit Frequency Maps"),
+                            tr("Save the modified frequency maps before closing?"),
+                            QMessageBox::SaveAll | QMessageBox::Discard | QMessageBox::Cancel,
+                            this);
+            box.button(QMessageBox::Discard)->setText(tr("Do not save"));
+            box.setDefaultButton(QMessageBox::SaveAll);
+            const auto answer = QMessageBox::StandardButton(box.exec());
             if (answer == QMessageBox::Cancel || (answer == QMessageBox::SaveAll && !saveAll())) {
                 return;
             }
