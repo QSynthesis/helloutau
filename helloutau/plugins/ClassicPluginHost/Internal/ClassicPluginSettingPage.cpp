@@ -119,7 +119,8 @@ namespace hello::daw {
         // chooses the encoding of a UST (UstDecodingDialog): the candidates, gray if the file has
         // invalid byte sequences in them, and the file decoded in the one selected. Returns
         // std::nullopt if the user cancels.
-        std::optional<QString> askCharset(QWidget *parent, const std::filesystem::path &folder) {
+        std::optional<QString> promptForCharset(QWidget *parent,
+                                                const std::filesystem::path &folder) {
             QList<QByteArray> lines;
             QFile file(textOf(folder / u"plugin.txt"));
             if (file.open(QIODevice::ReadOnly)) {
@@ -281,7 +282,7 @@ namespace hello::daw {
                 QString charset;
                 if (Installation::transcribes(plugin.folder)) {
                     // A plugin whose encoding the user does not confirm is skipped.
-                    const auto chosen = askCharset(all, plugin.folder);
+                    const auto chosen = promptForCharset(all, plugin.folder);
                     if (!chosen) {
                         continue;
                     }
@@ -372,7 +373,7 @@ namespace hello::daw {
                 connect(install, &QPushButton::clicked, row, [=] {
                     QString charset;
                     if (Installation::transcribes(folder)) {
-                        const auto chosen = askCharset(row, folder);
+                        const auto chosen = promptForCharset(row, folder);
                         if (!chosen) {
                             return;
                         }

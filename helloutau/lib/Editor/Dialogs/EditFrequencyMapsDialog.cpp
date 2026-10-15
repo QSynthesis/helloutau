@@ -843,7 +843,7 @@ namespace hello::daw {
         // Shows a dialog in which the user chooses the settings of the check, as the check
         // dialog of frqeditor does, initially those of the last check, and keeps them in the
         // settings. Returns std::nullopt if the user cancels.
-        std::optional<kit::FrequencyMapCheck::Settings> askCheckSettings() {
+        std::optional<kit::FrequencyMapCheck::Settings> promptForCheckSettings() {
             stdc_decl_t;
             auto settings = editor->settings().frequencyMaps().checkSettings();
             QDialog dialog(&decl);
@@ -1061,7 +1061,7 @@ namespace hello::daw {
                 preview->stop();
             })->setEnabled(false);
             addCommand(QStringLiteral("helloutau.frequencyMap.check"), [this] {
-                if (const auto settings = askCheckSettings()) {
+                if (const auto settings = promptForCheckSettings()) {
                     check(*settings);
                 }
             });

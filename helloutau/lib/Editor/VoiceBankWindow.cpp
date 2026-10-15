@@ -427,9 +427,9 @@ namespace hello::daw {
                     actions.value(QStringLiteral("helloutau.voiceBank.showInfo"))->isChecked());
             })->setCheckable(true);
             addCommand(QStringLiteral("helloutau.voiceBank.convertCharset"),
-                       [this] { askCharset(false); });
+                       [this] { promptForCharset(false); });
             addCommand(QStringLiteral("helloutau.voiceBank.rereadCharset"),
-                       [this] { askCharset(true); });
+                       [this] { promptForCharset(true); });
             addCommand(QStringLiteral("helloutau.voiceBank.rereadCharsets"), [this] {
                 stdc_decl_t;
                 decl.rereadCharsets();
@@ -1464,7 +1464,7 @@ namespace hello::daw {
         // Shows a list in which the user chooses an encoding for the folder of the context menu of
         // the tree, or else for the folder chosen in the tree, and converts the folder to the
         // encoding or reads the folder again in it.
-        void askCharset(bool reread) {
+        void promptForCharset(bool reread) {
             stdc_decl_t;
             std::filesystem::path folder;
             if (menuFolder) {

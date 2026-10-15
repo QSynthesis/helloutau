@@ -355,7 +355,7 @@ namespace hello::daw {
 
     // Shows a list in which the user chooses an action, a menu or a group of the registry of the
     // current tab, filtered by its text, and adds the chosen item in its declared form.
-    void MenusSettingPage::askAction() {
+    void MenusSettingPage::promptForAction() {
         const auto actions = registry(currentKind());
         QDialog dialog(m_tabs->window());
         dialog.setWindowTitle(tr("Add Action"));
@@ -479,7 +479,7 @@ namespace hello::daw {
         layout->addWidget(m_tabs, 1);
         layout->addLayout(buttons);
 
-        connect(m_add, &QPushButton::clicked, this, [this] { askAction(); });
+        connect(m_add, &QPushButton::clicked, this, [this] { promptForAction(); });
         connect(m_addSeparator, &QPushButton::clicked, this,
                 [this] { addEntry(Entry({}, Entry::Separator)); });
         connect(m_remove, &QPushButton::clicked, this, [this] { removeCurrent(); });

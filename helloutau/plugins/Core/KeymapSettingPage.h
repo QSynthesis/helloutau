@@ -130,7 +130,7 @@ namespace hello::daw {
         void updateItems();
         void filter();
         void updateButtons();
-        void askShortcut();
+        void promptForShortcut();
         QAK::ActionRegistry *registry(Editor::WindowKind kind) const;
         QString nameOf(const Command &command) const;
         QList<QKeySequence> defaultsOf(const Command &command) const;

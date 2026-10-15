@@ -245,7 +245,7 @@ namespace hello::daw {
         }
         m_fileNames = QList<FileNames>(m_directories.size());
         for (int i = 0; i < m_directories.size(); ++i) {
-            askFileNames(i);
+            promptForFileNames(i);
         }
 
         updateMessage();
@@ -347,7 +347,7 @@ namespace hello::daw {
         return result;
     }
 
-    void VoiceBankDecodingDialog::askFileNames(int index) {
+    void VoiceBankDecodingDialog::promptForFileNames(int index) {
         auto &names = m_fileNames[index];
         const auto &directory = *m_directories[index];
         const auto &charset = m_choices[index];
@@ -430,7 +430,7 @@ namespace hello::daw {
             if (row < m_choices.size() && !m_settled.value(row) && m_choices[row] != charset) {
                 m_choices[row] = charset;
                 if (m_current.isEmpty()) {
-                    askFileNames(row);
+                    promptForFileNames(row);
                 }
             }
         }
@@ -512,7 +512,7 @@ namespace hello::daw {
         }
         names.original = original;
         names.misdecodedAs = misdecodedAs;
-        askFileNames(index);
+        promptForFileNames(index);
         if (!names.question) {
             // The encodings chosen restore no name, which the page still shows as chosen.
             names.question = kit::MisdecodedNameQuestion::of(

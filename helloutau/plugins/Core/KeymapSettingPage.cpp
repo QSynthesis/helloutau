@@ -454,7 +454,7 @@ namespace hello::daw {
     // Shows a dialog in which the user enters a shortcut for the current command, and adds it. The
     // dialog lists the commands of the same kind of window that already have the shortcut, and
     // the user confirms removing it from them first.
-    void KeymapSettingPage::askShortcut() {
+    void KeymapSettingPage::promptForShortcut() {
         const auto command = currentCommand();
         if (!command) {
             return;
@@ -621,9 +621,9 @@ namespace hello::daw {
         });
         for (QTreeWidget *tree : m_trees) {
             connect(tree, &QTreeWidget::currentItemChanged, this, [this] { updateButtons(); });
-            connect(tree, &QTreeWidget::itemDoubleClicked, this, [this] { askShortcut(); });
+            connect(tree, &QTreeWidget::itemDoubleClicked, this, [this] { promptForShortcut(); });
         }
-        connect(m_add, &QPushButton::clicked, this, [this] { askShortcut(); });
+        connect(m_add, &QPushButton::clicked, this, [this] { promptForShortcut(); });
         connect(resetAllButton, &QPushButton::clicked, this, [this] { resetAll(); });
         connect(m_reset, &QPushButton::clicked, this, [this] {
             if (const auto command = currentCommand()) {
@@ -663,7 +663,7 @@ namespace hello::daw {
                     }
                     QMenu menu(m_tree);
                     connect(menu.addAction(tr("&Add Keyboard Shortcut...")), &QAction::triggered,
-                            this, [this] { askShortcut(); });
+                            this, [this] { promptForShortcut(); });
                     for (const auto &key : shortcuts(*command)) {
                         connect(menu.addAction(
                                     tr("Remove %1").arg(key.toString(QKeySequence::NativeText))),

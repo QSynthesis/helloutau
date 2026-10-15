@@ -183,7 +183,7 @@ namespace hello::daw {
 
         // Builds the question of the file names of folder index again under its encoding, with
         // the default choices.
-        void askFileNames(int index);
+        void promptForFileNames(int index);
         // Shows the file names of the current folder on their page.
         void showFileNames();
     };

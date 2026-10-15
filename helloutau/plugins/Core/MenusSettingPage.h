@@ -89,7 +89,7 @@ namespace hello::daw {
 
         const Panel &current() const;
         QAK::ActionRegistry *registry(Editor::WindowKind kind) const;
-        void askAction();
+        void promptForAction();
         void select(const QList<int> &path);
         void updateButtons();
     };

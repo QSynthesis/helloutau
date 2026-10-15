@@ -32,7 +32,7 @@ namespace hello::kit {
     /// \code
     ///   auto ust = UstDocument::open(path, diagnostics);
     ///   if (!ust) return;
-    ///   const auto charset = ust->settledCharset().value_or(askTheUser(*ust));
+    ///   const auto charset = ust->settledCharset().value_or(promptForCharset(*ust));
     ///   auto project = ust->toProject(charset, diagnostics);
     ///
     ///   auto out = UstDocument::fromProject(project, options, diagnostics);
