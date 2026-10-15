@@ -9,7 +9,7 @@
 #include <QtCore/QString>
 
 #include <helloutau/Widgets/ActionContributionRegistry.h>
-#include <helloutau/Widgets/ModifierBindings.h>
+#include <helloutau/Widgets/KeyboardModifierBindings.h>
 #include <helloutau/Widgets/SettingPageRegistry.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
@@ -85,22 +85,26 @@ namespace hello::daw {
 
         /// Returns the modifier schemes of the views in the windows of \a kind, in the order in
         /// which the settings list them.
-        static QList<const ModifierScheme *> modifierSchemes(WindowKind kind);
+        static QList<const KeyboardModifierScheme *> keyboardModifierSchemes(WindowKind kind);
 
         /// Returns the modifier bindings of the windows of \a kind, one for each of
-        /// modifierSchemes() in its order. The bindings of one kind do not affect the other.
-        QList<ModifierBindings> modifierBindings(WindowKind kind) const;
+        /// keyboardModifierSchemes() in its order. The bindings of one kind do not affect the
+        /// other.
+        QList<KeyboardModifierBindings> keyboardModifierBindings(WindowKind kind) const;
 
-        /// Returns the bindings of \a scheme, which is one of modifierSchemes(), in the windows
-        /// of \a kind.
-        ModifierBindings modifierBindings(WindowKind kind, const ModifierScheme &scheme) const;
+        /// Returns the bindings of \a scheme, which is one of keyboardModifierSchemes(), in the
+        /// windows of \a kind.
+        KeyboardModifierBindings
+            keyboardModifierBindings(WindowKind kind, const KeyboardModifierScheme &scheme) const;
 
-        /// Replaces the bindings of the windows of \a kind, one for each of modifierSchemes() in
-        /// its order. The windows receive them through modifierBindingsChanged().
-        void setModifierBindings(WindowKind kind, const QList<ModifierBindings> &bindings);
+        /// Replaces the bindings of the windows of \a kind, one for each of
+        /// keyboardModifierSchemes() in its order. The windows receive them through
+        /// keyboardModifierBindingsChanged().
+        void setKeyboardModifierBindings(WindowKind kind,
+                                         const QList<KeyboardModifierBindings> &bindings);
 
     Q_SIGNALS:
-        void modifierBindingsChanged(hello::daw::Editor::WindowKind kind);
+        void keyboardModifierBindingsChanged(hello::daw::Editor::WindowKind kind);
 
     public:
         /// Returns the action registry of the windows of \a kind, with the menus, the tool bars,

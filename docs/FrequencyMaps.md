@@ -97,7 +97,7 @@ HelloUtau 的方案：
   - 放大、缩小与显示频谱。
 
   编辑基准频率、试合成、逐帧数值列表与缩略图推后。
-- **修饰键**：编辑区为新的方案 `FrequencyViewModifiers`，四个滚轮角色默认与音符区相同（无为纵向滚动，Shift 为横向滚动，Ctrl 为横向缩放，Ctrl+Shift 为纵向缩放），另有画线、抹成无声与选区等鼠标操作，同样可配置。frqeditor 的滚轮为无修饰键纵向滚动一个半音、Ctrl 缩放、Shift 横向滚动（qfrqeditor 的 `docs/20260928-frqctrl-mouse-editing.md`）。
+- **修饰键**：编辑区为新的方案 `FrequencyViewKeyboardModifiers`，四个滚轮角色默认与音符区相同（无为纵向滚动，Shift 为横向滚动，Ctrl 为横向缩放，Ctrl+Shift 为纵向缩放），另有画线、抹成无声与选区等鼠标操作，同样可配置。frqeditor 的滚轮为无修饰键纵向滚动一个半音、Ctrl 缩放、Shift 横向滚动（qfrqeditor 的 `docs/20260928-frqctrl-mouse-editing.md`）。
 
 ### 代码的来源
 

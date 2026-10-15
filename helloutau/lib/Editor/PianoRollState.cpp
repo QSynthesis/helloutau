@@ -868,13 +868,13 @@ namespace hello::daw {
             position,
             [this, position,
              erases](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
-                const auto activation = activate(erases ? NoteViewModifiers::PitchEraseScene
-                                                        : NoteViewModifiers::PitchDrawScene,
+                const auto activation = activate(erases ? NoteViewKeyboardModifiers::PitchEraseScene
+                                                        : NoteViewKeyboardModifiers::PitchDrawScene,
                                                  modifiers);
                 if (!activation) {
                     return nullptr;
                 }
-                if (activation->operation == NoteViewModifiers::DragZoom) {
+                if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
                     return std::make_unique<ZoomGesture>(this, position, *activation);
                 }
                 return std::make_unique<BendGesture>(this, position, erases);
@@ -882,8 +882,8 @@ namespace hello::daw {
             nullptr);
     }
 
-    std::optional<ModifierBindings::Activation>
-        PianoRollState::activate(NoteViewModifiers::Scene scene,
+    std::optional<KeyboardModifierBindings::Activation>
+        PianoRollState::activate(NoteViewKeyboardModifiers::Scene scene,
                                  Qt::KeyboardModifiers modifiers) const {
         return noteModifiers.activate(scene, modifiers);
     }
@@ -891,17 +891,17 @@ namespace hello::daw {
     std::unique_ptr<SceneGesture> PianoRollState::spanPress(QPointF position) {
         const auto drag =
             [this, position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
-            const auto activation = activate(NoteViewModifiers::SpanScene, modifiers);
+            const auto activation = activate(NoteViewKeyboardModifiers::SpanScene, modifiers);
             if (!activation) {
                 return nullptr;
             }
-            return std::make_unique<SpanGesture>(this, position,
-                                                 NoteViewModifiers::Role(activation->operation));
+            return std::make_unique<SpanGesture>(
+                this, position, NoteViewKeyboardModifiers::Role(activation->operation));
         };
         // A click selects the span of no width at the press, the notes at that time.
         const auto click = [this, position](Qt::KeyboardModifiers modifiers) {
-            if (const auto activation = activate(NoteViewModifiers::SpanScene, modifiers)) {
-                SpanGesture(this, position, NoteViewModifiers::Role(activation->operation))
+            if (const auto activation = activate(NoteViewKeyboardModifiers::SpanScene, modifiers)) {
+                SpanGesture(this, position, NoteViewKeyboardModifiers::Role(activation->operation))
                     .release(position, modifiers);
             }
         };

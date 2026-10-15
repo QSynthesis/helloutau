@@ -18,14 +18,15 @@ namespace {
     // with Alt toggles.
     enum Role { Move, Copy, SnapOff };
 
-    const ModifierScheme &scheme() {
-        static const ModifierScheme scheme("drag", "test_KeymapFile", "Drag",
-                                           {
-                                               {Move,    "move",    "Move",     Qt::NoModifier     },
-                                               {Copy,    "copy",    "Copy",     Qt::ControlModifier},
-                                               {SnapOff, "snapOff", "Snap Off", Qt::AltModifier    },
+    const KeyboardModifierScheme &scheme() {
+        static const KeyboardModifierScheme scheme(
+            "drag", "test_KeymapFile", "Drag",
+            {
+                {Move,    "move",    "Move",     Qt::NoModifier     },
+                {Copy,    "copy",    "Copy",     Qt::ControlModifier},
+                {SnapOff, "snapOff", "Snap Off", Qt::AltModifier    },
         },
-                                           {{0, {{Move, {SnapOff}}, {Copy, {SnapOff}}}}});
+            {{0, {{Move, {SnapOff}}, {Copy, {SnapOff}}}}});
         return scheme;
     }
 
@@ -61,7 +62,7 @@ private:
     // Reads the file into fresh sections, which start with the defaults.
     KeymapFile::Sections readBack(QAK::ActionRegistry &registry) const {
         KeymapFile::Sections sections{
-            {QStringLiteral("projectWindow"), &registry, {ModifierBindings(scheme())}}
+            {QStringLiteral("projectWindow"), &registry, {KeyboardModifierBindings(scheme())}}
         };
         KeymapFile::read(sections, fileName());
         return sections;
@@ -73,7 +74,7 @@ private:
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QString::fromLatin1(pattern)));
         const auto sections = readBack(registry);
         QVERIFY(registry.shortcutsFamily().isEmpty());
-        QVERIFY(sections[0].modifiers[0] == ModifierBindings(scheme()));
+        QVERIFY(sections[0].modifiers[0] == KeyboardModifierBindings(scheme()));
     }
 
 private Q_SLOTS:
@@ -81,7 +82,9 @@ private Q_SLOTS:
         m_dir = std::make_unique<QTemporaryDir>();
         m_registry = std::make_unique<QAK::ActionRegistry>();
         m_sections = {
-            {QStringLiteral("projectWindow"), m_registry.get(), {ModifierBindings(scheme())}}
+            {QStringLiteral("projectWindow"),
+             m_registry.get(),
+             {KeyboardModifierBindings(scheme())}}
         };
     }
 
@@ -120,7 +123,7 @@ private Q_SLOTS:
         QAK::ActionRegistry registry;
         const auto sections = readBack(registry);
         QVERIFY(registry.shortcutsFamily().isEmpty());
-        QVERIFY(sections[0].modifiers[0] == ModifierBindings(scheme()));
+        QVERIFY(sections[0].modifiers[0] == KeyboardModifierBindings(scheme()));
     }
 
     // A file that is not a keymap, or a section that is not one, is ignored with a warning.
@@ -172,7 +175,7 @@ private Q_SLOTS:
                   versioned("{\"shortcuts\": [], \"modifiers\": {\"drag\": {\"copy\": []}}}"));
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("conflict")));
         sections = readBack(registry);
-        QVERIFY(sections[0].modifiers[0] == ModifierBindings(scheme()));
+        QVERIFY(sections[0].modifiers[0] == KeyboardModifierBindings(scheme()));
     }
 };
 

@@ -83,7 +83,7 @@ namespace hello::daw {
 
         // Returns the name of an option of modifiers as the platform writes it, such as Ctrl+Alt,
         // or the symbols of the keys on macOS, where Qt::ControlModifier is the Command key.
-        QString modifierText(Qt::KeyboardModifiers modifiers) {
+        QString keyboardModifierText(Qt::KeyboardModifiers modifiers) {
             if (modifiers == Qt::NoModifier) {
                 return KeymapSettingPage::tr("None");
             }
@@ -168,11 +168,11 @@ namespace hello::daw {
         }
         for (auto &list : m_modifiers) {
             for (auto &bindings : list) {
-                bindings = ModifierBindings(bindings.scheme());
+                bindings = KeyboardModifierBindings(bindings.scheme());
             }
         }
         updateItems();
-        updateModifierWidgets();
+        updateKeyboardModifierWidgets();
         Q_EMIT modifiedChanged();
     }
 
@@ -194,7 +194,7 @@ namespace hello::daw {
                     return true;
                 }
             }
-            if (m_modifiers[kind] != m_editor->modifierBindings(kind)) {
+            if (m_modifiers[kind] != m_editor->keyboardModifierBindings(kind)) {
                 return true;
             }
         }
@@ -227,7 +227,7 @@ namespace hello::daw {
             }
             actions->setShortcutsFamily(family);
             actions->updateContext(QAK::AE_Keymap);
-            m_editor->setModifierBindings(kind, m_modifiers[kind]);
+            m_editor->setKeyboardModifierBindings(kind, m_modifiers[kind]);
         }
         if (!m_editor->saveKeymap(error)) {
             return false;
@@ -249,7 +249,7 @@ namespace hello::daw {
 
     void KeymapSettingPage::load() {
         for (const auto kind : Editor::windowKinds) {
-            m_modifiers[kind] = m_editor->modifierBindings(kind);
+            m_modifiers[kind] = m_editor->keyboardModifierBindings(kind);
             m_commands[kind].clear();
             m_shortcuts[kind].clear();
             const auto actions = registry(kind);
@@ -263,7 +263,7 @@ namespace hello::daw {
         }
     }
 
-    void KeymapSettingPage::updateModifierWidgets() {
+    void KeymapSettingPage::updateKeyboardModifierWidgets() {
         for (const auto &item : std::as_const(m_modifierBoxes)) {
             if (!item.box) {
                 continue;
@@ -274,7 +274,7 @@ namespace hello::daw {
         }
     }
 
-    QWidget *KeymapSettingPage::createModifierPanel(Editor::WindowKind kind) {
+    QWidget *KeymapSettingPage::createKeyboardModifierPanel(Editor::WindowKind kind) {
         auto panel = new QWidget();
         auto layout = new QVBoxLayout(panel);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -293,7 +293,8 @@ namespace hello::daw {
                 const bool none = bindings.scheme().isStart(role.id);
                 for (int i = 0; i < int(std::size(modifierOptions)); ++i) {
                     if (modifierOptions[i] != Qt::NoModifier || none) {
-                        box->addItem(modifierText(modifierOptions[i]), modifierOptions[i].toInt());
+                        box->addItem(keyboardModifierText(modifierOptions[i]),
+                                     modifierOptions[i].toInt());
                     }
                 }
                 connect(box, qOverload<int>(&QComboBox::currentIndexChanged), this,
@@ -577,7 +578,7 @@ namespace hello::daw {
         auto modifierLayout = new QVBoxLayout(modifiers);
         m_modifierBoxes.clear();
         for (const auto kind : Editor::windowKinds) {
-            m_modifierPanels[kind] = createModifierPanel(kind);
+            m_modifierPanels[kind] = createKeyboardModifierPanel(kind);
             modifierLayout->addWidget(m_modifierPanels[kind]);
         }
         m_modifierScroll = new QScrollArea();
@@ -609,7 +610,7 @@ namespace hello::daw {
         layout->addLayout(content, 1);
 
         fillTree();
-        updateModifierWidgets();
+        updateKeyboardModifierWidgets();
 
         connect(m_search, &QLineEdit::textChanged, this, [this] { filter(); });
         connect(m_keySearch, &QKeySequenceEdit::keySequenceChanged, this, [this] { filter(); });

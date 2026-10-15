@@ -72,7 +72,7 @@ namespace hello::daw {
                     qWarning("Keymap: the modifiers %s of the section %s of %s conflict or leave "
                              "a role without modifiers, and the defaults apply.",
                              qPrintable(key), qPrintable(section.key), qPrintable(fileName));
-                    bindings = ModifierBindings(bindings.scheme());
+                    bindings = KeyboardModifierBindings(bindings.scheme());
                 }
             }
         }

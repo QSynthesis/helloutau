@@ -175,8 +175,8 @@ namespace hello::daw {
                     if (!impl.cursorEnabled) {
                         return;
                     }
-                    const bool disabled =
-                        impl.noteModifiers.isHeld(NoteViewModifiers::DisableNoteSnap, modifiers);
+                    const bool disabled = impl.noteModifiers.isHeld(
+                        NoteViewKeyboardModifiers::DisableNoteSnap, modifiers);
                     const double at = std::max<double>(0, double(impl.snapped(tick, disabled)));
                     const bool moved = at != impl.cursor;
                     setCursorPosition(at);
@@ -204,18 +204,18 @@ namespace hello::daw {
         const auto wheelActions =
             [this](Qt::KeyboardModifiers modifiers) -> std::optional<SceneView::WheelAction> {
             stdc_impl_t;
-            const auto activation = impl.activate(NoteViewModifiers::WheelScene, modifiers);
+            const auto activation = impl.activate(NoteViewKeyboardModifiers::WheelScene, modifiers);
             if (!activation) {
                 return std::nullopt;
             }
             switch (activation->operation) {
-                case NoteViewModifiers::VerticalScroll:
+                case NoteViewKeyboardModifiers::VerticalScroll:
                     return SceneView::VerticalScroll;
-                case NoteViewModifiers::HorizontalScroll:
+                case NoteViewKeyboardModifiers::HorizontalScroll:
                     return SceneView::HorizontalScroll;
-                case NoteViewModifiers::TimeZoom:
+                case NoteViewKeyboardModifiers::TimeZoom:
                     return SceneView::TimeZoom;
-                case NoteViewModifiers::KeyZoom:
+                case NoteViewKeyboardModifiers::KeyZoom:
                     return SceneView::KeyZoom;
                 default:
                     return std::nullopt;
@@ -346,13 +346,13 @@ namespace hello::daw {
         return impl.view;
     }
 
-    void PianoRoll::setModifierBindings(const ModifierBindings &bindings) {
+    void PianoRoll::setKeyboardModifierBindings(const KeyboardModifierBindings &bindings) {
         stdc_impl_t;
-        if (&bindings.scheme() == &ParameterViewModifiers::scheme()) {
+        if (&bindings.scheme() == &ParameterViewKeyboardModifiers::scheme()) {
             impl.parameterModifiers = bindings;
             return;
         }
-        Q_ASSERT(&bindings.scheme() == &NoteViewModifiers::scheme());
+        Q_ASSERT(&bindings.scheme() == &NoteViewKeyboardModifiers::scheme());
         impl.noteModifiers = bindings;
     }
 

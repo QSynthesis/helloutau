@@ -1957,12 +1957,13 @@ namespace hello::daw {
             const QPointer<PianoRoll> previousRoll = roll;
             roll = new PianoRoll(document->session());
             const auto updateModifiers = [this] {
-                for (const auto &bindings : editor->modifierBindings(Editor::ProjectWindowKind)) {
-                    roll->setModifierBindings(bindings);
+                for (const auto &bindings :
+                     editor->keyboardModifierBindings(Editor::ProjectWindowKind)) {
+                    roll->setKeyboardModifierBindings(bindings);
                 }
             };
             updateModifiers();
-            QObject::connect(editor, &Editor::modifierBindingsChanged, roll,
+            QObject::connect(editor, &Editor::keyboardModifierBindingsChanged, roll,
                              [updateModifiers](Editor::WindowKind kind) {
                                  if (kind == Editor::ProjectWindowKind) {
                                      updateModifiers();

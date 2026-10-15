@@ -1,4 +1,4 @@
-#include "ModifierBindings.h"
+#include "KeyboardModifierBindings.h"
 
 #include <algorithm>
 #include <iterator>
@@ -23,7 +23,7 @@ namespace hello::daw {
             {Qt::MetaModifier,    "Meta" },
         };
 
-        QJsonValue modifiersToJson(std::optional<Qt::KeyboardModifiers> modifiers) {
+        QJsonValue keyboardModifiersToJson(std::optional<Qt::KeyboardModifiers> modifiers) {
             if (!modifiers) {
                 return QJsonValue::Null;
             }
@@ -37,7 +37,7 @@ namespace hello::daw {
         }
 
         // The modifiers named in array, and whether every element names one
-        std::pair<Qt::KeyboardModifiers, bool> modifiersFromJson(const QJsonArray &array) {
+        std::pair<Qt::KeyboardModifiers, bool> keyboardModifiersFromJson(const QJsonArray &array) {
             Qt::KeyboardModifiers result;
             bool known = true;
             for (const auto &part : array) {
@@ -61,8 +61,9 @@ namespace hello::daw {
 
     }
 
-    ModifierScheme::ModifierScheme(const char *key, const char *context, const char *name,
-                                   QList<Role> roles, QList<Scene> scenes)
+    KeyboardModifierScheme::KeyboardModifierScheme(const char *key, const char *context,
+                                                   const char *name, QList<Role> roles,
+                                                   QList<Scene> scenes)
         : m_key(key), m_context(context), m_name(name), m_roles(std::move(roles)),
           m_scenes(std::move(scenes)) {
         for (int i = 0; i < m_roles.size(); ++i) {
@@ -73,27 +74,27 @@ namespace hello::daw {
         }
     }
 
-    QString ModifierScheme::key() const {
+    QString KeyboardModifierScheme::key() const {
         return QLatin1String(m_key);
     }
 
-    QString ModifierScheme::name() const {
+    QString KeyboardModifierScheme::name() const {
         return QCoreApplication::translate(m_context, m_name);
     }
 
-    const QList<ModifierScheme::Role> &ModifierScheme::roles() const {
+    const QList<KeyboardModifierScheme::Role> &KeyboardModifierScheme::roles() const {
         return m_roles;
     }
 
-    const QList<ModifierScheme::Scene> &ModifierScheme::scenes() const {
+    const QList<KeyboardModifierScheme::Scene> &KeyboardModifierScheme::scenes() const {
         return m_scenes;
     }
 
-    QString ModifierScheme::roleName(int role) const {
+    QString KeyboardModifierScheme::roleName(int role) const {
         return QCoreApplication::translate(m_context, m_roles.at(role).name);
     }
 
-    bool ModifierScheme::isStart(int role) const {
+    bool KeyboardModifierScheme::isStart(int role) const {
         return std::any_of(m_scenes.begin(), m_scenes.end(), [role](const Scene &scene) {
             return std::any_of(scene.operations.begin(), scene.operations.end(),
                                [role](const Operation &operation) {
@@ -102,41 +103,42 @@ namespace hello::daw {
         });
     }
 
-    bool ModifierBindings::Activation::isOn(int toggle) const {
+    bool KeyboardModifierBindings::Activation::isOn(int toggle) const {
         return toggles.contains(toggle);
     }
 
-    bool ModifierBindings::Activation::operator==(const Activation &other) const {
+    bool KeyboardModifierBindings::Activation::operator==(const Activation &other) const {
         return scene == other.scene && operation == other.operation && toggles == other.toggles;
     }
 
-    bool ModifierBindings::Conflict::operator==(const Conflict &other) const {
+    bool KeyboardModifierBindings::Conflict::operator==(const Conflict &other) const {
         return scene == other.scene && first == other.first && second == other.second;
     }
 
-    ModifierBindings::ModifierBindings(const ModifierScheme &scheme) : m_scheme(&scheme) {
+    KeyboardModifierBindings::KeyboardModifierBindings(const KeyboardModifierScheme &scheme)
+        : m_scheme(&scheme) {
         for (const auto &role : scheme.roles()) {
             m_modifiers.push_back(role.defaults);
         }
     }
 
-    const ModifierScheme &ModifierBindings::scheme() const {
+    const KeyboardModifierScheme &KeyboardModifierBindings::scheme() const {
         return *m_scheme;
     }
 
-    std::optional<Qt::KeyboardModifiers> ModifierBindings::modifiers(int role) const {
+    std::optional<Qt::KeyboardModifiers> KeyboardModifierBindings::modifiers(int role) const {
         return m_modifiers.at(role);
     }
 
-    void ModifierBindings::setModifiers(int role,
-                                        std::optional<Qt::KeyboardModifiers> modifiers) {
+    void KeyboardModifierBindings::setModifiers(int role,
+                                                std::optional<Qt::KeyboardModifiers> modifiers) {
         if (modifiers) {
             *modifiers &= standardModifiers;
         }
         m_modifiers[role] = modifiers;
     }
 
-    std::optional<Qt::KeyboardModifiers> ModifierBindings::toggleModifiers(int role) const {
+    std::optional<Qt::KeyboardModifiers> KeyboardModifierBindings::toggleModifiers(int role) const {
         const auto bound = m_modifiers.at(role);
         if (!bound || *bound == Qt::NoModifier) {
             return std::nullopt;
@@ -145,8 +147,8 @@ namespace hello::daw {
     }
 
     std::optional<QList<int>>
-        ModifierBindings::togglesFor(const ModifierScheme::Operation &operation,
-                                     Qt::KeyboardModifiers rest) const {
+        KeyboardModifierBindings::togglesFor(const KeyboardModifierScheme::Operation &operation,
+                                             Qt::KeyboardModifiers rest) const {
         QList<int> result;
         Qt::KeyboardModifiers sum;
         for (const int toggle : operation.toggles) {
@@ -162,8 +164,8 @@ namespace hello::daw {
         return result;
     }
 
-    std::optional<ModifierBindings::Activation>
-        ModifierBindings::activate(int scene, Qt::KeyboardModifiers actual) const {
+    std::optional<KeyboardModifierBindings::Activation>
+        KeyboardModifierBindings::activate(int scene, Qt::KeyboardModifiers actual) const {
         const auto pressed = actual & standardModifiers;
         const auto &operations = m_scheme->scenes().at(scene).operations;
         for (const auto &operation : operations) {
@@ -187,13 +189,14 @@ namespace hello::daw {
         return result;
     }
 
-    void ModifierBindings::updateToggles(Activation &activation,
-                                         Qt::KeyboardModifiers actual) const {
+    void KeyboardModifierBindings::updateToggles(Activation &activation,
+                                                 Qt::KeyboardModifiers actual) const {
         const auto &operations = m_scheme->scenes().at(activation.scene).operations;
-        const auto it = std::find_if(operations.begin(), operations.end(),
-                                     [&activation](const ModifierScheme::Operation &operation) {
-                                         return operation.role == activation.operation;
-                                     });
+        const auto it =
+            std::find_if(operations.begin(), operations.end(),
+                         [&activation](const KeyboardModifierScheme::Operation &operation) {
+                             return operation.role == activation.operation;
+                         });
         if (it == operations.end()) {
             return;
         }
@@ -203,12 +206,12 @@ namespace hello::daw {
         }
     }
 
-    bool ModifierBindings::isHeld(int role, Qt::KeyboardModifiers actual) const {
+    bool KeyboardModifierBindings::isHeld(int role, Qt::KeyboardModifiers actual) const {
         const auto bound = toggleModifiers(role);
         return bound && (actual & standardModifiers) == *bound;
     }
 
-    QList<ModifierBindings::Conflict> ModifierBindings::conflicts() const {
+    QList<KeyboardModifierBindings::Conflict> KeyboardModifierBindings::conflicts() const {
         QList<Conflict> result;
         const auto add = [&result](const Conflict &conflict) {
             if (!result.contains(conflict)) {
@@ -253,7 +256,7 @@ namespace hello::daw {
         return result;
     }
 
-    QList<ModifierBindings::Ambiguity> ModifierBindings::ambiguities() const {
+    QList<KeyboardModifierBindings::Ambiguity> KeyboardModifierBindings::ambiguities() const {
         QList<Ambiguity> result;
         for (const auto &scene : m_scheme->scenes()) {
             // Every way to hold modifiers that selects an operation, by the modifiers
@@ -299,22 +302,23 @@ namespace hello::daw {
         return result;
     }
 
-    bool ModifierBindings::isValid() const {
+    bool KeyboardModifierBindings::isValid() const {
         return conflicts().isEmpty();
     }
 
-    QJsonObject ModifierBindings::toJson() const {
+    QJsonObject KeyboardModifierBindings::toJson() const {
         QJsonObject result;
         const auto &roles = m_scheme->roles();
         for (int i = 0; i < roles.size(); ++i) {
             if (m_modifiers.at(i) != roles.at(i).defaults) {
-                result.insert(QLatin1String(roles.at(i).key), modifiersToJson(m_modifiers.at(i)));
+                result.insert(QLatin1String(roles.at(i).key),
+                              keyboardModifiersToJson(m_modifiers.at(i)));
             }
         }
         return result;
     }
 
-    bool ModifierBindings::readJson(const QJsonObject &object) {
+    bool KeyboardModifierBindings::readJson(const QJsonObject &object) {
         const auto &roles = m_scheme->roles();
         bool complete = true;
         int known = 0;
@@ -327,7 +331,7 @@ namespace hello::daw {
             if (value.isNull()) {
                 m_modifiers[i] = std::nullopt;
             } else if (value.isArray()) {
-                const auto [modifiers, named] = modifiersFromJson(value.toArray());
+                const auto [modifiers, named] = keyboardModifiersFromJson(value.toArray());
                 m_modifiers[i] = modifiers;
                 complete = complete && named;
             } else {
@@ -337,11 +341,11 @@ namespace hello::daw {
         return complete && known == object.size();
     }
 
-    bool ModifierBindings::operator==(const ModifierBindings &other) const {
+    bool KeyboardModifierBindings::operator==(const KeyboardModifierBindings &other) const {
         return m_scheme == other.m_scheme && m_modifiers == other.m_modifiers;
     }
 
-    bool ModifierBindings::operator!=(const ModifierBindings &other) const {
+    bool KeyboardModifierBindings::operator!=(const KeyboardModifierBindings &other) const {
         return !(*this == other);
     }
 

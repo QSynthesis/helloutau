@@ -28,8 +28,8 @@
 #include <helloutau/Widgets/SceneLayer.h>
 #include <helloutau/Widgets/SceneView.h>
 
-#include "NoteViewModifiers.h"
-#include "ParameterViewModifiers.h"
+#include "NoteViewKeyboardModifiers.h"
+#include "ParameterViewKeyboardModifiers.h"
 #include "PianoRoll.h"
 
 class QButtonGroup;
@@ -194,8 +194,8 @@ namespace hello::daw {
         int beatTicks = kit::ticksPerQuarter;
         int barTicks = kit::ticksPerQuarter * 4;
 
-        ModifierBindings noteModifiers{NoteViewModifiers::scheme()};
-        ModifierBindings parameterModifiers{ParameterViewModifiers::scheme()};
+        KeyboardModifierBindings noteModifiers{NoteViewKeyboardModifiers::scheme()};
+        KeyboardModifierBindings parameterModifiers{ParameterViewKeyboardModifiers::scheme()};
 
         QSet<kit::edit::NodeId> selection;
         /// The selected Mode2 points, by the identifiers of their nodes
@@ -316,16 +316,16 @@ namespace hello::daw {
         bool drawsBend(Qt::MouseButton button) const;
 
         /// Returns a press at position whose drag strokes the Mode1 pitch (BendGesture), as the
-        /// PitchDrawScene or the PitchEraseScene of NoteViewModifiers selects
+        /// PitchDrawScene or the PitchEraseScene of NoteViewKeyboardModifiers selects
         std::unique_ptr<SceneGesture> bendPress(QPointF position, Qt::MouseButton button);
 
-        /// Returns the operation of scene of NoteViewModifiers that modifiers select, see
-        /// ModifierBindings::activate()
-        std::optional<ModifierBindings::Activation> activate(NoteViewModifiers::Scene scene,
-                                                             Qt::KeyboardModifiers modifiers) const;
+        /// Returns the operation of scene of NoteViewKeyboardModifiers that modifiers select, see
+        /// KeyboardModifierBindings::activate()
+        std::optional<KeyboardModifierBindings::Activation>
+            activate(NoteViewKeyboardModifiers::Scene scene, Qt::KeyboardModifiers modifiers) const;
 
         /// Returns a right press at position, whose click and drag select a span of time as the
-        /// SpanScene of NoteViewModifiers selects
+        /// SpanScene of NoteViewKeyboardModifiers selects
         std::unique_ptr<SceneGesture> spanPress(QPointF position);
 
         int indexOf(kit::edit::NodeId id) const;

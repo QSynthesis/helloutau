@@ -15,8 +15,8 @@ namespace hello::daw {
     namespace {
 
         // Returns a left press in the parameter area at position. Its drag runs the gesture that
-        // \a make returns for the operation of the DragScene of ParameterViewModifiers, and its
-        // click does nothing.
+        // \a make returns for the operation of the DragScene of ParameterViewKeyboardModifiers, and
+        // its click does nothing.
         template <class Make>
         std::unique_ptr<SceneGesture> parameterPress(PianoRollState *state, QPointF position,
                                                      Make make) {
@@ -24,7 +24,7 @@ namespace hello::daw {
                 position,
                 [state, make](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                     const auto activation = state->parameterModifiers.activate(
-                        ParameterViewModifiers::DragScene, modifiers);
+                        ParameterViewKeyboardModifiers::DragScene, modifiers);
                     if (!activation) {
                         return nullptr;
                     }
@@ -176,9 +176,9 @@ namespace hello::daw {
         return outline;
     }
 
-    PianoRollState::EnvelopeGesture::EnvelopeGesture(PianoRollState *state, int index, int anchor,
-                                                     QPointF position,
-                                                     const ModifierBindings::Activation &activation)
+    PianoRollState::EnvelopeGesture::EnvelopeGesture(
+        PianoRollState *state, int index, int anchor, QPointF position,
+        const KeyboardModifierBindings::Activation &activation)
         : m_state(state), m_index(index), m_anchor(anchor), m_origin(position),
           m_activation(activation), m_original(state->envelopeOf(index)) {
         m_length = state->fragmentOf(index).second;
@@ -194,7 +194,7 @@ namespace hello::daw {
         const auto times = anchorTimes(m_original, m_length);
         const int last = int(times.size()) - 1;
         const int k = m_anchor;
-        double delta = m_activation.isOn(ParameterViewModifiers::LockTime)
+        double delta = m_activation.isOn(ParameterViewKeyboardModifiers::LockTime)
                            ? 0
                            : std::round((timeAt(position) - timeAt(m_origin)) * 10) / 10;
         delta = std::clamp(delta, (k > 0 ? times[k - 1] : 0) - times[k],
@@ -219,7 +219,7 @@ namespace hello::daw {
         }
         double volume = m_original.anchorsInTimeOrder()[k].y + view->keyAxis().toKey(position.y()) -
                         view->keyAxis().toKey(m_origin.y());
-        if (m_activation.isOn(ParameterViewModifiers::SnapValue)) {
+        if (m_activation.isOn(ParameterViewKeyboardModifiers::SnapValue)) {
             volume = quarterNearest(PianoRoll::EnvelopeLane, volume);
         }
         anchors[k].y = std::clamp(std::round(volume), 0.0, EnvelopeRange);
@@ -282,7 +282,7 @@ namespace hello::daw {
         }
         return parameterPress(m_state, position,
                               [state = m_state, index, anchor = hit.index,
-                               position](const ModifierBindings::Activation &activation) {
+                               position](const KeyboardModifierBindings::Activation &activation) {
                                   return std::make_unique<EnvelopeGesture>(state, index, anchor,
                                                                            position, activation);
                               });
@@ -371,7 +371,7 @@ namespace hello::daw {
         double key =
             std::clamp(keyOf(lane, m_start) + keys.toKey(position.y()) - keys.toKey(m_origin.y()),
                        range.minimum, range.maximum);
-        if (m_activation.isOn(ParameterViewModifiers::SnapValue)) {
+        if (m_activation.isOn(ParameterViewKeyboardModifiers::SnapValue)) {
             key = quarterNearest(lane, key);
         }
         const double value = std::round(valueAt(lane, key));
@@ -448,11 +448,12 @@ namespace hello::daw {
         if (button != Qt::LeftButton) {
             return nullptr;
         }
-        return parameterPress(
-            m_state, position,
-            [state = m_state, index, position](const ModifierBindings::Activation &activation) {
-                return std::make_unique<ValueGesture>(state, index, position, activation);
-            });
+        return parameterPress(m_state, position,
+                              [state = m_state, index,
+                               position](const KeyboardModifierBindings::Activation &activation) {
+                                  return std::make_unique<ValueGesture>(state, index, position,
+                                                                        activation);
+                              });
     }
 
 }

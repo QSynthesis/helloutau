@@ -4,7 +4,7 @@
 #include <QtCore/QList>
 #include <QtCore/QString>
 
-#include <helloutau/Widgets/ModifierBindings.h>
+#include <helloutau/Widgets/KeyboardModifierBindings.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -44,7 +44,7 @@ namespace hello::daw {
             QAK::ActionRegistry *registry = nullptr;
 
             /// The modifier bindings of the kind of window, one for each of its schemes
-            QList<ModifierBindings> modifiers;
+            QList<KeyboardModifierBindings> modifiers;
         };
 
         using Sections = QList<Section>;
@@ -58,8 +58,8 @@ namespace hello::daw {
         /// section that is not a valid keymap, is ignored with a warning, so that the defaults
         /// apply. Unknown roles and
         /// modifiers are ignored with a warning. Bindings that are not valid after reading
-        /// (ModifierBindings::isValid()) are replaced by the defaults of their scheme with a
-        /// warning.
+        /// (KeyboardModifierBindings::isValid()) are replaced by the defaults of their scheme with
+        /// a warning.
         static void read(Sections &sections, const QString &fileName);
 
         /// Writes the shortcuts that the registry of each of \a sections overrides and the

@@ -45,10 +45,10 @@
 #include "DiagnosticBox.h"
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
-#include "FrequencyViewModifiers.h"
+#include "FrequencyViewKeyboardModifiers.h"
 #include "KeymapFile.h"
-#include "NoteViewModifiers.h"
-#include "ParameterViewModifiers.h"
+#include "NoteViewKeyboardModifiers.h"
+#include "ParameterViewKeyboardModifiers.h"
 #include "ProjectWindow.h"
 #include "UpdateChecker.h"
 #include "UstDecodingDialog.h"
@@ -156,8 +156,8 @@ namespace hello::daw {
             // each in a file of its own beside the settings with a section for each kind
             keymapFile = KeymapFile::fileNameFor(settings->fileName());
             for (const auto kind : Editor::windowKinds) {
-                for (const auto scheme : Editor::modifierSchemes(kind)) {
-                    modifierBindings[kind].push_back(ModifierBindings(*scheme));
+                for (const auto scheme : Editor::keyboardModifierSchemes(kind)) {
+                    modifierBindings[kind].push_back(KeyboardModifierBindings(*scheme));
                 }
             }
             auto keymap = keymapSections();
@@ -517,7 +517,7 @@ namespace hello::daw {
         }
 
         // The modifier bindings of each kind of window, one for each of its modifier schemes
-        QList<ModifierBindings> modifierBindings[std::size(Editor::windowKinds)];
+        QList<KeyboardModifierBindings> modifierBindings[std::size(Editor::windowKinds)];
     };
 
     Editor::Editor(QObject *parent) : Editor(std::make_unique<AppSettings>(), parent) {
@@ -548,22 +548,25 @@ namespace hello::daw {
         return impl.projectDisplayName(window);
     }
 
-    QList<const ModifierScheme *> Editor::modifierSchemes(WindowKind kind) {
+    QList<const KeyboardModifierScheme *> Editor::keyboardModifierSchemes(WindowKind kind) {
         if (kind == ProjectWindowKind) {
-            return {&NoteViewModifiers::scheme(), &ParameterViewModifiers::scheme()};
+            return {&NoteViewKeyboardModifiers::scheme(),
+                    &ParameterViewKeyboardModifiers::scheme()};
         }
         if (kind == FrequencyMapEditorKind) {
-            return {&FrequencyViewModifiers::scheme()};
+            return {&FrequencyViewKeyboardModifiers::scheme()};
         }
         return {};
     }
 
-    QList<ModifierBindings> Editor::modifierBindings(WindowKind kind) const {
+    QList<KeyboardModifierBindings> Editor::keyboardModifierBindings(WindowKind kind) const {
         stdc_impl_t;
         return impl.modifierBindings[kind];
     }
 
-    ModifierBindings Editor::modifierBindings(WindowKind kind, const ModifierScheme &scheme) const {
+    KeyboardModifierBindings
+        Editor::keyboardModifierBindings(WindowKind kind,
+                                         const KeyboardModifierScheme &scheme) const {
         stdc_impl_t;
         for (const auto &bindings : impl.modifierBindings[kind]) {
             if (&bindings.scheme() == &scheme) {
@@ -571,17 +574,18 @@ namespace hello::daw {
             }
         }
         Q_ASSERT(false);
-        return ModifierBindings(scheme);
+        return KeyboardModifierBindings(scheme);
     }
 
-    void Editor::setModifierBindings(WindowKind kind, const QList<ModifierBindings> &bindings) {
+    void Editor::setKeyboardModifierBindings(WindowKind kind,
+                                             const QList<KeyboardModifierBindings> &bindings) {
         stdc_impl_t;
         Q_ASSERT(bindings.size() == impl.modifierBindings[kind].size());
         if (impl.modifierBindings[kind] == bindings) {
             return;
         }
         impl.modifierBindings[kind] = bindings;
-        Q_EMIT modifierBindingsChanged(kind);
+        Q_EMIT keyboardModifierBindingsChanged(kind);
     }
 
     SettingCatalog *Editor::settingCatalog() const {

@@ -1117,7 +1117,7 @@
     </message>
 </context>
 <context>
-    <name>hello::daw::FrequencyViewModifiers</name>
+    <name>hello::daw::FrequencyViewKeyboardModifiers</name>
     <message>
         <source>Frequency Map Area</source>
         <translation>频率表编辑区</translation>
@@ -1280,7 +1280,7 @@
     </message>
 </context>
 <context>
-    <name>hello::daw::NoteViewModifiers</name>
+    <name>hello::daw::NoteViewKeyboardModifiers</name>
     <message>
         <source>Note Area</source>
         <translation>音符区</translation>
@@ -1433,7 +1433,7 @@
     </message>
 </context>
 <context>
-    <name>hello::daw::ParameterViewModifiers</name>
+    <name>hello::daw::ParameterViewKeyboardModifiers</name>
     <message>
         <source>Parameter Area</source>
         <translation>参数区</translation>

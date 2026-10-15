@@ -54,14 +54,14 @@ namespace hello::daw {
     };
 
     /// A drag of an anchor of an envelope: in time between its neighbors, the others staying
-    /// where they are, unless the toggle LockTime of ParameterViewModifiers is on, and in volume
-    /// from 0 to EnvelopeRange, or with the toggle SnapValue the nearest quarter of it. Times are
-    /// kept to a tenth of a millisecond, volumes to a percent. The p of the anchor, its time and
-    /// its volume are shown beside it.
+    /// where they are, unless the toggle LockTime of ParameterViewKeyboardModifiers is on, and in
+    /// volume from 0 to EnvelopeRange, or with the toggle SnapValue the nearest quarter of it.
+    /// Times are kept to a tenth of a millisecond, volumes to a percent. The p of the anchor, its
+    /// time and its volume are shown beside it.
     class PianoRollState::EnvelopeGesture : public SceneGesture {
     public:
         EnvelopeGesture(PianoRollState *state, int index, int anchor, QPointF position,
-                        const ModifierBindings::Activation &activation);
+                        const KeyboardModifierBindings::Activation &activation);
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
 
@@ -74,7 +74,7 @@ namespace hello::daw {
         int m_index;
         int m_anchor;
         QPointF m_origin;
-        ModifierBindings::Activation m_activation;
+        KeyboardModifierBindings::Activation m_activation;
         kit::Envelope m_original;
         double m_length = 0;
     };
@@ -108,12 +108,13 @@ namespace hello::daw {
     };
 
     /// A drag of the handle of a value: every note it changes takes the value it is dragged to,
-    /// a whole number within the lane, or with the toggle SnapValue of ParameterViewModifiers
-    /// the nearest quarter of the lane. The value is shown beside the handle.
+    /// a whole number within the lane, or with the toggle SnapValue of
+    /// ParameterViewKeyboardModifiers the nearest quarter of the lane. The value is shown beside
+    /// the handle.
     class PianoRollState::ValueGesture : public SceneGesture {
     public:
         ValueGesture(PianoRollState *state, int index, QPointF position,
-                     const ModifierBindings::Activation &activation)
+                     const KeyboardModifierBindings::Activation &activation)
             : m_state(state), m_index(index), m_targets(state->valueTargets(index)),
               m_origin(position), m_activation(activation), m_start(state->valueOf(index)) {
         }
@@ -129,7 +130,7 @@ namespace hello::daw {
         int m_index;
         QList<int> m_targets;
         QPointF m_origin;
-        ModifierBindings::Activation m_activation;
+        KeyboardModifierBindings::Activation m_activation;
         double m_start;
     };
 

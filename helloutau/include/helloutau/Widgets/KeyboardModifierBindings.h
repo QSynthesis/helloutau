@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_WIDGETS_MODIFIERBINDINGS_H
-#define HELLOUTAU_WIDGETS_MODIFIERBINDINGS_H
+#ifndef HELLOUTAU_WIDGETS_KEYBOARDMODIFIERBINDINGS_H
+#define HELLOUTAU_WIDGETS_KEYBOARDMODIFIERBINDINGS_H
 
 #include <optional>
 
@@ -23,13 +23,13 @@ namespace hello::daw {
     /// its toggles turn on and off with the modifiers held.
     ///
     /// A class of its own describes each scheme: it declares the roles and the scenes as plain
-    /// enumerations numbered from 0 and returns the scheme, see NoteViewModifiers. If a view uses
-    /// roles of another scheme instead of declaring them, a comment under that enumeration
-    /// names them.
+    /// enumerations numbered from 0 and returns the scheme, see NoteViewKeyboardModifiers. If a
+    /// view uses roles of another scheme instead of declaring them, a comment under that
+    /// enumeration names them.
     ///
     /// Only Ctrl, Alt, Shift and Meta count as modifiers. A role may be off, which differs from
     /// a role without modifiers.
-    class HELLOUTAU_WIDGETS_EXPORT ModifierScheme {
+    class HELLOUTAU_WIDGETS_EXPORT KeyboardModifierScheme {
     public:
         struct Role {
             /// The value of the role in the enumeration of the scheme, equal to its index in
@@ -62,8 +62,8 @@ namespace hello::daw {
 
         /// Creates the scheme \a key with \a roles and \a scenes in the order of their ids.
         /// \a context is the translation context of \a name and of the names of the roles.
-        ModifierScheme(const char *key, const char *context, const char *name, QList<Role> roles,
-                       QList<Scene> scenes);
+        KeyboardModifierScheme(const char *key, const char *context, const char *name,
+                               QList<Role> roles, QList<Scene> scenes);
 
         /// Returns the key of the scheme in the section of its kind of window in the keymap
         /// file.
@@ -90,9 +90,9 @@ namespace hello::daw {
         QList<Scene> m_scenes;
     };
 
-    /// The modifiers bound to each role of a ModifierScheme. The scheme must outlive the
+    /// The modifiers bound to each role of a KeyboardModifierScheme. The scheme must outlive the
     /// bindings.
-    class HELLOUTAU_WIDGETS_EXPORT ModifierBindings {
+    class HELLOUTAU_WIDGETS_EXPORT KeyboardModifierBindings {
     public:
         /// An operation of a scene that modifiers select, with the toggles that are on
         struct HELLOUTAU_WIDGETS_EXPORT Activation {
@@ -132,9 +132,9 @@ namespace hello::daw {
         };
 
         /// Creates the bindings of \a scheme with the defaults of its roles.
-        explicit ModifierBindings(const ModifierScheme &scheme);
+        explicit KeyboardModifierBindings(const KeyboardModifierScheme &scheme);
 
-        const ModifierScheme &scheme() const;
+        const KeyboardModifierScheme &scheme() const;
 
         /// Returns the modifiers of \a role, or \c std::nullopt if the role is off.
         std::optional<Qt::KeyboardModifiers> modifiers(int role) const;
@@ -176,21 +176,21 @@ namespace hello::daw {
         /// \return \c true if \a object holds nothing that is ignored, \c false otherwise.
         bool readJson(const QJsonObject &object);
 
-        bool operator==(const ModifierBindings &other) const;
-        bool operator!=(const ModifierBindings &other) const;
+        bool operator==(const KeyboardModifierBindings &other) const;
+        bool operator!=(const KeyboardModifierBindings &other) const;
 
     private:
-        const ModifierScheme *m_scheme;
+        const KeyboardModifierScheme *m_scheme;
         QList<std::optional<Qt::KeyboardModifiers>> m_modifiers;
 
         // The modifiers of role if it is on and has modifiers
         std::optional<Qt::KeyboardModifiers> toggleModifiers(int role) const;
 
         // The toggles of operation whose modifiers add up to exactly rest
-        std::optional<QList<int>> togglesFor(const ModifierScheme::Operation &operation,
+        std::optional<QList<int>> togglesFor(const KeyboardModifierScheme::Operation &operation,
                                              Qt::KeyboardModifiers rest) const;
     };
 
 }
 
-#endif // HELLOUTAU_WIDGETS_MODIFIERBINDINGS_H
+#endif // HELLOUTAU_WIDGETS_KEYBOARDMODIFIERBINDINGS_H

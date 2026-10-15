@@ -745,11 +745,11 @@ namespace hello::daw {
                 [state, index, part,
                  position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                     const auto activation =
-                        state->activate(NoteViewModifiers::VibratoDragScene, modifiers);
+                        state->activate(NoteViewKeyboardModifiers::VibratoDragScene, modifiers);
                     if (!activation) {
                         return nullptr;
                     }
-                    if (activation->operation == NoteViewModifiers::DragZoom) {
+                    if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
                         return std::make_unique<ZoomGesture>(state, position, *activation);
                     }
                     return std::make_unique<VibratoGesture>(state, index, part, position);
@@ -774,8 +774,8 @@ namespace hello::daw {
         const auto state = m_state;
         // If the modifiers of the press select the point with a click, the point is selected at
         // once.
-        const auto click = state->activate(NoteViewModifiers::PointClickScene, modifiers);
-        if (click && click->operation == NoteViewModifiers::SelectPoint &&
+        const auto click = state->activate(NoteViewKeyboardModifiers::PointClickScene, modifiers);
+        if (click && click->operation == NoteViewKeyboardModifiers::SelectPoint &&
             !state->selectedPoints.contains(id)) {
             state->selectPoints({id});
         }
@@ -785,11 +785,11 @@ namespace hello::daw {
             [state, index, point, id,
              position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                 const auto activation =
-                    state->activate(NoteViewModifiers::PointDragScene, modifiers);
+                    state->activate(NoteViewKeyboardModifiers::PointDragScene, modifiers);
                 if (!activation) {
                     return nullptr;
                 }
-                if (activation->operation == NoteViewModifiers::DragZoom) {
+                if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
                     return std::make_unique<ZoomGesture>(state, position, *activation);
                 }
                 if (!state->selectedPoints.contains(id)) {
@@ -799,13 +799,13 @@ namespace hello::daw {
             },
             [state, id](Qt::KeyboardModifiers modifiers) {
                 const auto activation =
-                    state->activate(NoteViewModifiers::PointClickScene, modifiers);
+                    state->activate(NoteViewKeyboardModifiers::PointClickScene, modifiers);
                 if (!activation) {
                     return;
                 }
-                if (activation->operation == NoteViewModifiers::SelectPoint) {
+                if (activation->operation == NoteViewKeyboardModifiers::SelectPoint) {
                     state->selectPoints({id});
-                } else if (activation->operation == NoteViewModifiers::TogglePoint) {
+                } else if (activation->operation == NoteViewKeyboardModifiers::TogglePoint) {
                     auto ids = state->selectedPoints;
                     if (!ids.remove(id)) {
                         ids.insert(id);
@@ -839,11 +839,11 @@ namespace hello::daw {
                 [state,
                  position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                     const auto activation =
-                        state->activate(NoteViewModifiers::DrawDragScene, modifiers);
+                        state->activate(NoteViewKeyboardModifiers::DrawDragScene, modifiers);
                     if (!activation) {
                         return nullptr;
                     }
-                    if (activation->operation == NoteViewModifiers::DragZoom) {
+                    if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
                         return std::make_unique<ZoomGesture>(state, position, *activation);
                     }
                     return std::make_unique<DrawGesture>(state, position, *activation);
@@ -851,7 +851,7 @@ namespace hello::daw {
                 // A click draws a note as a drag that does not move.
                 [state, position](Qt::KeyboardModifiers modifiers) {
                     if (const auto activation =
-                            state->activate(NoteViewModifiers::DrawClickScene, modifiers)) {
+                            state->activate(NoteViewKeyboardModifiers::DrawClickScene, modifiers)) {
                         DrawGesture(state, position, *activation).release(position, modifiers);
                     }
                 });
@@ -860,20 +860,21 @@ namespace hello::daw {
             position,
             [state, position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                 const auto activation =
-                    state->activate(NoteViewModifiers::BandDragScene, modifiers);
+                    state->activate(NoteViewKeyboardModifiers::BandDragScene, modifiers);
                 if (!activation) {
                     return nullptr;
                 }
-                if (activation->operation == NoteViewModifiers::DragZoom) {
+                if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
                     return std::make_unique<ZoomGesture>(state, position, *activation);
                 }
                 return std::make_unique<BandGesture>(
-                    state, position, NoteViewModifiers::Role(activation->operation));
+                    state, position, NoteViewKeyboardModifiers::Role(activation->operation));
             },
             [state](Qt::KeyboardModifiers modifiers) {
                 const auto activation =
-                    state->activate(NoteViewModifiers::BlankClickScene, modifiers);
-                if (activation && activation->operation == NoteViewModifiers::ClearSelection) {
+                    state->activate(NoteViewKeyboardModifiers::BlankClickScene, modifiers);
+                if (activation &&
+                    activation->operation == NoteViewKeyboardModifiers::ClearSelection) {
                     state->setSelection({});
                     state->selectPoints({});
                 }
@@ -903,21 +904,22 @@ namespace hello::daw {
         const bool end = hit.part == PianoRoll::NoteEnd;
         const bool wasSelected = state->isSelected(index);
         // If the modifiers of the press select the note with a click, the note is selected at once.
-        const auto click = state->activate(NoteViewModifiers::NoteClickScene, modifiers);
-        if (click && click->operation == NoteViewModifiers::SelectNote && !wasSelected) {
+        const auto click = state->activate(NoteViewKeyboardModifiers::NoteClickScene, modifiers);
+        if (click && click->operation == NoteViewKeyboardModifiers::SelectNote && !wasSelected) {
             state->selectOnly(index);
         }
         return std::make_unique<PressGesture>(
             position,
             [state, index, end, wasSelected,
              position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
-                const auto activation = state->activate(end ? NoteViewModifiers::NoteEndDragScene
-                                                            : NoteViewModifiers::NoteDragScene,
-                                                        modifiers);
+                const auto activation =
+                    state->activate(end ? NoteViewKeyboardModifiers::NoteEndDragScene
+                                        : NoteViewKeyboardModifiers::NoteDragScene,
+                                    modifiers);
                 if (!activation) {
                     return nullptr;
                 }
-                if (activation->operation == NoteViewModifiers::DragZoom) {
+                if (activation->operation == NoteViewKeyboardModifiers::DragZoom) {
                     return std::make_unique<ZoomGesture>(state, position, *activation);
                 }
                 if (end) {
@@ -931,22 +933,22 @@ namespace hello::daw {
             },
             [state, index](Qt::KeyboardModifiers modifiers) {
                 const auto activation =
-                    state->activate(NoteViewModifiers::NoteClickScene, modifiers);
+                    state->activate(NoteViewKeyboardModifiers::NoteClickScene, modifiers);
                 if (!activation) {
                     return;
                 }
                 const auto id = state->timeline->note(index).id;
-                if (activation->operation == NoteViewModifiers::SelectNote) {
+                if (activation->operation == NoteViewKeyboardModifiers::SelectNote) {
                     // Also a click on one of several selected notes selects it alone.
                     state->selectOnly(index);
-                } else if (activation->operation == NoteViewModifiers::ToggleNote) {
+                } else if (activation->operation == NoteViewKeyboardModifiers::ToggleNote) {
                     auto ids = state->selection;
                     if (!ids.remove(id)) {
                         ids.insert(id);
                     }
                     state->anchor = id;
                     state->setSelection(ids);
-                } else if (activation->operation == NoteViewModifiers::ExtendNotes) {
+                } else if (activation->operation == NoteViewKeyboardModifiers::ExtendNotes) {
                     const int anchor = state->indexOf(state->anchor);
                     state->selectRange(anchor < 0 ? index : anchor, index);
                 }
