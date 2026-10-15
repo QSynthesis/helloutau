@@ -139,10 +139,6 @@
         <translation>频率表编辑器</translation>
     </message>
     <message>
-        <source>Separator</source>
-        <translation>分隔符</translation>
-    </message>
-    <message>
         <source>Stretch</source>
         <translation>弹性空白</translation>
     </message>

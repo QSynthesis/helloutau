@@ -372,7 +372,7 @@
 
 **Menus and Toolbars 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Menus and Toolbars，位于 Appearance & Behavior 下）：
 
-- 每种窗口一个标签页「Project Window」「Voice Bank Window」「Frequency Map Editor」，各有自己 registry 的布局。树的顶层是该窗口的菜单栏与工具栏：工程窗口为「Main Menu」「Main Toolbar」，音源窗口为「Main Menu」「Sample Toolbar」，编辑频率表的对话框只有「Main Menu」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线与伸缩空白以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
+- 每种窗口一个标签页「Project Window」「Voice Bank Window」「Frequency Map Editor」，各有自己 registry 的布局。树的顶层是该窗口的菜单栏与工具栏：工程窗口为「Main Menu」「Main Toolbar」，音源窗口为「Main Menu」「Sample Toolbar」，编辑频率表的对话框只有「Main Menu」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线以灰色的 13 个横线标出，与 JetBrains IDE 相同（IntelliJ 的 `CustomizationUtil.acceptObjectIconAndText()`）。伸缩空白只可能来自插件的清单，页面不能添加，以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
 - 右侧按钮：「Add Action...」（从可搜索的列表中选一个动作、菜单或组，以清单声明的形态加在当前条目之后，当前项是菜单或工具栏时加在其末尾。列表中不含可添加条目的目录不显示）、「Add Separator」、「Remove」、「Move Up」「Move Down」（在所在菜单内移动），以及「Restore Defaults」。菜单栏与工具栏本身不能删除或移动。
 - 编辑经 QActionKit 的 `ActionLayoutsModel`，它按清单检查每次改动：条目须已声明，形态须为声明的类型所允许，不能形成环。不被允许的改动不生效并提示。
 - **菜单与组的形态切换**：`ActionLayoutsModel` 支持在布局中将 menu 改为 group 或反之，但 JetBrains IDE 的设置页没有这一操作，因此暂不提供（作者 2026-10-11 定）。

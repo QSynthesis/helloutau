@@ -121,8 +121,10 @@ namespace hello::daw {
                                        : std::nullopt;
                 return icon ? QVariant(icon->icon()) : QVariant();
             }
+            // A line of dashes, untranslated, as CustomizationUtil.acceptObjectIconAndText() of
+            // JetBrains IntelliJ writes a separator
             if (entry.type() == Entry::Separator) {
-                return MenusSettingPage::tr("Separator");
+                return QStringLiteral("-------------");
             }
             if (entry.type() == Entry::Stretch) {
                 return MenusSettingPage::tr("Stretch");
