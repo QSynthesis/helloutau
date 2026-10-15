@@ -630,6 +630,14 @@
         <translation>恢复为已保存的内容(&amp;V)</translation>
     </message>
     <message>
+        <source>Revert Selected &amp;Frames</source>
+        <translation>恢复选中的帧(&amp;F)</translation>
+    </message>
+    <message>
+        <source>Set &amp;Key to Average of Selection</source>
+        <translation>基准频率设为选区平均值(&amp;K)</translation>
+    </message>
+    <message>
         <source>Multiply by &amp;2</source>
         <translation>乘以 2(&amp;2)</translation>
     </message>
@@ -904,6 +912,34 @@
 <context>
     <name>hello::daw::EditFrequencyMapsDialog</name>
     <message>
+        <source>Sample rate: %1 Hz</source>
+        <translation>采样率：%1 Hz</translation>
+    </message>
+    <message>
+        <source>Channels: %1</source>
+        <translation>声道数：%1</translation>
+    </message>
+    <message>
+        <source>Length: %1 ms</source>
+        <translation>长度：%1 毫秒</translation>
+    </message>
+    <message>
+        <source>Frames: %1</source>
+        <translation>帧数：%1</translation>
+    </message>
+    <message>
+        <source>Hop: %1 samples</source>
+        <translation>帧间隔：%1 个样本</translation>
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation>预览</translation>
+    </message>
+    <message>
+        <source>The audio file cannot be copied for the preview.</source>
+        <translation>无法为预览复制音频文件。</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
@@ -970,6 +1006,59 @@
     <message>
         <source>This choice applies while the dialog is open. The default is set on the Frequency Maps page of the settings. Without removing the caches, the resampler keeps synthesizing from the frequencies of the caches.</source>
         <translation>此选择只在对话框打开期间有效。缺省值在设置的「频率表」页中设置。不删除缓存时，重采样器仍按缓存中的频率合成。</translation>
+    </message>
+    <message>
+        <source>&amp;Update</source>
+        <translation>更新(&amp;U)</translation>
+    </message>
+    <message>
+        <source>&amp;Key</source>
+        <translation>基准频率(&amp;K)</translation>
+    </message>
+    <message>
+        <source>Hz</source>
+        <translation>Hz</translation>
+    </message>
+    <message>
+        <source>&lt;-- Se&amp;t</source>
+        <translation>&lt;-- 设定(&amp;T)</translation>
+    </message>
+    <message>
+        <source>&amp;Play</source>
+        <translation>播放(&amp;P)</translation>
+    </message>
+    <message>
+        <source>Pitch</source>
+        <translation>音高</translation>
+    </message>
+    <message>
+        <source>Modulation</source>
+        <translation>调制</translation>
+    </message>
+    <message>
+        <source>Flags</source>
+        <translation>Flags</translation>
+    </message>
+    <message>
+        <source>Information of the Audio File</source>
+        <translation>音频文件信息</translation>
+    </message>
+    <message>
+        <source>avg</source>
+        <comment>Interpolates the selected frames linearly.</comment>
+        <translation>插值</translation>
+    </message>
+    <message>
+        <source>reload</source>
+        <translation>重新加载</translation>
+    </message>
+    <message>
+        <source>key to average of selected range</source>
+        <translation>基准频率设为选区平均值</translation>
+    </message>
+    <message>
+        <source>&amp;Stop</source>
+        <translation>停止(&amp;S)</translation>
     </message>
     <message>
         <source>Save the modified frequency maps before closing?</source>
@@ -1326,7 +1415,7 @@
     </message>
     <message>
         <source>Drag Key Line: Set Key</source>
-        <translation>拖动键线：设定键</translation>
+        <translation>拖动基准频率线：设定基准频率</translation>
     </message>
 </context>
 <context>

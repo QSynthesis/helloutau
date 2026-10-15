@@ -93,6 +93,7 @@
 #include <helloutau/Editor/OtoWaveformView.h>
 #include <helloutau/Editor/Dialogs/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
+#include <helloutau/Editor/SamplePreview.h>
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/Dialogs/PasteParametersDialog.h>
 #include <helloutau/Editor/Dialogs/ScalePitchDialog.h>
@@ -3205,6 +3206,60 @@ private Q_SLOTS:
             QVERIFY(warned);
             QCOMPARE(dialog->currentFile(), 0);
             QVERIFY(dialog->view()->buffer());
+
+            // The right side of frqeditor: the key, the list of the frames, which selects the
+            // frames, and the frequency of the current frame, each set as one step.
+            QCOMPARE(dialog->keyEdit()->text(), QString::asprintf("%.8f", 220.0));
+            QCOMPARE(dialog->frameList()->count(), 100);
+            dialog->keyEdit()->setText(QStringLiteral("330"));
+            Q_EMIT dialog->keyEdit()->editingFinished();
+            QCOMPARE(dialog->bufferOf(0)->key(), 330.0);
+            trigger("helloutau.edit.undo");
+            QCOMPARE(dialog->bufferOf(0)->key(), 220.0);
+            dialog->frameList()->selectionModel()->select(
+                QItemSelection(dialog->frameList()->model()->index(10, 0),
+                               dialog->frameList()->model()->index(12, 0)),
+                QItemSelectionModel::ClearAndSelect);
+            QCOMPARE(dialog->view()->selection(),
+                     (std::optional<std::pair<std::size_t, std::size_t>>{
+                         {10, 3}
+            }));
+            dialog->frameList()->setCurrentRow(5);
+            dialog->frequencyEdit()->setText(QStringLiteral("300"));
+            dialog->setButton()->click();
+            QCOMPARE(dialog->bufferOf(0)->map().frames.at(5).frequency, 300.0);
+            trigger("helloutau.edit.undo");
+            QVERIFY(!dialog->isModified(0));
+
+            // The preview synthesizes a copy of the audio file beside the map as edited, at the
+            // key.
+            class Recorder : public kit::SynthToolProcess {
+            public:
+                kit::SynthToolRun run(const fs::path &, const QStringList &arguments,
+                                      kit::DiagnosticList &,
+                                      const std::function<bool()> &) const override {
+                    recorded = arguments;
+                    std::error_code error;
+                    fs::copy_file(fs::path(arguments.at(0).toStdU16String()),
+                                  fs::path(arguments.at(1).toStdU16String()),
+                                  fs::copy_options::overwrite_existing, error);
+                    kit::SynthToolRun out;
+                    out.started = true;
+                    return out;
+                }
+                mutable QStringList recorded;
+            };
+            const auto recorder = std::make_shared<Recorder>();
+            dialog->preview()->setSynthToolProcess(recorder);
+            dialog->playButton()->click();
+            QTRY_VERIFY(dialog->preview()->state() != SamplePreview::Synthesizing);
+            QVERIFY(recorder->recorded.size() > 2);
+            const fs::path input(recorder->recorded.at(0).toStdU16String());
+            QCOMPARE(input.filename(), fs::path("a.wav"));
+            QVERIFY(input.parent_path() != bank);
+            QVERIFY(fs::exists(input.parent_path() / "a_wav.frq"));
+            QCOMPARE(recorder->recorded.at(2), QStringLiteral("A3"));
+            dialog->preview()->stop();
 
             dialog->view()->selectAll();
             trigger("helloutau.frequencyMap.multiplyBy2");

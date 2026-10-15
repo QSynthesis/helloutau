@@ -36,6 +36,12 @@
                 shortcut="Ctrl+Shift+S" />
         <!-- The current frequency map as last saved, as one step of its history -->
         <action id="helloutau.frequencyMap.revert" text="Re&amp;vert to Saved" category="Edit" />
+        <!-- The selected frames as last saved, as Reload selected frequencies of frqeditor -->
+        <action id="helloutau.frequencyMap.revertSelection" text="Revert Selected &amp;Frames"
+                category="Edit" />
+        <!-- The key to the mean of the voiced selected frames, as the button of frqeditor -->
+        <action id="helloutau.frequencyMap.keyToAverage" text="Set &amp;Key to Average of Selection"
+                category="Edit" />
         <!-- The voiced frames of the selection, as the buttons of frqeditor -->
         <action id="helloutau.frequencyMap.multiplyBy2" text="Multiply by &amp;2" category="Edit" />
         <action id="helloutau.frequencyMap.divideBy2" text="&amp;Divide by 2" category="Edit" />
@@ -88,6 +94,7 @@
                 <action id="helloutau.edit.redo" />
                 <separator />
                 <action id="helloutau.frequencyMap.revert" />
+                <action id="helloutau.frequencyMap.revertSelection" />
                 <separator />
                 <action id="helloutau.frequencyMap.multiplyBy2" />
                 <action id="helloutau.frequencyMap.divideBy2" />
@@ -95,6 +102,8 @@
                 <action id="helloutau.frequencyMap.divideBy3" />
                 <action id="helloutau.frequencyMap.unvoice" />
                 <action id="helloutau.frequencyMap.interpolate" />
+                <separator />
+                <action id="helloutau.frequencyMap.keyToAverage" />
             </menu>
             <menu id="helloutau.frequencyMap.select">
                 <action id="helloutau.select.selectAll" />

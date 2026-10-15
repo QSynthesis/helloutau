@@ -11,6 +11,9 @@
 
 class QCheckBox;
 class QLabel;
+class QLineEdit;
+class QListWidget;
+class QPushButton;
 class QTreeWidget;
 
 namespace QAK {
@@ -26,6 +29,7 @@ namespace hello::daw {
 
     class Editor;
     class FrequencyMapView;
+    class SamplePreview;
 
     /// The dialog that edits the frequency maps of the audio files of a voice bank in one format.
     /// See the editing in docs/FrequencyMaps.md.
@@ -43,6 +47,13 @@ namespace hello::daw {
     /// the setting FrequencyMapSettings::removesCachesOnSave(), and asks before it overwrites a
     /// map file that changed on disk after it was read. Closing the dialog with a modified map
     /// asks whether to save every modified map.
+    ///
+    /// Beside the file list the dialog has the right side of the window of frqeditor: the key
+    /// with its button Update, the list of the frequencies of the frames, which selects the
+    /// frames of the editing area, the frequency of the current frame with its button Set, the
+    /// preview, the information of the audio file, the editing area and a row of buttons for the
+    /// selected frames. The preview synthesizes the audio file at the key with the map as edited
+    /// and the resampler of the settings, or plays the audio file as it is with \c $direct.
     ///
     /// The menus and the shortcuts are those of Editor::FrequencyMapEditorKind. The actions of
     /// contributions are added when the dialog is created.
@@ -99,6 +110,18 @@ namespace hello::daw {
 
         QTreeWidget *fileList() const;
         FrequencyMapView *view() const;
+        /// Returns the edit of the key, which sets the key when its editing finishes
+        QLineEdit *keyEdit() const;
+        /// Returns the list of the frequencies of the frames, one row for each frame
+        QListWidget *frameList() const;
+        /// Returns the edit of the frequency of the current frame, which Set writes
+        QLineEdit *frequencyEdit() const;
+        QPushButton *setButton() const;
+        QPushButton *playButton() const;
+        /// Returns the box that plays the audio file as it is, as \c $direct=True of UTAU does
+        QCheckBox *directBox() const;
+        /// Returns the preview that the button Play starts.
+        SamplePreview *preview() const;
         /// Returns the box that removes the analysis caches on save, for this dialog only
         QCheckBox *removeCachesBox() const;
         /// Returns the label that explains why the current file cannot be edited, hidden if it

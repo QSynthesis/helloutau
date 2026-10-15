@@ -1,6 +1,7 @@
 #include "EditFrequencyMapsDialog.h"
 
 #include <atomic>
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <map>
@@ -10,16 +11,24 @@
 #include <QtCore/QEventLoop>
 #include <QtCore/QHash>
 #include <QtCore/QSignalBlocker>
+#include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>
+#include <QtWidgets/QGridLayout>
+#include <QtWidgets/QGroupBox>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QListWidget>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QProgressDialog>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QSlider>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
@@ -31,6 +40,7 @@
 
 #include <hellokit/AudioFile/Spectrogram.h>
 #include <hellokit/AudioFile/WaveAudio.h>
+#include <hellokit/Support/TemporaryStorage.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyMapRevisionBuffer.h>
 
@@ -39,6 +49,7 @@
 #include "Editor.h"
 #include "FrequencyMapView.h"
 #include "FrequencyViewKeyboardModifiers.h"
+#include "SamplePreview.h"
 
 namespace hello::daw {
 
@@ -46,6 +57,18 @@ namespace hello::daw {
 
         QString textOf(const std::filesystem::path &path) {
             return QString::fromStdU16String(path.u16string());
+        }
+
+        // Returns the text of a frequency in the list and the edits, as frqeditor writes it,
+        // or ---- for an unvoiced frame.
+        QString frequencyText(double frequency) {
+            return frequency > kit::FrequencyMapRevisionBuffer::lowestFrequency
+                       ? QString::asprintf("%.8f", frequency)
+                       : QStringLiteral("----");
+        }
+
+        double noteOf(double frequency) {
+            return 69 + 12 * std::log2(frequency / 440);
         }
 
         QString presence(bool present) {
@@ -106,6 +129,181 @@ namespace hello::daw {
         QLabel *message = nullptr;
         QCheckBox *removeCaches = nullptr;
         QAK::WidgetActionContext *context = nullptr;
+
+        // The right side of the window of frqeditor
+        QLineEdit *keyEdit = nullptr;
+        QPushButton *updateKeyButton = nullptr;
+        QListWidget *frameList = nullptr;
+        QLineEdit *frequencyEdit = nullptr;
+        QPushButton *setButton = nullptr;
+        QSlider *pitchSlider = nullptr;
+        QLabel *pitchLabel = nullptr;
+        QLineEdit *modulationEdit = nullptr;
+        QLineEdit *flagsEdit = nullptr;
+        QCheckBox *directBox = nullptr;
+        QPushButton *playButton = nullptr;
+        QLabel *wavInfo = nullptr;
+        // The buttons of the row below, with the actions that they trigger
+        QList<std::pair<QPushButton *, QString>> editButtons;
+        SamplePreview *preview = nullptr;
+        // The folder of the audio file and the map of the preview
+        std::unique_ptr<QTemporaryDir> previewDirectory;
+        // The buffer whose frames the list shows
+        const kit::FrequencyMapRevisionBuffer *listed = nullptr;
+
+        // Shows the key, the frames and the current frequency of the current buffer.
+        void refreshPanel() {
+            const auto buffer = currentBuffer();
+            {
+                const QSignalBlocker blocker(keyEdit);
+                keyEdit->setText(buffer ? frequencyText(buffer->key()) : QString());
+            }
+            const bool keyEditable = buffer && buffer->map().averageFrequency.has_value();
+            keyEdit->setEnabled(keyEditable);
+            updateKeyButton->setEnabled(keyEditable);
+
+            static const std::vector<kit::FrequencyMap::Frame> none;
+            const auto &frames = buffer ? buffer->map().frames : none;
+            {
+                const QSignalBlocker blocker(frameList);
+                if (listed != buffer || frameList->count() != int(frames.size())) {
+                    frameList->clear();
+                    for (std::size_t i = 0; i < frames.size(); ++i) {
+                        frameList->addItem(QString());
+                    }
+                    listed = buffer;
+                }
+                for (std::size_t i = 0; i < frames.size(); ++i) {
+                    const auto item = frameList->item(int(i));
+                    const auto text = frequencyText(frames[i].frequency);
+                    if (item->text() != text) {
+                        item->setText(text);
+                    }
+                }
+                frameList->clearSelection();
+                if (const auto selection = view->selection()) {
+                    const auto first = frameList->model()->index(int(selection->first), 0);
+                    const auto last =
+                        frameList->model()->index(int(selection->first + selection->second - 1), 0);
+                    frameList->selectionModel()->select(QItemSelection(first, last),
+                                                        QItemSelectionModel::Select);
+                    frameList->scrollToItem(frameList->item(int(selection->first)));
+                }
+            }
+            updateFrequencyEdit();
+            playButton->setEnabled(audio != nullptr);
+        }
+
+        void updateFrequencyEdit() {
+            const auto buffer = currentBuffer();
+            const int row = frameList->currentRow();
+            const bool valid = buffer && row >= 0 && std::size_t(row) < buffer->map().frames.size();
+            frequencyEdit->setText(
+                valid ? frequencyText(buffer->map().frames[std::size_t(row)].frequency)
+                      : QString());
+            frequencyEdit->setEnabled(valid);
+            setButton->setEnabled(valid);
+        }
+
+        // Selects the frames of the rows that the list selects, which are contiguous.
+        void selectListedFrames() {
+            const auto rows = frameList->selectionModel()->selectedRows();
+            if (rows.isEmpty()) {
+                view->clearSelection();
+                return;
+            }
+            int first = rows.front().row();
+            int last = first;
+            for (const auto &index : rows) {
+                first = std::min(first, index.row());
+                last = std::max(last, index.row());
+            }
+            view->setSelection(std::size_t(first), std::size_t(last - first + 1));
+        }
+
+        // Returns the text of the information of the audio file of the current file.
+        QString wavInfoText() {
+            if (!audio) {
+                return QString();
+            }
+            QStringList lines{tr("Sample rate: %1 Hz").arg(audio->sampleRate),
+                              tr("Channels: %1").arg(audio->channels),
+                              tr("Length: %1 ms").arg(std::lround(audio->duration()))};
+            if (const auto buffer = currentBuffer()) {
+                lines.push_back(tr("Frames: %1").arg(buffer->map().frames.size()));
+                lines.push_back(tr("Hop: %1 samples").arg(buffer->map().hop));
+            }
+            return lines.join(QLatin1Char('\n'));
+        }
+
+        // Synthesizes the audio file at the key with the map as edited, as the preview of
+        // frqeditor does, or plays the audio file as it is with $direct. Stops a preview in
+        // progress instead.
+        void play() {
+            stdc_decl_t;
+            if (preview->state() != SamplePreview::Stopped) {
+                preview->stop();
+                return;
+            }
+            const auto title = tr("Preview");
+            kit::DiagnosticList diagnostics;
+            if (!audio) {
+                return;
+            }
+            if (directBox->isChecked()) {
+                if (!preview->play(audio, 0, std::nullopt, diagnostics)) {
+                    DiagnosticBox::report(&decl, title, diagnostics);
+                }
+                return;
+            }
+            const auto entry = openedOf(current);
+            if (!entry) {
+                return;
+            }
+            if (!previewDirectory) {
+                previewDirectory = std::make_unique<QTemporaryDir>(
+                    kit::TemporaryStorage::templatePath(QStringLiteral("frequency-preview")));
+            }
+            const std::filesystem::path folder(previewDirectory->path().toStdU16String());
+            const auto &file = files.at(current);
+            const auto name = file.path.filename();
+            std::error_code error;
+            std::filesystem::copy_file(file.path, folder / name,
+                                       std::filesystem::copy_options::overwrite_existing, error);
+            if (error) {
+                QMessageBox::warning(&decl, title,
+                                     tr("The audio file cannot be copied for the preview."));
+                return;
+            }
+            // The map as edited beside the copy, and no cache of an earlier preview
+            kit::FrequencyFormat::MapWrite write;
+            write.wav = name;
+            write.map = entry->buffer->map();
+            write.sampleRate = entry->sampleRate;
+            if (!kit::FrequencyFormats::writeMaps(format, folder, {write}, true, diagnostics)) {
+                DiagnosticBox::report(&decl, title, diagnostics);
+                return;
+            }
+            kit::VoiceSample sample;
+            sample.path = folder / name;
+            sample.fileName = textOf(name);
+            sample.hasEntry = true;
+            const int noteNum = std::clamp(
+                int(std::lround(noteOf(entry->buffer->key()))) + pitchSlider->value(), 0, 127);
+            // The whole audio file at 120 beats per minute, 480 ticks for 500 milliseconds
+            const int length = std::max(1, int(std::lround(audio->duration() * 480 / 500)));
+            SamplePreview::NoteOptions options;
+            options.flags = flagsEdit->text();
+            bool valid = false;
+            const int modulation = modulationEdit->text().toInt(&valid);
+            // 100 percent without a number, as in frqeditor
+            options.modulation = valid ? std::clamp(modulation, -200, 200) : 100;
+            const std::filesystem::path resampler(
+                editor->settings().rendering().resampler().toStdU16String());
+            if (!preview->synthesize(sample, noteNum, length, resampler, options, diagnostics)) {
+                DiagnosticBox::report(&decl, title, diagnostics);
+            }
+        }
         QHash<QString, QAction *> actions;
 
         // Returns the map file of the file at index in its folder.
@@ -259,6 +457,7 @@ namespace hello::daw {
             message->setVisible(!reason.isEmpty());
             view->setTitle(textOf(file.path.filename()));
             view->setBuffer(currentBuffer());
+            wavInfo->setText(wavInfoText());
             updateActions();
             return true;
         }
@@ -357,6 +556,9 @@ namespace hello::daw {
             enable("helloutau.edit.undo", buffer && buffer->canUndo());
             enable("helloutau.edit.redo", buffer && buffer->canRedo());
             enable("helloutau.frequencyMap.revert", modified);
+            enable("helloutau.frequencyMap.revertSelection", modified && selection.has_value());
+            enable("helloutau.frequencyMap.keyToAverage",
+                   buffer && selection && buffer->map().averageFrequency.has_value());
             for (const auto id :
                  {"helloutau.frequencyMap.multiplyBy2", "helloutau.frequencyMap.divideBy2",
                   "helloutau.frequencyMap.multiplyBy3", "helloutau.frequencyMap.divideBy3",
@@ -372,6 +574,12 @@ namespace hello::daw {
             if (current >= 0) {
                 updateRow(current);
             }
+            for (const auto &[button, id] : std::as_const(editButtons)) {
+                if (const auto action = actions.value(id)) {
+                    button->setEnabled(action->isEnabled());
+                }
+            }
+            refreshPanel();
         }
 
         // Runs an edit of the current buffer and shows its result.
@@ -479,8 +687,17 @@ namespace hello::daw {
                        [this] { edit([](auto &buffer) { return buffer.undo(); }); });
             addCommand(QStringLiteral("helloutau.edit.redo"),
                        [this] { edit([](auto &buffer) { return buffer.redo(); }); });
-            addCommand(QStringLiteral("helloutau.frequencyMap.revert"), [this] {
-                edit([](auto &buffer) { return buffer.revert(0, buffer.map().frames.size()); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.revert"),
+                       [this] { edit([](auto &buffer) { return buffer.revertAll(); }); });
+            addCommand(QStringLiteral("helloutau.frequencyMap.revertSelection"), [this] {
+                editSelection([](auto &buffer, std::size_t first, std::size_t count) {
+                    return buffer.revert(first, count);
+                });
+            });
+            addCommand(QStringLiteral("helloutau.frequencyMap.keyToAverage"), [this] {
+                editSelection([](auto &buffer, std::size_t first, std::size_t count) {
+                    return buffer.setKeyToMean(first, count);
+                });
             });
             const std::pair<const char *, double> factors[] = {
                 {"helloutau.frequencyMap.multiplyBy2", 2      },
@@ -615,19 +832,112 @@ namespace hello::daw {
         removeCachesNote->setWordWrap(true);
         removeCachesNote->setVisible(!caches.isEmpty());
 
+        // The right side of the window of frqeditor: the key and the frames in the left column,
+        // the frequency of the current frame, the preview and the information of the audio file
+        // in the middle column, the editing area at the right and the buttons along the bottom.
+        // The two columns keep their widths, as in frqeditor.
+        impl.keyEdit = new QLineEdit();
+        impl.updateKeyButton = new QPushButton(tr("&Update"));
+        auto keyLabel = new QLabel(tr("&Key"));
+        keyLabel->setBuddy(impl.keyEdit);
+        auto keyRow = new QHBoxLayout();
+        keyRow->addWidget(keyLabel);
+        keyRow->addWidget(impl.keyEdit, 1);
+        keyRow->addWidget(new QLabel(tr("Hz")));
+        keyRow->addWidget(impl.updateKeyButton);
+        impl.frameList = new QListWidget();
+        impl.frameList->setSelectionMode(QAbstractItemView::ContiguousSelection);
+        impl.frameList->setUniformItemSizes(true);
+        auto leftColumn = new QWidget();
+        leftColumn->setFixedWidth(200);
+        auto leftLayout = new QVBoxLayout(leftColumn);
+        leftLayout->setContentsMargins(0, 0, 0, 0);
+        leftLayout->addLayout(keyRow);
+        leftLayout->addWidget(impl.frameList, 1);
+
+        impl.frequencyEdit = new QLineEdit();
+        impl.setButton = new QPushButton(tr("<-- Se&t"));
+        impl.pitchSlider = new QSlider(Qt::Horizontal);
+        impl.pitchSlider->setRange(-12, 12);
+        impl.pitchSlider->setValue(0);
+        impl.pitchLabel = new QLabel(QStringLiteral("0"));
+        impl.modulationEdit = new QLineEdit();
+        impl.flagsEdit = new QLineEdit();
+        impl.directBox = new QCheckBox(QStringLiteral("$direct=True"));
+        impl.playButton = new QPushButton(tr("&Play"));
+        auto previewGroup = new QGroupBox(tr("Preview"));
+        auto previewLayout = new QGridLayout(previewGroup);
+        previewLayout->addWidget(new QLabel(tr("Pitch")), 0, 0, 1, 3);
+        previewLayout->addWidget(impl.pitchSlider, 1, 0, 1, 2);
+        previewLayout->addWidget(impl.pitchLabel, 1, 2);
+        previewLayout->addWidget(new QLabel(tr("Modulation")), 2, 0);
+        previewLayout->addWidget(impl.modulationEdit, 2, 1);
+        previewLayout->addWidget(new QLabel(QStringLiteral("%")), 2, 2);
+        previewLayout->addWidget(new QLabel(tr("Flags")), 3, 0);
+        previewLayout->addWidget(impl.flagsEdit, 3, 1, 1, 2);
+        previewLayout->addWidget(impl.directBox, 4, 0, 1, 3);
+        previewLayout->addWidget(impl.playButton, 5, 0, 1, 3, Qt::AlignHCenter);
+        impl.wavInfo = new QLabel();
+        impl.wavInfo->setWordWrap(true);
+        auto wavInfoGroup = new QGroupBox(tr("Information of the Audio File"));
+        auto wavInfoLayout = new QVBoxLayout(wavInfoGroup);
+        wavInfoLayout->addWidget(impl.wavInfo);
+        auto middleColumn = new QWidget();
+        middleColumn->setFixedWidth(180);
+        auto middleLayout = new QVBoxLayout(middleColumn);
+        middleLayout->setContentsMargins(0, 0, 0, 0);
+        middleLayout->addWidget(impl.frequencyEdit);
+        middleLayout->addWidget(impl.setButton, 0, Qt::AlignLeft);
+        middleLayout->addWidget(previewGroup);
+        middleLayout->addStretch(1);
+        middleLayout->addWidget(wavInfoGroup);
+
         auto editing = new QWidget();
         auto editingLayout = new QVBoxLayout(editing);
         editingLayout->setContentsMargins(0, 0, 0, 0);
         editingLayout->addWidget(impl.message);
         editingLayout->addWidget(impl.view, 1);
-        editingLayout->addWidget(impl.removeCaches);
-        editingLayout->addWidget(removeCachesNote);
+
+        // The buttons 1009 to 1016 of frqeditor
+        auto buttonRow = new QHBoxLayout();
+        buttonRow->setSpacing(2);
+        const std::pair<QString, const char *> editButtons[] = {
+            {QStringLiteral("x3"), "helloutau.frequencyMap.multiplyBy3"},
+            {QStringLiteral("x2"), "helloutau.frequencyMap.multiplyBy2"},
+            {QStringLiteral("-"), "helloutau.frequencyMap.unvoice"},
+            {QStringLiteral("/2"), "helloutau.frequencyMap.divideBy2"},
+            {QStringLiteral("/3"), "helloutau.frequencyMap.divideBy3"},
+            {tr("avg", "Interpolates the selected frames linearly."),
+             "helloutau.frequencyMap.interpolate"},
+            {tr("reload"), "helloutau.frequencyMap.revert"},
+            {tr("key to average of selected range"), "helloutau.frequencyMap.keyToAverage"},
+        };
+        for (const auto &[text, id] : editButtons) {
+            auto button = new QPushButton(text);
+            button->setFlat(true);
+            button->setMinimumWidth(0);
+            buttonRow->addWidget(button);
+            impl.editButtons.push_back({button, QLatin1String(id)});
+        }
+        buttonRow->addStretch(1);
+
+        auto panel = new QWidget();
+        auto grid = new QGridLayout(panel);
+        grid->setContentsMargins(0, 0, 0, 0);
+        grid->addWidget(leftColumn, 0, 0);
+        grid->addWidget(middleColumn, 0, 1);
+        grid->addWidget(editing, 0, 2);
+        grid->addLayout(buttonRow, 1, 0, 1, 3);
+        grid->addWidget(impl.removeCaches, 2, 0, 1, 3);
+        grid->addWidget(removeCachesNote, 3, 0, 1, 3);
+        grid->setColumnStretch(2, 1);
+        grid->setRowStretch(0, 1);
 
         auto splitter = new QSplitter();
         splitter->addWidget(impl.list);
-        splitter->addWidget(editing);
+        splitter->addWidget(panel);
         splitter->setStretchFactor(0, 1);
-        splitter->setStretchFactor(1, 3);
+        splitter->setStretchFactor(1, 4);
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Close);
         auto menuBar = new QMenuBar();
@@ -635,10 +945,66 @@ namespace hello::daw {
         layout->setMenuBar(menuBar);
         layout->addWidget(splitter, 1);
         layout->addWidget(buttons);
-        resize(1000, 640);
+        resize(1200, 680);
         impl.initActions(menuBar);
 
         connect(buttons, &QDialogButtonBox::rejected, this, &EditFrequencyMapsDialog::reject);
+        for (const auto &[button, id] : std::as_const(impl.editButtons)) {
+            connect(button, &QPushButton::clicked, this, [this, id = id] {
+                stdc_impl_t;
+                if (const auto action = impl.actions.value(id); action && action->isEnabled()) {
+                    action->trigger();
+                }
+            });
+        }
+        connect(impl.frameList, &QListWidget::itemSelectionChanged, this, [this] {
+            stdc_impl_t;
+            impl.selectListedFrames();
+        });
+        connect(impl.frameList, &QListWidget::currentRowChanged, this, [this] {
+            stdc_impl_t;
+            impl.updateFrequencyEdit();
+        });
+        const auto setFrequency = [this] {
+            stdc_impl_t;
+            const int row = impl.frameList->currentRow();
+            const double frequency = impl.frequencyEdit->text().toDouble();
+            impl.edit([row, frequency](auto &buffer) {
+                return row >= 0 && buffer.setFrequency(std::size_t(row), frequency);
+            });
+        };
+        connect(impl.setButton, &QPushButton::clicked, this, setFrequency);
+        connect(impl.frequencyEdit, &QLineEdit::returnPressed, this, setFrequency);
+        const auto setKey = [this] {
+            stdc_impl_t;
+            bool valid = false;
+            const double key = impl.keyEdit->text().toDouble(&valid);
+            if (valid) {
+                impl.edit([key](auto &buffer) { return buffer.setKey(key); });
+            }
+            impl.refreshPanel();
+        };
+        connect(impl.updateKeyButton, &QPushButton::clicked, this, setKey);
+        connect(impl.keyEdit, &QLineEdit::editingFinished, this, setKey);
+        connect(impl.pitchSlider, &QSlider::valueChanged, this, [this](int value) {
+            stdc_impl_t;
+            impl.pitchLabel->setNum(value);
+        });
+        impl.preview = new SamplePreview(this);
+        connect(impl.playButton, &QPushButton::clicked, this, [this] {
+            stdc_impl_t;
+            impl.play();
+        });
+        connect(impl.preview, &SamplePreview::stateChanged, this,
+                [this](SamplePreview::State state) {
+                    stdc_impl_t;
+                    impl.playButton->setText(state == SamplePreview::Stopped ? tr("&Play")
+                                                                             : tr("&Stop"));
+                });
+        connect(impl.preview, &SamplePreview::failed, this,
+                [this](const kit::DiagnosticList &diagnostics) {
+                    DiagnosticBox::report(this, tr("Preview"), diagnostics);
+                });
         connect(impl.list, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem *item) {
             stdc_impl_t;
             if (item) {
@@ -733,6 +1099,41 @@ namespace hello::daw {
     FrequencyMapView *EditFrequencyMapsDialog::view() const {
         stdc_impl_t;
         return impl.view;
+    }
+
+    QLineEdit *EditFrequencyMapsDialog::keyEdit() const {
+        stdc_impl_t;
+        return impl.keyEdit;
+    }
+
+    QListWidget *EditFrequencyMapsDialog::frameList() const {
+        stdc_impl_t;
+        return impl.frameList;
+    }
+
+    QLineEdit *EditFrequencyMapsDialog::frequencyEdit() const {
+        stdc_impl_t;
+        return impl.frequencyEdit;
+    }
+
+    QPushButton *EditFrequencyMapsDialog::setButton() const {
+        stdc_impl_t;
+        return impl.setButton;
+    }
+
+    QPushButton *EditFrequencyMapsDialog::playButton() const {
+        stdc_impl_t;
+        return impl.playButton;
+    }
+
+    QCheckBox *EditFrequencyMapsDialog::directBox() const {
+        stdc_impl_t;
+        return impl.directBox;
+    }
+
+    SamplePreview *EditFrequencyMapsDialog::preview() const {
+        stdc_impl_t;
+        return impl.preview;
     }
 
     QCheckBox *EditFrequencyMapsDialog::removeCachesBox() const {
