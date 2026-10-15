@@ -34,7 +34,7 @@
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QSplitter>
-#include <QtWidgets/QToolButton>
+#include <QtWidgets/QToolBar>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -49,10 +49,13 @@
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyMapRevisionBuffer.h>
 
+#include <helloutau/Widgets/ToolBarPalette.h>
+
 #include "AppSettings.h"
 #include "DiagnosticBox.h"
 #include "Editor.h"
 #include "FrequencyMapView.h"
+#include "FrequencyMapWaveform.h"
 #include "FrequencyViewKeyboardModifiers.h"
 #include "SamplePreview.h"
 
@@ -131,6 +134,10 @@ namespace hello::daw {
 
         QTreeWidget *list = nullptr;
         FrequencyMapView *view = nullptr;
+        FrequencyMapWaveform *waveform = nullptr;
+        QToolBar *toolBar = nullptr;
+        // Moves the playhead of the waveform while the preview plays
+        QTimer *playheadTimer = nullptr;
         QLabel *message = nullptr;
         QCheckBox *removeCaches = nullptr;
         QAK::WidgetActionContext *context = nullptr;
@@ -239,6 +246,16 @@ namespace hello::daw {
                 lines.push_back(tr("Hop: %1 samples").arg(buffer->map().hop));
             }
             return lines.join(QLatin1Char('\n'));
+        }
+
+        // Moves the playhead of the waveform to the time heard: the time of the audio file, or
+        // the time of the synthesized note, which spans the audio file at about the same pace.
+        void movePlayhead() {
+            auto time = preview->position();
+            if (!time) {
+                time = preview->notePosition();
+            }
+            waveform->setPlayhead(time);
         }
 
         // Synthesizes the audio file at the key with the map as edited, as the preview of
@@ -424,12 +441,16 @@ namespace hello::daw {
                 left && current != index && !left->buffer->canUndo() && !left->buffer->canRedo()) {
                 opened.erase(current);
             }
+            if (current != index) {
+                preview->stop();
+            }
             current = index;
             {
                 const QSignalBlocker blocker(list);
                 list->setCurrentItem(list->topLevelItem(index));
             }
             audio = read;
+            waveform->setAudio(read);
             spectrumSource = spectrum ? read : nullptr;
             view->setSpectrogram(spectrum);
             QString reason;
@@ -531,7 +552,7 @@ namespace hello::daw {
             "helloutau.frequencyMap.flameColors", "helloutau.frequencyMap.rubyColors",
         };
 
-        // The actions of the tools of the view, in the order of their buttons
+        // The actions of the tools of the view
         static constexpr std::pair<const char *, FrequencyMapView::Tool> toolActionIds[] = {
             {"helloutau.select.selectTool", FrequencyMapView::SelectTool},
             {"helloutau.select.penTool",    FrequencyMapView::PenTool   },
@@ -582,6 +603,11 @@ namespace hello::daw {
             enable("helloutau.select.deselect", selection.has_value());
             enable("helloutau.frequencyMap.previousFile", current > 0);
             enable("helloutau.frequencyMap.nextFile", current + 1 < files.size());
+            enable("helloutau.frequencyMap.synthesize", audio != nullptr);
+            if (const auto action =
+                    actions.value(QStringLiteral("helloutau.frequencyMap.synthesize"))) {
+                playButton->setEnabled(action->isEnabled());
+            }
             if (current >= 0) {
                 updateRow(current);
             }
@@ -682,6 +708,12 @@ namespace hello::daw {
             stdc_decl_t;
             context = new QAK::WidgetActionContext(&decl);
             context->addMenuBar(QStringLiteral("helloutau.frequencyMapEditorMenu"), menuBar);
+            context->addToolBar(QStringLiteral("helloutau.frequencyMap.toolBar"), toolBar);
+            // The same command as the button Play of the preview
+            addCommand(QStringLiteral("helloutau.frequencyMap.synthesize"), [this] { play(); });
+            addCommand(QStringLiteral("helloutau.playback.stop"), [this] {
+                preview->stop();
+            })->setEnabled(false);
             addCommand(QStringLiteral("helloutau.file.save"), [this] {
                 stdc_decl_t;
                 decl.save();
@@ -915,7 +947,15 @@ namespace hello::daw {
         auto editingLayout = new QVBoxLayout(editing);
         editingLayout->setContentsMargins(0, 0, 0, 0);
         editingLayout->addWidget(impl.message);
-        editingLayout->addWidget(impl.view, 1);
+        // The waveform below the editing area, which follows its time axis
+        impl.waveform = new FrequencyMapWaveform(impl.view);
+        auto editingSplitter = new QSplitter(Qt::Vertical);
+        editingSplitter->setChildrenCollapsible(false);
+        editingSplitter->addWidget(impl.view);
+        editingSplitter->addWidget(impl.waveform);
+        editingSplitter->setStretchFactor(0, 3);
+        editingSplitter->setStretchFactor(1, 1);
+        editingLayout->addWidget(editingSplitter, 1);
 
         // The buttons 1009 to 1016 of frqeditor
         auto buttonRow = new QHBoxLayout();
@@ -939,16 +979,12 @@ namespace hello::daw {
             impl.editButtons.push_back({button, QLatin1String(id)});
         }
         buttonRow->addStretch(1);
-        // The buttons of the tools of the editing area at the end. Their actions are set after
-        // initActions().
-        QList<std::pair<QToolButton *, QString>> toolButtons;
-        for (const auto &[id, tool] : Impl::toolActionIds) {
-            Q_UNUSED(tool);
-            auto button = new QToolButton();
-            button->setAutoRaise(true);
-            buttonRow->addWidget(button);
-            toolButtons.push_back({button, QLatin1String(id)});
-        }
+        // The tool bar at the end, which QActionKit fills from the layout of
+        // helloutau.frequencyMap.toolBar: the tools of the editing area and the playback
+        impl.toolBar = new QToolBar();
+        impl.toolBar->setObjectName(QStringLiteral("frequencyMapToolBar"));
+        followToolBarPalette(impl.toolBar);
+        buttonRow->addWidget(impl.toolBar);
 
         auto panel = new QWidget();
         auto grid = new QGridLayout(panel);
@@ -975,9 +1011,6 @@ namespace hello::daw {
         layout->addWidget(splitter, 1);
         layout->addWidget(buttons);
         impl.initActions(menuBar);
-        for (const auto &[button, id] : std::as_const(toolButtons)) {
-            button->setDefaultAction(impl.actions.value(id));
-        }
 
         // Wide enough to show the whole list beside the right side with an editing area of
         // editingWidth, within the screen. If the screen is narrower, the list is narrowed so that
@@ -1041,15 +1074,34 @@ namespace hello::daw {
             impl.pitchLabel->setNum(value);
         });
         impl.preview = new SamplePreview(this);
+        impl.playheadTimer = new QTimer(this);
+        impl.playheadTimer->setInterval(30);
+        connect(impl.playheadTimer, &QTimer::timeout, this, [this] {
+            stdc_impl_t;
+            impl.movePlayhead();
+        });
         connect(impl.playButton, &QPushButton::clicked, this, [this] {
             stdc_impl_t;
-            impl.play();
+            if (const auto action =
+                    impl.actions.value(QStringLiteral("helloutau.frequencyMap.synthesize"));
+                action && action->isEnabled()) {
+                action->trigger();
+            }
         });
         connect(impl.preview, &SamplePreview::stateChanged, this,
                 [this](SamplePreview::State state) {
                     stdc_impl_t;
                     impl.playButton->setText(state == SamplePreview::Stopped ? tr("&Play")
                                                                              : tr("&Stop"));
+                    impl.actions.value(QStringLiteral("helloutau.playback.stop"))
+                        ->setEnabled(state != SamplePreview::Stopped);
+                    if (state == SamplePreview::Playing) {
+                        impl.playheadTimer->start();
+                        impl.movePlayhead();
+                    } else {
+                        impl.playheadTimer->stop();
+                        impl.waveform->setPlayhead(std::nullopt);
+                    }
                 });
         connect(impl.preview, &SamplePreview::failed, this,
                 [this](const kit::DiagnosticList &diagnostics) {
@@ -1149,6 +1201,11 @@ namespace hello::daw {
     FrequencyMapView *EditFrequencyMapsDialog::view() const {
         stdc_impl_t;
         return impl.view;
+    }
+
+    FrequencyMapWaveform *EditFrequencyMapsDialog::waveform() const {
+        stdc_impl_t;
+        return impl.waveform;
     }
 
     QLineEdit *EditFrequencyMapsDialog::keyEdit() const {

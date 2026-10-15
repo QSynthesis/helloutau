@@ -25,7 +25,7 @@ namespace hello::daw {
             {"helloutau.view.showParameters",      "helloutau/showParameters.svg"   },
             {"helloutau.edit.crossfadeP2P3",       "helloutau/crossfadeP2P3.svg"    },
             {"helloutau.edit.crossfadeP1P4",       "helloutau/crossfadeP1P4.svg"    },
-            {"helloutau.edit.resetEnvelopes",      "helloutau/resetEnvelope.svg"     },
+            {"helloutau.edit.resetEnvelopes",      "helloutau/resetEnvelope.svg"    },
             {"helloutau.edit.find",                "intellij/search.svg"            },
             {"helloutau.playback.play",            "intellij/run.svg"               },
             {"helloutau.playback.stop",            "intellij/stop.svg"              },
@@ -33,6 +33,7 @@ namespace hello::daw {
             {"helloutau.voiceBank.playAudio",      "intellij/run.svg"               },
             {"helloutau.voiceBank.playSpan",       "helloutau/playSpan.svg"         },
             {"helloutau.voiceBank.synthesize",     "intellij/lightning.svg"         },
+            {"helloutau.frequencyMap.synthesize",  "intellij/lightning.svg"         },
         };
         // The file of the checked states, if it differs. The project window shows the checked
         // states of the play command while it plays or renders.

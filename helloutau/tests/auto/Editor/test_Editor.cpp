@@ -89,6 +89,7 @@
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/FrequencyMapView.h>
+#include <helloutau/Editor/FrequencyMapWaveform.h>
 #include <helloutau/Editor/Dialogs/NotePropertiesDialog.h>
 #include <helloutau/Editor/OtoWaveformView.h>
 #include <helloutau/Editor/Dialogs/ProjectPropertiesDialog.h>
@@ -3265,6 +3266,30 @@ private Q_SLOTS:
             QVERIFY(fs::exists(input.parent_path() / "a_wav.frq"));
             QCOMPARE(recorder->recorded.at(2), QStringLiteral("A3"));
             dialog->preview()->stop();
+            // The command of the playback menu is the button.
+            recorder->recorded.clear();
+            trigger("helloutau.frequencyMap.synthesize");
+            QTRY_VERIFY(dialog->preview()->state() != SamplePreview::Synthesizing);
+            QCOMPARE(recorder->recorded.value(2), QStringLiteral("A3"));
+            dialog->preview()->stop();
+
+            // The waveform below the editing area shows the audio file. With $direct the command
+            // plays the audio file as it is if the machine has an output device, and the stop
+            // command stops it.
+            QCOMPARE(dialog->waveform()->audio()->frameCount(), qsizetype(1000));
+            if (AudioEngine::instance()->sampleRate() > 0) {
+                const auto stop =
+                    dialog->actionContext()->action(QStringLiteral("helloutau.playback.stop"));
+                QVERIFY(!stop->isEnabled());
+                dialog->directBox()->setChecked(true);
+                trigger("helloutau.frequencyMap.synthesize");
+                QCOMPARE(dialog->preview()->state(), SamplePreview::Playing);
+                QVERIFY(stop->isEnabled());
+                stop->trigger();
+                QCOMPARE(dialog->preview()->state(), SamplePreview::Stopped);
+                QVERIFY(!stop->isEnabled());
+                dialog->directBox()->setChecked(false);
+            }
 
             dialog->view()->selectAll();
             trigger("helloutau.frequencyMap.multiplyBy2");

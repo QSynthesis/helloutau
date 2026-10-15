@@ -29,6 +29,7 @@ namespace hello::daw {
 
     class Editor;
     class FrequencyMapView;
+    class FrequencyMapWaveform;
     class SamplePreview;
 
     /// The dialog that edits the frequency maps of the audio files of a voice bank in one format.
@@ -51,10 +52,12 @@ namespace hello::daw {
     /// Beside the file list the dialog has the right side of the window of frqeditor: the key
     /// with its button Update, the list of the frequencies of the frames, which selects the
     /// frames of the editing area, the frequency of the current frame with its button Set, the
-    /// preview, the information of the audio file, the editing area and a row of buttons for the
-    /// selected frames, which ends with the buttons of the select tool and the pen of the editing
-    /// area. The preview synthesizes the audio file at the key with the map as edited and the
-    /// resampler of the settings, or plays the audio file as it is with \c $direct.
+    /// preview, the information of the audio file, the editing area with the waveform below it,
+    /// and a row of buttons for the selected frames, which ends with the tool bar
+    /// \c helloutau.frequencyMap.toolBar. The preview synthesizes the audio file at the key with
+    /// the map as edited and the resampler of the settings, or plays the audio file as it is with
+    /// \c $direct. The command Synthesize and Play of the playback menu triggers the preview. The
+    /// playhead of the waveform follows the playback.
     ///
     /// The dialog opens wide enough to show the whole file list, unless the screen is narrower.
     ///
@@ -113,6 +116,8 @@ namespace hello::daw {
 
         QTreeWidget *fileList() const;
         FrequencyMapView *view() const;
+        /// Returns the waveform of the audio file below the editing area.
+        FrequencyMapWaveform *waveform() const;
         /// Returns the edit of the key, which sets the key when its editing finishes
         QLineEdit *keyEdit() const;
         /// Returns the list of the frequencies of the frames, one row for each frame

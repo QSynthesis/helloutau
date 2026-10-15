@@ -34,6 +34,13 @@
         <action id="helloutau.select.selectTool" text="&amp;Select Tool" category="Select"
                 shortcut="V" />
         <action id="helloutau.select.penTool" text="P&amp;en Tool" category="Select" shortcut="B" />
+        <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
+
+        <!-- The audio file synthesized by the resampler of the settings with the map as edited,
+             or the audio file as it is with $direct=True, or a stop of the playback. The button
+             Play of the preview triggers this command. -->
+        <action id="helloutau.frequencyMap.synthesize" text="&amp;Synthesize and Play"
+                category="Playback" shortcut="Ctrl+Return" />
 
         <!-- Every modified frequency map in order, as Save All of frqeditor -->
         <action id="helloutau.frequencyMap.saveAll" text="Save &amp;All" category="File"
@@ -80,6 +87,9 @@
         <menu id="helloutau.frequencyMap.edit" text="&amp;Edit" />
         <menu id="helloutau.frequencyMap.select" text="&amp;Select" />
         <menu id="helloutau.frequencyMap.view" text="&amp;View" />
+        <menu id="helloutau.frequencyMap.playback" text="&amp;Playback" />
+        <!-- The tool bar at the end of the row of buttons, which the dialog places -->
+        <menu id="helloutau.frequencyMap.toolBar" text="Editing Toolbar" topLevel="true" />
         <menu id="helloutau.frequencyMap.spectrum" text="Spec&amp;trogram" />
         <menu id="helloutau.frequencyMap.colors" text="&amp;Colors" />
         <menu id="helloutau.frequencyMap.brightness" text="&amp;Brightness" />
@@ -139,6 +149,17 @@
                     </menu>
                 </menu>
             </menu>
+            <menu id="helloutau.frequencyMap.playback">
+                <action id="helloutau.frequencyMap.synthesize" />
+                <action id="helloutau.playback.stop" />
+            </menu>
+        </menu>
+        <menu id="helloutau.frequencyMap.toolBar">
+            <action id="helloutau.select.selectTool" />
+            <action id="helloutau.select.penTool" />
+            <separator />
+            <action id="helloutau.frequencyMap.synthesize" />
+            <action id="helloutau.playback.stop" />
         </menu>
     </layouts>
 </actionExtension>

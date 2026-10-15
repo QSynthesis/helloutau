@@ -622,6 +622,10 @@
         <translation>UST(&amp;U)...</translation>
     </message>
     <message>
+        <source>&amp;Synthesize and Play</source>
+        <translation>合成播放(&amp;S)</translation>
+    </message>
+    <message>
         <source>Save &amp;All</source>
         <translation>全部保存(&amp;A)</translation>
     </message>
@@ -712,6 +716,10 @@
     <message>
         <source>Frequency Map Editor Menu</source>
         <translation>频率表编辑器菜单</translation>
+    </message>
+    <message>
+        <source>Editing Toolbar</source>
+        <translation>编辑工具栏</translation>
     </message>
     <message>
         <source>Spec&amp;trogram</source>
