@@ -37,6 +37,7 @@
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QToolBar>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -167,7 +168,7 @@ namespace hello::daw {
         QPushButton *playButton = nullptr;
         QLabel *wavInfo = nullptr;
         // The buttons of the row below, with the actions that they trigger
-        QList<std::pair<QPushButton *, QString>> editButtons;
+        QList<std::pair<QToolButton *, QString>> editButtons;
         SamplePreview *preview = nullptr;
         // The folder of the audio file and the map of the preview
         std::unique_ptr<QTemporaryDir> previewDirectory;
@@ -708,11 +709,6 @@ namespace hello::daw {
             }
             if (current >= 0) {
                 updateRow(current);
-            }
-            for (const auto &[button, id] : std::as_const(editButtons)) {
-                if (const auto action = actions.value(id)) {
-                    button->setEnabled(action->isEnabled());
-                }
             }
             refreshPanel();
         }
@@ -1267,8 +1263,8 @@ namespace hello::daw {
         impl.updateKeyButton = new QPushButton(tr("&Update"));
         auto keyLabel = new QLabel(tr("&Key"));
         keyLabel->setBuddy(impl.keyEdit);
+        // The label above the field, so that the field takes the width of the column
         auto keyRow = new QHBoxLayout();
-        keyRow->addWidget(keyLabel);
         keyRow->addWidget(impl.keyEdit, 1);
         keyRow->addWidget(new QLabel(tr("Hz")));
         keyRow->addWidget(impl.updateKeyButton);
@@ -1279,6 +1275,7 @@ namespace hello::daw {
         leftColumn->setFixedWidth(200);
         auto leftLayout = new QVBoxLayout(leftColumn);
         leftLayout->setContentsMargins(0, 0, 0, 0);
+        leftLayout->addWidget(keyLabel);
         leftLayout->addLayout(keyRow);
         leftLayout->addWidget(impl.frameList, 1);
 
@@ -1333,24 +1330,22 @@ namespace hello::daw {
         editingSplitter->setStretchFactor(1, 1);
         editingLayout->addWidget(editingSplitter, 1);
 
-        // The buttons 1009 to 1016 of frqeditor
+        // The buttons 1009 to 1016 of frqeditor, as icons of the commands. Each button takes the
+        // icon, the tool tip and the enabled state of its command once the commands exist.
         auto buttonRow = new QHBoxLayout();
         buttonRow->setSpacing(2);
-        const std::pair<QString, const char *> editButtons[] = {
-            {QStringLiteral("x3"), "helloutau.frequencyMap.multiplyBy3"},
-            {QStringLiteral("x2"), "helloutau.frequencyMap.multiplyBy2"},
-            {QStringLiteral("-"), "helloutau.frequencyMap.unvoice"},
-            {QStringLiteral("/2"), "helloutau.frequencyMap.divideBy2"},
-            {QStringLiteral("/3"), "helloutau.frequencyMap.divideBy3"},
-            {tr("avg", "Interpolates the selected frames linearly."),
-             "helloutau.frequencyMap.interpolate"},
-            {tr("reload"), "helloutau.frequencyMap.revert"},
-            {tr("key to average of selected range"), "helloutau.frequencyMap.keyToAverage"},
-        };
-        for (const auto &[text, id] : editButtons) {
-            auto button = new QPushButton(text);
-            button->setFlat(true);
-            button->setMinimumWidth(0);
+        for (const auto id : {
+                 "helloutau.frequencyMap.multiplyBy3",
+                 "helloutau.frequencyMap.multiplyBy2",
+                 "helloutau.frequencyMap.unvoice",
+                 "helloutau.frequencyMap.divideBy2",
+                 "helloutau.frequencyMap.divideBy3",
+                 "helloutau.frequencyMap.interpolate",
+                 "helloutau.frequencyMap.revert",
+                 "helloutau.frequencyMap.keyToAverage",
+             }) {
+            auto button = new QToolButton();
+            button->setAutoRaise(true);
             buttonRow->addWidget(button);
             impl.editButtons.push_back({button, QLatin1String(id)});
         }
@@ -1410,12 +1405,7 @@ namespace hello::daw {
 
         connect(buttons, &QDialogButtonBox::rejected, this, &EditFrequencyMapsDialog::reject);
         for (const auto &[button, id] : std::as_const(impl.editButtons)) {
-            connect(button, &QPushButton::clicked, this, [this, id = id] {
-                stdc_impl_t;
-                if (const auto action = impl.actions.value(id); action && action->isEnabled()) {
-                    action->trigger();
-                }
-            });
+            button->setDefaultAction(impl.actions.value(id));
         }
         connect(impl.frameList, &QListWidget::itemSelectionChanged, this, [this] {
             stdc_impl_t;

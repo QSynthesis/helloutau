@@ -7,15 +7,23 @@
 | `undo.svg` | `general/undo.svg` | 撤销 |
 | `redo.svg` | `general/redo.svg` | 重做 |
 | `edit.svg` | `general/edit.svg` | 画笔工具 |
-| `search.svg` | `general/search.svg` | 查找 |
+| `search.svg` | `general/search.svg` | 查找、检查频率表 |
 | `run.svg` | `run/run.svg` | 播放 |
 | `pause.svg` | `run/pause.svg` | 播放（播放与渲染中） |
 | `stop.svg` | `run/stop.svg` | 停止 |
 | `rerun.svg` | `run/rerun.svg` | 重播 |
 | `freeze.svg` | `debugger/freeze.svg` | Mode2 转为 Mode1 |
 | `lightning.svg` | `actions/lightning.svg` | 试合成 |
+| `up.svg` | `general/up.svg` | 上一处修正 |
+| `down.svg` | `general/down.svg` | 下一处修正 |
+| `checked.svg` | `actions/checked.svg` | 修正 |
+| `close.svg` | `general/close.svg` | 忽略修正 |
+| `magicResolveToolbar.svg` | `diff/magicResolveToolbar.svg` | 全部修正 |
+| `clearCash.svg` | `actions/clearCash.svg` | 全部忽略 |
+| `remove.svg` | `general/remove.svg` | 设为无声 |
+| `revert.svg` | `vcs/revert.svg` | 恢复为已保存的频率表 |
 
-最后两项在 IntelliJ 中没有含义相同的图标，按含义相近选取：雪花取「冻结」之义，即把计算出的曲线固定为数值。IntelliJ 中没有可用图形的命令，图标由本项目绘制，见 [`../helloutau/README.md`](../helloutau/README.md)。
+`freeze.svg` 与 `lightning.svg` 在 IntelliJ 中没有含义相同的图标，按含义相近选取：雪花取「冻结」之义，即把计算出的曲线固定为数值。频率表的检查与修正：放大镜对应「检查」（与「查找」共用），对勾与叉号对应采纳与放弃一处修正，自动解决冲突的魔杖对应「全部修正」，清除缓存的扫帚对应「全部忽略」。IntelliJ 中没有可用图形的命令，图标由本项目绘制，见 [`../helloutau/README.md`](../helloutau/README.md)。
 
 对原文件的修改：
 

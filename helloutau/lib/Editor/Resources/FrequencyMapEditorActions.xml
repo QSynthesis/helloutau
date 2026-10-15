@@ -193,10 +193,13 @@
             <action id="helloutau.frequencyMap.synthesize" />
             <action id="helloutau.playback.stop" />
             <separator />
+            <action id="helloutau.frequencyMap.check" />
             <action id="helloutau.frequencyMap.previousCorrection" />
             <action id="helloutau.frequencyMap.nextCorrection" />
             <action id="helloutau.frequencyMap.adoptCorrection" />
             <action id="helloutau.frequencyMap.ignoreCorrection" />
+            <action id="helloutau.frequencyMap.adoptAllCorrections" />
+            <action id="helloutau.frequencyMap.ignoreAllCorrections" />
         </menu>
     </layouts>
 </actionExtension>

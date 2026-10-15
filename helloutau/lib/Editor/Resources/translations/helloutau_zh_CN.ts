@@ -1124,19 +1124,6 @@
         <translation>音频文件信息</translation>
     </message>
     <message>
-        <source>avg</source>
-        <comment>Interpolates the selected frames linearly.</comment>
-        <translation>插值</translation>
-    </message>
-    <message>
-        <source>reload</source>
-        <translation>重新加载</translation>
-    </message>
-    <message>
-        <source>key to average of selected range</source>
-        <translation>基准频率设为选区平均值</translation>
-    </message>
-    <message>
         <source>&amp;Stop</source>
         <translation>停止(&amp;S)</translation>
     </message>

@@ -2,8 +2,14 @@
     <qresource prefix="/helloutau/icons">
         <file>helloutau/crossfadeP1P4.svg</file>
         <file>helloutau/crossfadeP2P3.svg</file>
+        <file>helloutau/divideBy2.svg</file>
+        <file>helloutau/divideBy3.svg</file>
+        <file>helloutau/interpolate.svg</file>
+        <file>helloutau/keyToAverage.svg</file>
         <file>helloutau/resetEnvelope.svg</file>
         <file>helloutau/mode2.svg</file>
+        <file>helloutau/multiplyBy2.svg</file>
+        <file>helloutau/multiplyBy3.svg</file>
         <file>helloutau/pitchTool.svg</file>
         <file>helloutau/playSpan.svg</file>
         <file>helloutau/selectTool.svg</file>
@@ -11,15 +17,23 @@
         <file>helloutau/showParameters.svg</file>
         <file>helloutau/showPitch.svg</file>
         <file>helloutau/showRenderedPitch.svg</file>
+        <file>intellij/checked.svg</file>
+        <file>intellij/clearCash.svg</file>
+        <file>intellij/close.svg</file>
+        <file>intellij/down.svg</file>
         <file>intellij/edit.svg</file>
         <file>intellij/freeze.svg</file>
         <file>intellij/lightning.svg</file>
+        <file>intellij/magicResolveToolbar.svg</file>
         <file>intellij/pause.svg</file>
         <file>intellij/redo.svg</file>
+        <file>intellij/remove.svg</file>
         <file>intellij/rerun.svg</file>
+        <file>intellij/revert.svg</file>
         <file>intellij/run.svg</file>
         <file>intellij/search.svg</file>
         <file>intellij/stop.svg</file>
         <file>intellij/undo.svg</file>
+        <file>intellij/up.svg</file>
     </qresource>
 </RCC>
