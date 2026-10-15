@@ -222,6 +222,7 @@ Markdown：
 | 问题清单、交接、临时分析、参考资料副本 | `.cache/claude/`、`.cache/codex/`（已 gitignore） |
 | 面向用户的说明 | `README.md`、`docs/` |
 | 项目状态与待办事项 | `docs/Status.md` |
+| 更新日志（作者 2026-10-15 要求，每项新功能、改进与修复都写入） | `docs/changelog/Unreleased.md`，发布时改名为版本号 |
 | 文法审查的流程 | `docs/GrammarReview.md` |
 
 `.cache/` 整体被 gitignore，参考仓库的克隆和下载的官方资料都放在那里，不纳入版本库。
