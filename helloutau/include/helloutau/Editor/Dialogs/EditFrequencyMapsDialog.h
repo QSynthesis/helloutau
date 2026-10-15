@@ -56,6 +56,8 @@ namespace hello::daw {
     /// area. The preview synthesizes the audio file at the key with the map as edited and the
     /// resampler of the settings, or plays the audio file as it is with \c $direct.
     ///
+    /// The dialog opens wide enough to show the whole file list, unless the screen is narrower.
+    ///
     /// The menus and the shortcuts are those of Editor::FrequencyMapEditorKind. The actions of
     /// contributions are added when the dialog is created.
     class HELLOUTAU_EDITOR_EXPORT EditFrequencyMapsDialog : public QDialog {

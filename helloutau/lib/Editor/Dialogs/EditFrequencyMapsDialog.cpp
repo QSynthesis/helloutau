@@ -1,5 +1,6 @@
 #include "EditFrequencyMapsDialog.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <functional>
@@ -16,6 +17,7 @@
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtGui/QActionGroup>
+#include <QtGui/QScreen>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QGridLayout>
@@ -30,6 +32,7 @@
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSlider>
+#include <QtWidgets/QScrollBar>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QToolButton>
 #include <QtWidgets/QTreeWidget>
@@ -962,8 +965,8 @@ namespace hello::daw {
         auto splitter = new QSplitter();
         splitter->addWidget(impl.list);
         splitter->addWidget(panel);
-        splitter->setStretchFactor(0, 1);
-        splitter->setStretchFactor(1, 4);
+        splitter->setStretchFactor(0, 0);
+        splitter->setStretchFactor(1, 1);
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Close);
         auto menuBar = new QMenuBar();
@@ -971,11 +974,29 @@ namespace hello::daw {
         layout->setMenuBar(menuBar);
         layout->addWidget(splitter, 1);
         layout->addWidget(buttons);
-        resize(1200, 680);
         impl.initActions(menuBar);
         for (const auto &[button, id] : std::as_const(toolButtons)) {
             button->setDefaultAction(impl.actions.value(id));
         }
+
+        // Wide enough to show the whole list beside the right side with an editing area of
+        // editingWidth, within the screen. If the screen is narrower, the list is narrowed so that
+        // the right side keeps its least width. A resize changes the right side only.
+        constexpr int editingWidth = 300;
+        const QRect available = (parent ? parent->screen() : screen())->availableGeometry();
+        const auto margins = layout->contentsMargins();
+        const int listWidth = impl.list->header()->length() + 2 * impl.list->frameWidth() +
+                              impl.list->verticalScrollBar()->sizeHint().width();
+        const int panelMinimum = panel->minimumSizeHint().width();
+        const int width = std::min(margins.left() + listWidth + splitter->handleWidth() +
+                                       panelMinimum + editingWidth + margins.right(),
+                                   available.width() * 9 / 10);
+        const int splitterWidth = width - margins.left() - margins.right();
+        const int listShown =
+            std::max(impl.list->minimumSizeHint().width(),
+                     std::min(listWidth, splitterWidth - splitter->handleWidth() - panelMinimum));
+        splitter->setSizes({listShown, splitterWidth - splitter->handleWidth() - listShown});
+        resize(width, std::min(680, available.height() * 9 / 10));
 
         connect(buttons, &QDialogButtonBox::rejected, this, &EditFrequencyMapsDialog::reject);
         for (const auto &[button, id] : std::as_const(impl.editButtons)) {
