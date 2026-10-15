@@ -214,6 +214,10 @@
         <translation>收录音频文件(&amp;F)</translation>
     </message>
     <message>
+        <source>&amp;Open in File Manager</source>
+        <translation>在文件管理器中打开(&amp;O)</translation>
+    </message>
+    <message>
         <source>&amp;Offset</source>
         <translation>左空白(&amp;O)</translation>
     </message>
@@ -4075,6 +4079,14 @@ Lyrics:
     <message>
         <source>Open Voice Bank</source>
         <translation>打开音源</translation>
+    </message>
+    <message>
+        <source>Open in File Manager</source>
+        <translation>在文件管理器中打开</translation>
+    </message>
+    <message>
+        <source>The file manager cannot show %1.</source>
+        <translation>文件管理器无法显示 %1。</translation>
     </message>
     <message>
         <source>Frequency Map Log</source>

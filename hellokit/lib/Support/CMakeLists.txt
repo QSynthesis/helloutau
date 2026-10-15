@@ -16,3 +16,8 @@ hellokit_add_library(${PROJECT_NAME} SHARED
     INCLUDE_PRIVATE ../../include/hellokit/Support/** **
     MACRO_PREFIX HELLOKIT_SUPPORT
 )
+
+# FileManager selects a file in File Explorer through the shell and COM.
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE shell32 ole32)
+endif()

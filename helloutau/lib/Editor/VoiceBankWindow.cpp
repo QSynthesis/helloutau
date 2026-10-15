@@ -54,6 +54,7 @@
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
+#include <hellokit/Support/FileManager.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/FrequencyMapGenerator.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
@@ -385,6 +386,8 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.includeAudio();
             });
+            addCommand(QStringLiteral("helloutau.voiceBank.openInFileManager"),
+                       [this] { openInFileManager(); });
             addCommand(QStringLiteral("helloutau.select.selectAll"),
                        [this] { table->selectAll(); });
             // The current row is cleared as well, so that no entry is shown in the waveform
@@ -1362,6 +1365,25 @@ namespace hello::daw {
             actions.value(QStringLiteral("helloutau.voiceBank.renameAliases"))->setEnabled(entries);
             actions.value(QStringLiteral("helloutau.voiceBank.includeAudio"))
                 ->setEnabled(!selectedRows(false).isEmpty());
+            stdc_decl_t;
+            actions.value(QStringLiteral("helloutau.voiceBank.openInFileManager"))
+                ->setEnabled(decl.currentRow() >= 0);
+        }
+
+        // Selects the audio file of the current entry in the file manager of the system.
+        void openInFileManager() {
+            stdc_decl_t;
+            const int row = decl.currentRow();
+            if (row < 0) {
+                return;
+            }
+            const auto path = audioPathOf(row);
+            if (!kit::FileManager::reveal(path)) {
+                QMessageBox::warning(&decl, tr("Open in File Manager"),
+                                     tr("The file manager cannot show %1.")
+                                         .arg(QDir::toNativeSeparators(
+                                             QString::fromStdU16String(path.u16string()))));
+            }
         }
 
         // The current row across a rebuild of the rows, by its folder, file and alias
@@ -1418,6 +1440,9 @@ namespace hello::daw {
                           "helloutau.edit.delete"}) {
                         menu.addAction(actions.value(QString::fromLatin1(id)));
                     }
+                    menu.addSeparator();
+                    menu.addAction(
+                        actions.value(QStringLiteral("helloutau.voiceBank.openInFileManager")));
                     menu.exec(table->viewport()->mapToGlobal(position));
                 });
             updateEditActions();

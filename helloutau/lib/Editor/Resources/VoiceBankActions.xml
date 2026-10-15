@@ -84,6 +84,9 @@
                 category="Edit" />
         <!-- An entry with an empty alias for each selected audio file without one -->
         <action id="helloutau.voiceBank.includeAudio" text="Include Audio &amp;Files"
+                category="Edit" />
+        <!-- The folder of the audio file of the current entry, with the file selected -->
+        <action id="helloutau.voiceBank.openInFileManager" text="&amp;Open in File Manager"
                 category="Edit" />        <!-- A value of the current entry at the time under the pointer, while the pointer is over
              the waveform. The keys are those of OpenUtau -->
         <action id="helloutau.voiceBank.setOffset" text="&amp;Offset" category="Set at Pointer"
