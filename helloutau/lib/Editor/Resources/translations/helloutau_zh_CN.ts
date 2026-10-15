@@ -1053,7 +1053,7 @@
     </message>
     <message>
         <source>&amp;Note of the recordings:</source>
-        <translation>原音收录音阶(&amp;N)：</translation>
+        <translation>收录音阶(&amp;N)：</translation>
     </message>
     <message>
         <source>Save Frequency Map</source>
