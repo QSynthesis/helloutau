@@ -59,6 +59,18 @@ namespace hello::daw {
         bool synthesize(const kit::VoiceSample &sample, int noteNum, int length,
                         const std::filesystem::path &resampler, kit::DiagnosticList &diagnostics);
 
+        /// The flags and the modulation of a synthesized note, as a note of a project has them
+        struct NoteOptions {
+            QString flags;
+            /// The modulation in percent, or \c std::nullopt for the default of UTAU
+            std::optional<double> modulation;
+        };
+
+        /// \overload with the flags and the modulation of \a options.
+        bool synthesize(const kit::VoiceSample &sample, int noteNum, int length,
+                        const std::filesystem::path &resampler, const NoteOptions &options,
+                        kit::DiagnosticList &diagnostics);
+
         /// Stops playing and discards a note being synthesized.
         void stop();
 

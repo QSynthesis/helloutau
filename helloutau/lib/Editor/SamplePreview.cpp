@@ -38,6 +38,7 @@ namespace hello::daw {
             kit::VoiceSample sample;
             int noteNum = 60;
             int length = 480;
+            SamplePreview::NoteOptions options;
             std::filesystem::path resampler;
             std::shared_ptr<QTemporaryDir> directory;
             std::shared_ptr<kit::SynthToolProcess> process;
@@ -72,6 +73,8 @@ namespace hello::daw {
             note.lyric = QString::fromLatin1(lyric);
             note.noteNum = job.noteNum;
             note.length = job.length;
+            note.flags = job.options.flags;
+            note.modulation = job.options.modulation;
             kit::Track track;
             track.notes.push_back(note);
             kit::Project project;
@@ -260,6 +263,12 @@ namespace hello::daw {
     bool SamplePreview::synthesize(const kit::VoiceSample &sample, int noteNum, int length,
                                    const std::filesystem::path &resampler,
                                    kit::DiagnosticList &diagnostics) {
+        return synthesize(sample, noteNum, length, resampler, NoteOptions(), diagnostics);
+    }
+
+    bool SamplePreview::synthesize(const kit::VoiceSample &sample, int noteNum, int length,
+                                   const std::filesystem::path &resampler,
+                                   const NoteOptions &options, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
         if (resampler.empty()) {
@@ -274,6 +283,7 @@ namespace hello::daw {
         job->sample = sample;
         job->noteNum = noteNum;
         job->length = length;
+        job->options = options;
         job->resampler = resampler;
         job->directory = impl.directory;
         job->process = impl.process;

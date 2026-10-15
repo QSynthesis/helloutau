@@ -150,6 +150,28 @@ private Q_SLOTS:
         QCOMPARE(preview.state(), SamplePreview::Stopped);
     }
 
+    // The flags and the modulation of the options reach the resampler in their places of the
+    // arguments of UTAU.
+    void the_options_reach_the_resampler() {
+        QTemporaryDir dir;
+        const auto sample = sampleIn(dir);
+        SamplePreview preview;
+        const auto synthTool = std::make_shared<FakeResampler>();
+        preview.setSynthToolProcess(synthTool);
+        SamplePreview::NoteOptions options;
+        options.flags = QStringLiteral("g-5");
+        options.modulation = 50;
+        kit::DiagnosticList diagnostics;
+        QVERIFY(
+            preview.synthesize(sample, 60, 480, fs::path("resampler.exe"), options, diagnostics));
+        QTRY_VERIFY(preview.state() != SamplePreview::Synthesizing);
+        const auto arguments = synthTool->arguments();
+        QVERIFY(arguments.size() > 10);
+        QCOMPARE(arguments.at(4), QStringLiteral("g-5"));
+        QCOMPARE(arguments.at(10), QStringLiteral("50"));
+        preview.stop();
+    }
+
     void a_resampler_that_writes_nothing_fails() {
         QTemporaryDir dir;
         const auto sample = sampleIn(dir);
