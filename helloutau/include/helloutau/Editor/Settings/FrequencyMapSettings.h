@@ -9,8 +9,9 @@ namespace hello::daw {
 
     class AppSettingsStore;
 
-    /// The generation of frequency maps in a voice bank window, the group \c frequencyMaps of
-    /// the settings file. See the generation in docs/FrequencyMaps.md.
+    /// The generation and the editing of frequency maps in a voice bank window, the group
+    /// \c frequencyMaps of the settings file. See the generation and the editing in
+    /// docs/FrequencyMaps.md.
     class HELLOUTAU_EDITOR_EXPORT FrequencyMapSettings {
     public:
         ~FrequencyMapSettings();
@@ -31,6 +32,12 @@ namespace hello::daw {
         /// caches removes its maps regardless.
         Regeneration regeneration() const;
         void setRegeneration(Regeneration regeneration);
+
+        /// Returns whether saving an edited map removes the analysis caches of its format, the
+        /// default. The resampler reads a cache in place of the map, therefore an edit takes
+        /// effect in synthesis only after the cache is removed.
+        bool removesCachesOnSave() const;
+        void setRemovesCachesOnSave(bool removes);
 
         /// Returns whether the runs held in the log of the generation and its size limit are
         /// those of the render log, the default, rather than isLogAccumulated() and logLimit().

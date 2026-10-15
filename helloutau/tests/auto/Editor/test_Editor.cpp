@@ -3484,6 +3484,7 @@ private Q_SLOTS:
             auto &maps = e->settings().frequencyMaps();
             maps.setThreadCount(0);
             maps.setRegeneration(FrequencyMapSettings::MapsAndCaches);
+            maps.setRemovesCachesOnSave(true);
             maps.setFollowsRenderLog(true);
             maps.setLogAccumulated(true);
             maps.setLogLimit(1024 * 1024);
@@ -3498,6 +3499,13 @@ private Q_SLOTS:
         QCOMPARE(e->settings().frequencyMaps().threadCount(), 3);
         QCOMPARE(e->settings().rendering().threadCount(), 0);
         QCOMPARE(e->settings().frequencyMaps().regeneration(), FrequencyMapSettings::CachesOnly);
+
+        // The caches are removed on save by default.
+        QVERIFY(page->removeCachesOnSaveBox()->isChecked());
+        page->removeCachesOnSaveBox()->setChecked(false);
+        QVERIFY(page->isModified());
+        QVERIFY(page->apply(&error));
+        QVERIFY(!e->settings().frequencyMaps().removesCachesOnSave());
 
         // The log follows the render log by default, and its own boxes are enabled once it does
         // not. A size outside the limits is refused.

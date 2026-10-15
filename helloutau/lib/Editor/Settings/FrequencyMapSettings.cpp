@@ -13,6 +13,7 @@ namespace hello::daw {
         constexpr char KeyThreads[] = "frequencyMaps/threads";
         constexpr char KeyRegeneration[] = "frequencyMaps/regeneration";
         constexpr char CachesOnlyValue[] = "cachesOnly";
+        constexpr char KeyRemovesCachesOnSave[] = "frequencyMaps/removesCachesOnSave";
         constexpr char KeyFollowsRenderLog[] = "frequencyMaps/log/followsRenderLog";
         constexpr char KeyLogAccumulated[] = "frequencyMaps/log/accumulated";
         constexpr char KeyLogLimit[] = "frequencyMaps/log/limit";
@@ -42,6 +43,14 @@ namespace hello::daw {
         m_store.setValue(KeyRegeneration, regeneration == CachesOnly
                                               ? json::Value(std::string(CachesOnlyValue))
                                               : json::Value());
+    }
+
+    bool FrequencyMapSettings::removesCachesOnSave() const {
+        return m_store.value(KeyRemovesCachesOnSave).toBool(true);
+    }
+
+    void FrequencyMapSettings::setRemovesCachesOnSave(bool removes) {
+        m_store.setValue(KeyRemovesCachesOnSave, removes ? json::Value() : json::Value(false));
     }
 
     bool FrequencyMapSettings::followsRenderLog() const {

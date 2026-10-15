@@ -984,10 +984,6 @@
         <translation>频率表</translation>
     </message>
     <message>
-        <source>The generation of frequency maps with the resampler in the voice bank window, and the analysis caches that each resampler keeps.</source>
-        <translation>音源窗口以重采样器生成频率表的方式，以及各重采样器保留的分析缓存。</translation>
-    </message>
-    <message>
         <source>Generation</source>
         <translation>生成</translation>
     </message>
@@ -1014,6 +1010,18 @@
     <message>
         <source>An analysis cache holds the frequencies of an audio file, which the resampler reads in place of the frequency map. Removing only the caches makes the resampler write them again from the frequency maps, for example after the maps were edited elsewhere. Without caches, the maps are removed.</source>
         <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。只删除缓存时，重采样器按频率表重新写出缓存，例如频率表在别处编辑之后。没有缓存的格式删除频率表。</translation>
+    </message>
+    <message>
+        <source>Editing</source>
+        <translation>编辑</translation>
+    </message>
+    <message>
+        <source>Re&amp;move the analysis caches when saving a frequency map</source>
+        <translation>保存频率表时删除分析缓存(&amp;M)</translation>
+    </message>
+    <message>
+        <source>The resampler reads the analysis cache in place of the frequency map, therefore an edit takes effect in synthesis only after the cache is removed. The editing dialog can change this choice while it is open.</source>
+        <translation>重采样器读取分析缓存而不读取频率表，因此删除缓存之后，编辑才会在合成中生效。编辑对话框打开期间可以临时改变此项。</translation>
     </message>
     <message>
         <source>Generation Log</source>
@@ -1054,6 +1062,10 @@
     <message>
         <source>Format</source>
         <translation>格式</translation>
+    </message>
+    <message>
+        <source>The generation of frequency maps with the resampler and their editing in the voice bank window, and the analysis caches that each resampler keeps.</source>
+        <translation>音源窗口以重采样器生成频率表的方式与频率表的编辑，以及各重采样器保留的分析缓存。</translation>
     </message>
     <message>
         <source>Frequency Map</source>

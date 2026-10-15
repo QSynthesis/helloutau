@@ -36,6 +36,7 @@ namespace hello::daw {
 
         QComboBox *threadCountBox() const;
         QComboBox *regenerationBox() const;
+        QCheckBox *removeCachesOnSaveBox() const;
 
         /// The box that makes the log of the generation follow the render log, and the boxes
         /// of its own runs and size, which are disabled while it is checked.
@@ -56,6 +57,7 @@ namespace hello::daw {
         const kit::FrequencyFormats &m_formats;
         QPointer<QComboBox> m_threads;
         QPointer<QComboBox> m_regeneration;
+        QPointer<QCheckBox> m_removeCachesOnSave;
         QPointer<QCheckBox> m_followRenderLog;
         QPointer<QComboBox> m_logMode;
         QPointer<QComboBox> m_logLimit;

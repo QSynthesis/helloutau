@@ -59,8 +59,8 @@ private Q_SLOTS:
         QCOMPARE(AppSettings(file).rendering().threadCount(), 0);
     }
 
-    // The thread count and the regeneration of frequency maps persist, independent of the
-    // rendering threads. The defaults are not written.
+    // The thread count, the regeneration and the removal of the caches on save of frequency maps
+    // persist, independent of the rendering threads. The defaults are not written.
     void the_frequency_map_settings_persist() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));
@@ -68,21 +68,27 @@ private Q_SLOTS:
             const AppSettings settings(file);
             QCOMPARE(settings.frequencyMaps().threadCount(), 0);
             QCOMPARE(settings.frequencyMaps().regeneration(), FrequencyMapSettings::MapsAndCaches);
+            QVERIFY(settings.frequencyMaps().removesCachesOnSave());
         }
         {
             AppSettings settings(file);
             settings.frequencyMaps().setThreadCount(2);
             settings.frequencyMaps().setRegeneration(FrequencyMapSettings::CachesOnly);
+            settings.frequencyMaps().setRemovesCachesOnSave(false);
         }
         {
             AppSettings settings(file);
             QCOMPARE(settings.frequencyMaps().threadCount(), 2);
             QCOMPARE(settings.rendering().threadCount(), 0);
             QCOMPARE(settings.frequencyMaps().regeneration(), FrequencyMapSettings::CachesOnly);
+            QVERIFY(!settings.frequencyMaps().removesCachesOnSave());
             settings.frequencyMaps().setThreadCount(0);
             settings.frequencyMaps().setRegeneration(FrequencyMapSettings::MapsAndCaches);
+            settings.frequencyMaps().setRemovesCachesOnSave(true);
             QVERIFY(settings.value(QStringLiteral("frequencyMaps/threads")).isUndefined());
             QVERIFY(settings.value(QStringLiteral("frequencyMaps/regeneration")).isUndefined());
+            QVERIFY(
+                settings.value(QStringLiteral("frequencyMaps/removesCachesOnSave")).isUndefined());
         }
     }
 

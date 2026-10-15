@@ -21,8 +21,9 @@ namespace hello::daw {
                                                      QObject *parent)
         : SettingPage(QLatin1String(pageId), parent), m_settings(settings), m_formats(formats) {
         setTitle(tr("Frequency Maps"));
-        setDescription(tr("The generation of frequency maps with the resampler in the voice bank "
-                          "window, and the analysis caches that each resampler keeps."));
+        setDescription(tr("The generation of frequency maps with the resampler and their editing "
+                          "in the voice bank window, and the analysis caches that each resampler "
+                          "keeps."));
         setKeywords({QStringLiteral("frequency map"), QStringLiteral("frq"), QStringLiteral("llsm"),
                      QStringLiteral("cache")});
     }
@@ -52,6 +53,18 @@ namespace hello::daw {
                     "resampler write them again from the frequency maps, for example after the "
                     "maps were edited elsewhere. Without caches, the maps are removed.")));
         layout->addWidget(generationGroup);
+
+        auto editingGroup = new QGroupBox(tr("Editing"), widget);
+        auto editingForm = new QFormLayout(editingGroup);
+        m_removeCachesOnSave =
+            new QCheckBox(tr("Re&move the analysis caches when saving a frequency map"));
+        m_removeCachesOnSave->setChecked(m_settings.frequencyMaps().removesCachesOnSave());
+        editingForm->addRow(m_removeCachesOnSave);
+        editingForm->addRow(
+            note(tr("The resampler reads the analysis cache in place of the frequency map, "
+                    "therefore an edit takes effect in synthesis only after the cache is "
+                    "removed. The editing dialog can change this choice while it is open.")));
+        layout->addWidget(editingGroup);
 
         auto logGroup = new QGroupBox(tr("Generation Log"), widget);
         auto logForm = new QFormLayout(logGroup);
@@ -93,6 +106,7 @@ namespace hello::daw {
         connect(m_threads, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);
         connect(m_regeneration, &QComboBox::currentIndexChanged, this,
                 &SettingPage::modifiedChanged);
+        connect(m_removeCachesOnSave, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
         connect(m_followRenderLog, &QCheckBox::toggled, this, updateLog);
         connect(m_followRenderLog, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
         connect(m_logMode, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
@@ -131,6 +145,7 @@ namespace hello::daw {
         const auto &maps = m_settings.frequencyMaps();
         return threadCountOf(m_threads) != maps.threadCount() ||
                m_regeneration->currentData().toInt() != maps.regeneration() ||
+               m_removeCachesOnSave->isChecked() != maps.removesCachesOnSave() ||
                m_followRenderLog->isChecked() != maps.followsRenderLog() ||
                m_logMode->currentData().toBool() != maps.isLogAccumulated() ||
                logLimitOf(m_logLimit) != maps.logLimit();
@@ -156,6 +171,7 @@ namespace hello::daw {
         maps.setThreadCount(*threads);
         maps.setRegeneration(
             FrequencyMapSettings::Regeneration(m_regeneration->currentData().toInt()));
+        maps.setRemovesCachesOnSave(m_removeCachesOnSave->isChecked());
         maps.setFollowsRenderLog(m_followRenderLog->isChecked());
         maps.setLogAccumulated(m_logMode->currentData().toBool());
         maps.setLogLimit(*logLimit);
@@ -169,6 +185,10 @@ namespace hello::daw {
 
     QComboBox *FrequencyMapSettingPage::regenerationBox() const {
         return m_regeneration;
+    }
+
+    QCheckBox *FrequencyMapSettingPage::removeCachesOnSaveBox() const {
+        return m_removeCachesOnSave;
     }
 
     QCheckBox *FrequencyMapSettingPage::followRenderLogBox() const {
