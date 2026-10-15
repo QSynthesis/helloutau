@@ -1200,10 +1200,10 @@ namespace hello::daw {
         for (const auto &cache : caches) {
             headers.push_back(cache.name);
         }
-        headers.push_back(tr("Corrections"));
-        impl.correctionColumn = int(headers.size() - 1);
         headers.push_back(tr("Modified"));
         impl.modifiedColumn = int(headers.size() - 1);
+        headers.push_back(tr("Corrections"));
+        impl.correctionColumn = int(headers.size() - 1);
         impl.list = new QTreeWidget();
         impl.list->setRootIsDecorated(false);
         impl.list->setHeaderLabels(headers);
