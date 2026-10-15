@@ -895,9 +895,9 @@ namespace hello::daw {
         }
 
         // Selects the next run of corrections in the direction of forward: in the current file
-        // after the selection, then in the other files from their ends, wrapping around. With
-        // fromStart, the search begins at the end of the first file, or of the last. Returns
-        // whether a run was found.
+        // after the selection, then in the other files from the end that the direction starts
+        // at, wrapping around. With fromStart, the search begins at the start of the first file
+        // if forward, otherwise at the end of the last file. Returns whether a run was found.
         bool goToCorrection(bool forward, bool fromStart = false) {
             correctionForward = forward;
             const int count = int(files.size());

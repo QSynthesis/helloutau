@@ -108,8 +108,8 @@ namespace hello::daw {
         void leaveEvent(QEvent *event) override;
         void focusOutEvent(QFocusEvent *event) override;
 
-        /// Returns the cursor shown over a hit whose cursor is \a shape, by default the cursor of
-        /// that shape.
+        /// Returns the cursor shown over a hit whose cursor is \a shape. The default
+        /// implementation returns the cursor of that shape.
         virtual QCursor cursorOf(Qt::CursorShape shape) const;
 
     private:

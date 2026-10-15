@@ -140,8 +140,8 @@ private Q_SLOTS:
         QCOMPARE(m_log.last(), QStringLiteral("cancel"));
     }
 
-    // A zoom drag zooms both axes about its origin, and only the axis of the first move while
-    // locked.
+    // A zoom drag zooms both axes about its origin, and while locked, only the axis of the first
+    // move.
     void a_zoom_drag_keeps_its_origin() {
         SceneView view;
         view.resize(800, 600);

@@ -20,7 +20,8 @@
     </configuration>
 
     <items>
-        <!-- The commands that the windows have as well -->
+        <!-- The commands that the windows have as well, of which the tools are in the project
+             window only -->
         <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
         <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
         <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />

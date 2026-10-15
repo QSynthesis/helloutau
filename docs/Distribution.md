@@ -145,7 +145,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 接口的响应须为 GitHub 的 release 格式：`tag_name`、`name`、`body`、`draft`、`prerelease`、`html_url`（可缺），以及 `assets` 中各项的 `name` 与 `browser_download_url`。GitHub 与 Gitee 都采用这一格式，Gitea、Forgejo 等兼容 GitHub 接口的平台同样适用。GitLab 的格式不同，需要支持时再为源增加表示格式的键。请求只带 User-Agent（GitHub 拒绝没有 User-Agent 的请求），不带任何平台专用的请求头。
 
-文件缺失、缺少任一项或任一项无效时，启动时的检查只记入日志，手动检查报告原因。triplet 不在此文件中，因为它描述构建本身，由 CMake 写入 `hellokit/Config.h` 的 `HELLOKIT_TRIPLET`。版本（`HELLOKIT_VERSION`）与构建信息（`hellokit/BuildInfo.h`）同样由 hellokit 生成，因为 hellokit 的程序（`hello-updater`、`hello-plugin-play`）也要读取；应用名与组织名留在 `helloutau/Config.h`（作者 2026-10-15 定）。
+文件缺失、缺少任一项或任一项无效时，启动时的检查只记入日志，手动检查报告原因。triplet 不在此文件中，因为它描述构建本身，由 CMake 写入 `hellokit/Config.h` 的 `HELLOKIT_TRIPLET`。版本（`HELLOKIT_VERSION`）与构建信息（`hellokit/BuildInfo.h`）同样由 hellokit 生成，因为 hellokit 的 `hello-updater` 与 helloutau 的 `hello-plugin-play` 也要读取。应用名与组织名留在 `helloutau/Config.h`（作者 2026-10-15 定）。
 
 ### 检查与下载
 

@@ -186,8 +186,8 @@ namespace hello::daw {
             QFrame::wheelEvent(event);
             return;
         }
-        // At the same time in the middle of the viewport, so that a zoom of the keys keeps the
-        // middle in place
+        // At the same x as the event and in the middle of the viewport, so that a zoom of the
+        // keys keeps the middle in place
         const auto viewport = view->viewport();
         QPointF position = viewport->mapFromGlobal(event->globalPosition());
         position.setY(viewport->height() / 2.0);

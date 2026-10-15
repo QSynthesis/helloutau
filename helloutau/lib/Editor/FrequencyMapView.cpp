@@ -173,7 +173,7 @@ namespace hello::daw {
         }
 
         // Returns the time in milliseconds after the last frame, or the end of the spectrogram
-        // without frames.
+        // without frames, or 1000 without frames and without a spectrogram.
         double endTime() const {
             const auto list = frames();
             if (list && !list->empty()) {
@@ -676,7 +676,8 @@ namespace hello::daw {
         }
 
         // Draws a square at each voiced frame and joins consecutive voiced frames, as frqeditor
-        // draws a curve, the selected frames in selected if impl is given.
+        // draws a curve, in color, and the frames that impl selects in the color selected if
+        // impl is given.
         static void drawCurve(QPainter &painter, const FrequencyMapView &view,
                               const std::vector<kit::FrequencyMap::Frame> &frames,
                               const QColor &color, const QColor &selected, const Impl *impl) {

@@ -165,8 +165,8 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 1);
     }
 
-    // A pmk that read() rejects is damaged and not repairable, among them a pmk whose last mark
-    // ends far beyond its marks.
+    // A pmk that read() rejects is damaged and not repairable, among them a pmk with more than
+    // markHop frames for each mark, here a single mark that ends near the largest int32.
     void a_damaged_pmk_is_reported() {
         QDir(m_dir.path()).mkdir(QStringLiteral("d"));
         const auto directory = pathOf("d");

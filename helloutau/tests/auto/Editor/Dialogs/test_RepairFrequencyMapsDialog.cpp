@@ -167,7 +167,7 @@ private Q_SLOTS:
         }
     }
 
-    // With misdecoded names restored, a file of one audio file takes the name that the format
+    // With misdecoded names restored, a file of a single audio file takes the name that the format
     // derives from the restored name of the audio file, and a file of several audio files, or a
     // file that the format does not derive from its audio file, keeps its name in the restored
     // folder. The folder 偆 and the audio file 偁.wav restore as い and あ.wav.

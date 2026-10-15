@@ -27,10 +27,10 @@ namespace hello::daw {
         }
 
         // Returns the path of file in folder with misdecoded names restored by shownPathOf, or an
-        // empty path if shownPathOf restores nothing. A file of one audio file takes the name that
-        // format derives from the restored name of the audio file, provided that format derives
-        // the name on disk from the name of the audio file on disk, as a rename of the audio file
-        // keeps it. Another file keeps its name in the restored folder.
+        // empty path if shownPathOf restores nothing. A file of a single audio file takes the name
+        // that format derives from the restored name of the audio file, provided that format
+        // derives the name on disk from the name of the audio file on disk, as a rename of the
+        // audio file keeps it. Another file keeps its name in the restored folder.
         fs::path restoredPathOf(const kit::FrequencyFormat &format,
                                 const RepairFrequencyMapsDialog::ShownPath &shownPathOf,
                                 const fs::path &folder,

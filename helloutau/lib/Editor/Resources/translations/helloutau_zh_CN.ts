@@ -1336,7 +1336,7 @@
     </message>
     <message>
         <source>An analysis cache holds the frequencies of an audio file, which the resampler reads in place of the frequency map. Removing only the caches makes the resampler write them again from the frequency maps, for example after the maps were edited elsewhere. Without caches, the maps are removed.</source>
-        <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。只删除缓存时，重采样器按频率表重新写出缓存，例如频率表在别处编辑之后。没有缓存的格式删除频率表。</translation>
+        <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。只删除缓存时，重采样器按频率表重新写出缓存，例如频率表在别处编辑之后。格式没有缓存时删除频率表。</translation>
     </message>
     <message>
         <source>Editing</source>

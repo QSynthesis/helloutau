@@ -25,9 +25,9 @@ namespace hello::kit {
     /// - A frequency above highestFrequency becomes highestFrequency.
     /// - A frequency not above lowestFrequency marks the frame unvoiced.
     ///
-    /// Each edit that changes a frequency is one step of the history, and an edit that changes no
-    /// frequency adds no step. A new step discards the undone steps. A range of frames is
-    /// limited to the frames of the map.
+    /// Each edit that changes the frequency of a frame or the key is one step of the history, and
+    /// an edit that changes neither adds no step. A new step discards the undone steps. A range of
+    /// frames is limited to the frames of the map.
     class HELLOKIT_VOICEBANK_EXPORT FrequencyMapRevisionBuffer {
     public:
         /// The frequency up to which a frame is unvoiced, A1 in hertz

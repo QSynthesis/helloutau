@@ -154,7 +154,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 4. ~~**试点：频率表格式与 SynthToolSupport 插件**~~：
    - `FrequencyFormatRegistration`（HelloKitVoiceBank）：登记对象，持有一种格式，形状与 `ActionRegistration` 相同（见「注册接口」）。
    - `FrequencyFormatRegistry` 成为 `QObject`：内容来自进程级列表，按登记顺序；同一 ID 的多个格式只取先登记的，它注销后由下一个接替，与 qactionkit 对重复条目的处理一致；变化时发出 `formatsChanged()`。不再有 `add()` 与 `addBuiltinFormats()`。音源窗口的「F0」下拉框随之重建：所选格式仍在则保留，否则改选重采样器对应的格式。
-   - `BuiltinFrequencyFormats` 登记 frq，由编辑器持有。dio、mrq（以及 2026-10-15 加入的 frc、pmk）由 SynthToolSupport 插件（ID `org.helloutau.synthtoolsupport`，目录 `SynthToolSupport`，依赖 Core，作者定名，2026-10-15 由 FrequencyEditor 改名）登记，代码也在插件中（作者 2026-10-12 决定，取代原先三种都由插件登记、代码留在 hellokit 的做法）。将来的频率表编辑界面也由它负责。需要这些格式的测试自己登记或直接构造。
+   - `BuiltinFrequencyFormats` 登记 frq，由编辑器持有。dio、mrq（以及 2026-10-15 加入的 frc、pmk）由 SynthToolSupport 插件（ID `org.helloutau.synthtoolsupport`，目录 `SynthToolSupport`，依赖 Core，作者定名，2026-10-15 由 FrequencyEditor 改名）登记，代码也在插件中（作者 2026-10-12 决定，取代原先三种都由插件登记、代码留在 hellokit 的做法）。需要这些格式的测试自己登记或直接构造。
    - 删除 `FrequencyFormatPlugin`。
    - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 SynthToolSupport，必在其后载入。
    - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，SynthToolSupport 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。

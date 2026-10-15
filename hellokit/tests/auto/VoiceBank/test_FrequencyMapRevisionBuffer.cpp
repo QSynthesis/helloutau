@@ -124,8 +124,8 @@ private Q_SLOTS:
         QVERIFY(map.canUndo());
     }
 
-    // Scaling changes only the voiced frames of the range, those above 55 Hz, limited, and the
-    // range is limited to the map.
+    // Scaling changes only the voiced frames of the range, those above 55 Hz, with each scaled
+    // frequency limited, and the range is limited to the map.
     void scaling_changes_the_voiced_frames() {
         FrequencyMapRevisionBuffer map(mapOf({100, 30, 5000, 200}));
         QVERIFY(map.scale(0, 10, 2));
@@ -241,8 +241,9 @@ private Q_SLOTS:
         QVERIFY(!map.setFrequency(1, 440));
     }
 
-    // Adopting corrections writes the proposed frequencies above 0, limited, and sets the key to
-    // the mean of the voiced frames in whole cents rounded toward zero, as one step.
+    // Adopting corrections writes the proposed frequencies above 0, with each such frequency
+    // limited, and sets the key to the mean of the voiced frames in whole cents rounded toward
+    // zero, as one step.
     void adopting_corrections() {
         auto source = mapOf({221, 520, 0, 445, 300});
         source.averageFrequency = 150;
