@@ -207,7 +207,7 @@
     </message>
     <message>
         <source>Include Audio &amp;Files</source>
-        <translation>加入音频文件(&amp;F)</translation>
+        <translation>收录音频文件(&amp;F)</translation>
     </message>
     <message>
         <source>&amp;Offset</source>
@@ -3404,7 +3404,7 @@ Lyrics:
     </message>
     <message>
         <source>Include Audio File</source>
-        <translation>加入音频文件</translation>
+        <translation>收录音频文件</translation>
     </message>
     <message>
         <source>The audio file has no analysis cache %1 of the format %2.</source>
@@ -3935,7 +3935,7 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     </message>
     <message>
         <source>Include Audio Files</source>
-        <translation>加入音频文件</translation>
+        <translation>收录音频文件</translation>
     </message>
     <message>
         <source>Remove Oto Entries</source>
@@ -5271,7 +5271,7 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     </message>
     <message>
         <source>Include Audio Files</source>
-        <translation>加入音频文件</translation>
+        <translation>收录音频文件</translation>
     </message>
     <message>
         <source>The folder has %1 oto entries, not an entry %2.</source>
