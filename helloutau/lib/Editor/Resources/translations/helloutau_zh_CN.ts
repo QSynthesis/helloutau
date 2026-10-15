@@ -675,7 +675,7 @@
     </message>
     <message>
         <source>Set &amp;Key to Average of Selection</source>
-        <translation>基准频率设为选区平均值(&amp;K)</translation>
+        <translation>将基准频率设为选区平均值(&amp;K)</translation>
     </message>
     <message>
         <source>Multiply by &amp;2</source>
@@ -1089,7 +1089,7 @@
     </message>
     <message>
         <source>This choice applies while the dialog is open. The default is set on the Frequency Maps page of the settings. Without removing the caches, the resampler keeps synthesizing from the frequencies of the caches.</source>
-        <translation>此选择只在对话框打开期间有效。缺省值在设置的「频率表」页中设置。不删除缓存时，重采样器仍按缓存中的频率合成。</translation>
+        <translation>此选择只在对话框打开期间有效。默认值在设置的「频率表」页中设置。不删除缓存时，重采样器仍按缓存中的频率合成。</translation>
     </message>
     <message>
         <source>&amp;Update</source>
@@ -1348,7 +1348,7 @@
     </message>
     <message>
         <source>The resampler reads the analysis cache in place of the frequency map, therefore an edit takes effect in synthesis only after the cache is removed. The editing dialog can change this choice while it is open.</source>
-        <translation>重采样器读取分析缓存而不读取频率表，因此删除缓存之后，编辑才会在合成中生效。编辑对话框打开期间可以临时改变此项。</translation>
+        <translation>重采样器读取分析缓存而不读取频率表，因此删除缓存之后，编辑才会在合成中生效。在编辑对话框打开期间可以临时改变此项。</translation>
     </message>
     <message>
         <source>Generation Log</source>
@@ -1392,7 +1392,7 @@
     </message>
     <message>
         <source>The generation of frequency maps with the resampler and their editing in the voice bank window, and the analysis caches that each resampler keeps.</source>
-        <translation>音源窗口以重采样器生成频率表的方式与频率表的编辑，以及各重采样器保留的分析缓存。</translation>
+        <translation>音源窗口以重采样器生成频率表的方式与频率表的编辑方式，以及各重采样器保留的分析缓存。</translation>
     </message>
     <message>
         <source>When regenerating, remove only the analysis caches and &amp;keep the frequency maps</source>
@@ -1525,7 +1525,7 @@
     </message>
     <message>
         <source>This choice applies to this generation only. The default is set on the Frequency Maps page of the settings.</source>
-        <translation>此选择只对本次生成有效。缺省值在设置的「频率表」页中设置。</translation>
+        <translation>此选择只对本次生成有效。默认值在设置的「频率表」页中设置。</translation>
     </message>
     <message numerus="yes">
         <source>%n missing frequency map(s) will be generated.</source>

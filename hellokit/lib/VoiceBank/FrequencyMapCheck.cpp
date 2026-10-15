@@ -84,8 +84,8 @@ namespace hello::kit {
             return runs;
         }
 
-        // Returns the frequency of frame i of run on the line from the note left to the note
-        // right, which lie one frame before and one frame after the run.
+        // Returns the frequency of frame i of run on the line from left to right, the notes of
+        // the frames one frame before and one frame after the run.
         double interpolated(const IntRun &run, int i, double left, double right) {
             const double step = (right - left) / double(run.last - run.first + 2);
             return frequencyOf(double(i - run.first + 1) * step + left);
@@ -136,8 +136,9 @@ namespace hello::kit {
             }
         }
 
-        // Drops the corrections from the first voiced frame in the direction of step up to the
-        // first frame without a correction.
+        // Walks from the end of the segment that step starts at, in the direction of step, and
+        // drops the corrections from the first voiced frame reached up to the first frame
+        // without a correction.
         void clearFromEnd(std::vector<Frame> &frames, int first, int last, int step) {
             int i = step > 0 ? first : last;
             while (i >= first && i <= last && frames[size_t(i)].unvoiced) {

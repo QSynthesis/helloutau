@@ -16,8 +16,7 @@ namespace hello::kit {
         /// On Linux without a file manager on D-Bus, opens the folder with \c xdg-open, which
         /// selects nothing.
         ///
-        /// \return whether the file manager accepted the request, which does not wait for its
-        ///         window
+        /// \return whether the file manager accepted the request, without waiting for its window
         static bool reveal(const std::filesystem::path &path);
 
     private:

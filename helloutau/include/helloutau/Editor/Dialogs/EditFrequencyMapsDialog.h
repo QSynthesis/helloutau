@@ -48,9 +48,9 @@ namespace hello::daw {
     /// Each map has a history of its own, which ends with the dialog. Save writes the current
     /// map, and Save All writes every modified map in order and stops at the first failure. A
     /// save removes the analysis caches of the map if removeCachesBox() is checked, initially
-    /// the setting FrequencyMapSettings::removesCachesOnSave(), and asks before it overwrites a
-    /// map file that changed on disk after it was read. Closing the dialog with a modified map
-    /// asks whether to save every modified map.
+    /// the setting FrequencyMapSettings::removesCachesOnSave(). The user is asked whether to
+    /// overwrite a map file that changed on disk after it was read. Closing the dialog with a
+    /// modified map shows a question whether to save every modified map.
     ///
     /// Beside the file list the dialog has the right side of the window of frqeditor: the key
     /// with its button Update, the list of the frequencies of the frames, which selects the
@@ -93,7 +93,7 @@ namespace hello::daw {
                                 QWidget *parent = nullptr);
         ~EditFrequencyMapsDialog();
 
-        /// Returns the index of the current file, or -1 before the first file is read once the
+        /// Returns the index of the current file, or -1 before the first file is read after the
         /// dialog is shown.
         int currentFile() const;
 
@@ -113,17 +113,17 @@ namespace hello::daw {
         bool isModified(int index) const;
 
         /// Writes the map of the current file. Returns false if it is not modified, the user
-        /// keeps a map file that changed on disk, or the write fails.
+        /// declines to overwrite a map file that changed on disk, or the write fails.
         bool save();
 
         /// Writes every modified map in order, and stops at the first that save() does not
         /// write. Returns whether every modified map was written.
         bool saveAll();
 
-        /// Checks the map of every file that has one against \a settings in the background, the
-        /// maps read so far as edited, and replaces the corrections of every map with the
-        /// result, as the menu command does after asking for the settings. Selects the first
-        /// correction, or reports that there is none. Returns false if the user cancels the
+        /// Checks the map of every file that has one against \a settings in the background, with
+        /// the maps read so far as edited, and replaces the corrections of every map with the
+        /// result, as the menu command does after the user chooses the settings. Selects the
+        /// first correction, or reports that there is none. Returns false if the user cancels the
         /// check, which keeps the corrections as they were.
         bool check(const kit::FrequencyMapCheck::Settings &settings);
 
@@ -155,7 +155,7 @@ namespace hello::daw {
         QAK::WidgetActionContext *actionContext() const;
 
     public Q_SLOTS:
-        /// Closes the dialog after asking whether to save every modified map, if any.
+        /// Closes the dialog after the user is asked whether to save every modified map, if any.
         void reject() override;
 
     protected:

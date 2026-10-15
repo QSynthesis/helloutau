@@ -64,7 +64,7 @@ namespace hello::daw {
         QPointF m_origin;
         QPointF m_last;
         LockFunction m_locked;
-        // Where the lock turned on, and the axis that the lock zooms once the pointer has moved
+        // Where the lock turned on, and the axis that the drag zooms once the pointer has moved
         // far enough from there
         std::optional<QPointF> m_lockOrigin;
         std::optional<Qt::Orientation> m_orientation;

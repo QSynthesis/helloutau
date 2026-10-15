@@ -138,8 +138,8 @@ namespace hello::daw {
         painter.setClipRect(area);
         painter.fillRect(area, view->whiteRowColor());
 
-        // Below the plot of the view only, the right of the column of labels to the right of the
-        // viewport
+        // Below the plot of the view only, from the right of the column of labels to the right of
+        // the viewport
         const auto viewport = view->viewport();
         const int left =
             std::max(area.left(), int(std::lround(impl.fromViewport(view->labelWidth()))));

@@ -6,8 +6,8 @@
 
 namespace hello::daw {
 
-    // The layout, as model4 writes it and frqeditor reads and writes it: the layout of the frq of
-    // resampler.exe, FREQ0003, the int32 hop in samples, the double average frequency, 16
+    // The layout, as model4 writes it and frqeditor reads and writes it, is that of the frq of
+    // resampler.exe: FREQ0003, the int32 hop in samples, the double average frequency, 16
     // reserved bytes, the int32 frame count, and each frame a double frequency and a double
     // amplitude. The reserved bytes of model4 are m4 and six spaces, followed by eight zero
     // bytes, in place of the zeros of frq.

@@ -157,7 +157,7 @@ private Q_SLOTS:
         QVERIFY(!preview.notePosition().has_value());
     }
 
-    // The flags and the modulation of the options reach the resampler in their places of the
+    // The flags and the modulation of the options reach the resampler at their places in the
     // arguments of UTAU.
     void the_options_reach_the_resampler() {
         QTemporaryDir dir;

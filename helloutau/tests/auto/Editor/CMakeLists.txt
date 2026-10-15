@@ -4,7 +4,7 @@ add_auto_test(test_FrequencyMapView.cpp HelloUtauEditor)
 add_auto_test(test_FrequencyMapWaveform.cpp HelloUtauEditor)
 add_auto_test(test_FrequencyViewKeyboardModifiers.cpp HelloUtauEditor)
 add_auto_test(test_KeymapFile.cpp HelloUtauEditor QActionKit::Core)
-# The editor of the test registers the formats dio and mrq of the SynthToolSupport plugin, as the
+# The editor of the test registers the formats dio, frc, mrq and pmk, as the SynthToolSupport
 # plugin does, whose library is in its own directory of the plugins.
 add_auto_test(test_Editor.cpp HelloUtauTestingEditor SynthToolSupportPlugin)
 set_property(TEST test_Editor APPEND PROPERTY ENVIRONMENT_MODIFICATION

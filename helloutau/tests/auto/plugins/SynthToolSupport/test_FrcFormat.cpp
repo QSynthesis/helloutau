@@ -34,7 +34,7 @@ namespace {
         return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
     }
 
-    // Returns a map in the layout of frq with the reserved bytes reserved
+    // Returns a map in the layout of frq with the given reserved bytes
     QByteArray frcOf(qint32 hop, double average, const QByteArray &reserved,
                      const QList<std::pair<double, double>> &frames) {
         QByteArray bytes("FREQ0003");

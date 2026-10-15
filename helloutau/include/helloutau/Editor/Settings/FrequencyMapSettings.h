@@ -62,7 +62,7 @@ namespace hello::daw {
         void setSpectrogramColorScheme(int scheme);
 
         /// Returns the settings that the check of the editing dialog last used: by default C4,
-        /// with no option. The note is limited to C1 to B7, as frqeditor offers it.
+        /// with no option. The note is limited to the range C1 to B7, as frqeditor offers it.
         kit::FrequencyMapCheck::Settings checkSettings() const;
         void setCheckSettings(const kit::FrequencyMapCheck::Settings &settings);
         /// @}

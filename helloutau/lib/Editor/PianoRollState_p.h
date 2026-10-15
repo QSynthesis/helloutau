@@ -324,9 +324,9 @@ namespace hello::daw {
         std::optional<KeyboardModifierBindings::Activation>
             activate(NoteViewKeyboardModifiers::Scene scene, Qt::KeyboardModifiers modifiers) const;
 
-        /// Returns the drag that zooms the view about position (DragZoom of
-        /// NoteViewKeyboardModifiers), locked to one axis while DragZoomAxisLock of activation is
-        /// on
+        /// Returns the drag that zooms the view about \a position (DragZoom of
+        /// NoteViewKeyboardModifiers), locked to one axis while DragZoomAxisLock of
+        /// \a activation is on
         std::unique_ptr<SceneGesture> zoomGesture(QPointF position,
                                                   KeyboardModifierBindings::Activation activation);
 

@@ -134,7 +134,7 @@ namespace hello::daw {
 
         Tool tool() const;
 
-        /// Sets the tool of the left presses after the call.
+        /// Sets the tool of the left presses that follow the call.
         void setTool(Tool tool);
 
         /// Returns the brightness of the spectrogram from lowestBrightness to highestBrightness,

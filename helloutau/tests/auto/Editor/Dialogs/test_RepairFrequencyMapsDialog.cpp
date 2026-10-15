@@ -195,7 +195,7 @@ private Q_SLOTS:
         QCOMPARE(firstLine(dialog.list(1)->item(0)), QString::fromUtf8("い\\あ.wav.cache"));
         QCOMPARE(firstLine(dialog.list(1)->item(1)), QString::fromUtf8("い\\other.cache"));
 
-        // Without the function, the names on disk
+        // Without the function, the names on disk are shown.
         RepairFrequencyMapsDialog onDisk(format, root, files);
         QCOMPARE(firstLine(onDisk.list(1)->item(0)), QString::fromUtf8("偆\\偁.wav.cache"));
     }

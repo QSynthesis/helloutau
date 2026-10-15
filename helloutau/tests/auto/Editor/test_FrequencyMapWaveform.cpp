@@ -55,7 +55,7 @@ private:
     FrequencyMapWaveform *m_waveform = nullptr;
     std::unique_ptr<FrequencyMapRevisionBuffer> m_buffer;
 
-    // The color drawn at time, halfway between the zero line and the top of the lane
+    // Returns the color drawn at time, halfway between the zero line and the top of the lane.
     QColor colorAt(double time) const {
         const auto image = m_waveform->grab().toImage();
         const QRect area = m_waveform->contentsRect();

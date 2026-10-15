@@ -100,7 +100,7 @@
 
 **第五阶段「插件」进行中**：原生插件的载入、设置与「Plugins」设置页，频率表格式与格式转换驱动的登记，ClassicPluginHost 及原版插件的试听（[`PluginPlay.md`](PluginPlay.md)）均已实现，验收（社区常用的原版插件）待作者进行。选区编辑与音源批量操作的扩展点尚未建立，见 [`Plugins.md`](Plugins.md)。
 
-**第六阶段「兼容周边」中频率表一项除 vs4ufrq 外均已完成**（2026-10-15）：frq、dio、mrq、frc、pmk 五种格式的读写，生成、删除、修复与格式间转换，编辑对话框中的编辑、检查与修正，以及音源窗口按格式显示 F0 曲线。frq 由编辑器登记，其余四种由 SynthToolSupport 插件登记。缩略图不做，vs4ufrq 以后再做，见 [`FrequencyMaps.md`](FrequencyMaps.md)「实施步骤」。原音设定编辑器见 [`VoiceBankEditor.md`](VoiceBankEditor.md)，VSQ / SynthV 导入与 `.uar` 安装尚未开始。
+**第六阶段「兼容周边」中频率表一项除 vs4ufrq 外均已完成**（2026-10-15），包括 frq、dio、mrq、frc、pmk 五种格式的读写，生成、删除、修复与格式间转换，编辑对话框中的编辑、检查与修正，以及音源窗口按格式显示 F0 曲线。frq 由编辑器登记，其余四种由 SynthToolSupport 插件登记。缩略图不做，vs4ufrq 以后再做，见 [`FrequencyMaps.md`](FrequencyMaps.md)「实施步骤」。原音设定编辑器见 [`VoiceBankEditor.md`](VoiceBankEditor.md)，VSQ / SynthV 导入与 `.uar` 安装尚未开始。
 
 ## 扩展点位置
 

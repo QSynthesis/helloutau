@@ -113,7 +113,7 @@ namespace hello::kit {
         /// Sets the average frequency to the arithmetic mean in hertz of the voiced frames among
         /// \a count frames from \a first, as the button that sets the key to the average of the
         /// selection in frqeditor does, as one step. Returns whether it changed, and false
-        /// without a voiced frame, as setKey() does otherwise.
+        /// without a voiced frame or if setKey() returns false.
         bool setKeyToMean(std::size_t first, std::size_t count);
 
         /// Writes the proposed frequencies of \a corrections, from frame \a first, as frqeditor

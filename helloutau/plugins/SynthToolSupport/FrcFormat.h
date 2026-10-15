@@ -10,7 +10,7 @@
 namespace hello::daw {
 
     /// The frequency maps of model4, beside the audio file as a_wav.frc, registered by the
-    /// SynthToolSupport plugin. The layout is that of frq with other reserved bytes. See
+    /// SynthToolSupport plugin. The layout is that of frq with different reserved bytes. See
     /// docs/FrequencyMaps.md.
     class SYNTHTOOLSUPPORTPLUGIN_EXPORT FrcFormat : public kit::FrequencyFormat {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::FrcFormat)

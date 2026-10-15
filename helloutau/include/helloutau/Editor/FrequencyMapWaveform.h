@@ -21,7 +21,7 @@ namespace hello::daw {
     /// The waveform follows the time axis of the view: a time is drawn at the same x on the
     /// screen as in the viewport of the view, and the part below the column of labels of the view
     /// is left blank. The waveform of each channel is drawn in a lane of its own. A wheel step is
-    /// passed to the viewport of the view, so that it scrolls and zooms the view.
+    /// passed to the viewport of the view, so that the view scrolls and zooms.
     ///
     /// The colors are properties that a style sheet can set. The background and the lines take
     /// the colors of the rows of the view.

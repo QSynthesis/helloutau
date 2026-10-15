@@ -43,9 +43,9 @@
         <action id="helloutau.frequencyMap.synthesize" text="&amp;Synthesize and Play"
                 category="Playback" shortcuts="Ctrl+Return;Ctrl+Enter" />
 
-        <!-- The check of every map against the note of the recordings, as frqeditor checks
-             them, and the corrections that it proposes. A correction is a run of frames, which
-             the commands select in turn across the files. -->
+        <!-- The check of every map against the note of the recordings, as frqeditor does, and
+             the corrections that it proposes. A correction is a run of frames, which the
+             commands select in turn across the files. -->
         <action id="helloutau.frequencyMap.check" text="&amp;Check Frequency Maps..."
                 category="Check" />
         <action id="helloutau.frequencyMap.previousCorrection" text="&amp;Previous Correction"

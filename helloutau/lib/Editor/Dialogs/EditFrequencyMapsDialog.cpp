@@ -410,8 +410,8 @@ namespace hello::daw {
 
         // Reads the audio of the file at index, its spectrogram if shown and its map if not read
         // yet in the background, then shows the file in the editing area, or explains in the
-        // message why it cannot be edited. A cancellation keeps the current file, and returns
-        // false.
+        // message why it cannot be edited. Returns false if the user cancels the reading, which
+        // keeps the current file.
         bool show(int index) {
             stdc_decl_t;
             const auto &file = files.at(index);
@@ -840,9 +840,9 @@ namespace hello::daw {
             return true;
         }
 
-        // Asks for the settings of the check, as the check dialog of frqeditor does, initially
-        // those of the last check, and keeps them in the settings. Returns std::nullopt if the
-        // user cancels.
+        // Shows a dialog in which the user chooses the settings of the check, as the check
+        // dialog of frqeditor does, initially those of the last check, and keeps them in the
+        // settings. Returns std::nullopt if the user cancels.
         std::optional<kit::FrequencyMapCheck::Settings> askCheckSettings() {
             stdc_decl_t;
             auto settings = editor->settings().frequencyMaps().checkSettings();

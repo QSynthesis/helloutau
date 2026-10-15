@@ -92,8 +92,8 @@ private Q_SLOTS:
         }
     }
 
-    // The settings of the check of frequency maps persist, the note limited to C1 to B7. The
-    // defaults are not written.
+    // The settings of the check of frequency maps persist, the note limited to the range C1 to B7.
+    // The defaults are not written.
     void the_check_settings_of_frequency_maps_persist() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));

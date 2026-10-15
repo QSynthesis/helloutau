@@ -3162,9 +3162,9 @@ private Q_SLOTS:
         QCOMPARE(qsizetype(fs::file_size(bank / "a_wav.frq")), frq.size());
     }
 
-    // The editing dialog reads the map of the current file, edits it with its actions, asks
-    // before it overwrites a map file that changed on disk, and asks on closing with a modified
-    // map. A file without a map cannot be edited.
+    // The editing dialog reads the map of the current file and edits it with its actions. The user
+    // is asked before a map file that changed on disk is overwritten, and when the dialog closes
+    // with a modified map. A file without a map cannot be edited.
     void the_frequency_maps_are_edited() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -3174,7 +3174,7 @@ private Q_SLOTS:
             qToLittleEndian(value, bytes.data());
             return bytes;
         };
-        // a_wav.frq at 220 Hz, a frame each 10 ms
+        // a_wav.frq at 220 Hz, one frame every 10 ms
         QByteArray frq("FREQ0003");
         frq += le(qint32(10)) + le(220.0) + QByteArray(16, '\0') + le(qint32(100));
         for (int i = 0; i < 100; ++i) {
@@ -3238,15 +3238,15 @@ private Q_SLOTS:
 
             // A canceled reading keeps the current file, and is reported.
             dialog->setProgressDelay(0);
-            // A click on the button, since QProgressDialog::cancel() emits no canceled()
+            // The test clicks the button, since QProgressDialog::cancel() emits no canceled().
             QTimer::singleShot(0, [] {
                 if (const auto progress =
                         qobject_cast<QProgressDialog *>(QApplication::activeModalWidget())) {
                     progress->findChild<QPushButton *>()->click();
                 }
             });
-            // Polled, since the dialog is the active modal widget between the progress dialog and
-            // the warning
+            // The test polls for the warning, since the dialog is the active modal widget between
+            // the progress dialog and the warning.
             bool warned = false;
             int tries = 0;
             std::function<void()> answer = [&] {
@@ -3358,7 +3358,7 @@ private Q_SLOTS:
             QVERIFY(dialog->save());
             QVERIFY(!dialog->isModified(0));
 
-            // Closing discards an edit after asking.
+            // Closing discards an edit after the user is asked.
             trigger("helloutau.frequencyMap.unvoice");
             QVERIFY(dialog->isModified(0));
             bool asked = false;

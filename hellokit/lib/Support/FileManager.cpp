@@ -22,7 +22,7 @@ namespace hello::kit {
         // The milliseconds that a helper program may take before the request counts as failed
         constexpr int helperTimeout = 10000;
 
-        // Runs args and returns whether it exits with 0 within helperTimeout.
+        // Runs args and returns whether the program exits with 0 within helperTimeout.
         bool succeeds(std::vector<std::string> args) {
             stdc::Popen process;
             process.args(std::move(args));

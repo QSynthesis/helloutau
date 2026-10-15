@@ -44,13 +44,13 @@ private:
     std::unique_ptr<FrequencyMapView> m_view;
     std::unique_ptr<FrequencyMapRevisionBuffer> m_buffer;
 
-    // The point of frame at frequency in the view
+    // Returns the point of the frame at frequency in the view.
     QPoint pointOf(int frame, double frequency) const {
         return QPoint(int(std::lround(m_view->xOf(frame * 10))),
                       int(std::lround(m_view->yOf(frequency))));
     }
 
-    // Sent directly with the button held, which QTest::mouseMove does not hold
+    // Sends the move directly with the button held, which QTest::mouseMove does not hold.
     void moveTo(QPoint position, Qt::MouseButton button, Qt::KeyboardModifiers modifiers = {}) {
         QMouseEvent event(QEvent::MouseMove, position, m_view->viewport()->mapToGlobal(position),
                           Qt::NoButton, button, modifiers);
@@ -263,13 +263,13 @@ private Q_SLOTS:
     // The pen shows a cursor of its own over the plot, which stays visible over the rows, and the
     // select tool shows the arrow.
     void the_pen_has_a_cursor_of_its_own() {
-        // Sent directly, because QTest::mouseMove moves the pointer of the system on Windows,
-        // whose move may not reach the viewport
+        // The move is sent directly, because QTest::mouseMove moves the pointer of the system on
+        // Windows, whose move may not reach the viewport.
         const auto point = pointOf(50, 200);
         moveTo(point, Qt::NoButton);
         QCOMPARE(m_view->viewport()->cursor().shape(), Qt::BitmapCursor);
         m_view->setTool(FrequencyMapView::SelectTool);
-        // A move elsewhere, since the hover is updated only when the hit changes
+        // The move is sent elsewhere, since the hover is updated only when the hit changes.
         moveTo(QPoint(m_view->labelWidth() / 2, point.y()), Qt::NoButton);
         moveTo(point, Qt::NoButton);
         QCOMPARE(m_view->viewport()->cursor().shape(), Qt::ArrowCursor);

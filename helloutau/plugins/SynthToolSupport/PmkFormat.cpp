@@ -30,10 +30,10 @@ namespace hello::daw {
             std::size_t frameCount = 0;
         };
 
-        // Returns the marks of bytes, or std::nullopt if bytes is no complete pmk. The frames end
-        // with the last mark. A pmk with more than markHop frames for each mark is rejected,
-        // which bounds the frames of a crafted file. A legitimate pmk has a mark at least every
-        // few frames, since the longest voiced period is about 800 samples.
+        // Returns the marks of bytes, or std::nullopt if bytes is no complete pmk. The frames reach
+        // the end of the last period. A pmk with more than markHop frames for each mark is
+        // rejected, which bounds the frames of a crafted file. A legitimate pmk has a mark at
+        // least every few frames, since the longest voiced period is about 800 samples.
         std::optional<Marks> marksOf(const QByteArray &bytes) {
             if (bytes.size() < headerSize || bytes.at(0) != 0x13 || bytes.at(1) != 0) {
                 return std::nullopt;
@@ -89,9 +89,9 @@ namespace hello::daw {
         return sidecarsExist(directory, wavs);
     }
 
-    // The frame of each start takes the period of the current mark, after which the current mark
-    // advances to the first mark that ends at the start of the next frame or later, as frqeditor
-    // reads it.
+    // The period of each frame is that of the current mark at the start of the frame, after which
+    // the current mark advances to the first mark that ends at the start of the next frame or
+    // later, as frqeditor reads it.
     std::optional<kit::FrequencyMap> PmkFormat::read(const std::filesystem::path &wav,
                                                      int sampleRate,
                                                      kit::DiagnosticList &diagnostics) const {
