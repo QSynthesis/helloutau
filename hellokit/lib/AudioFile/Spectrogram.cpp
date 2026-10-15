@@ -45,7 +45,9 @@ namespace hello::kit {
 
     Spectrogram::Spectrogram() = default;
 
-    Spectrogram Spectrogram::of(const WaveAudio &audio) {
+    template <class Canceled>
+    std::optional<Spectrogram> Spectrogram::compute(const WaveAudio &audio,
+                                                    const Canceled &canceled) {
         Spectrogram result;
         const auto frames = audio.frameCount();
         if (frames <= 0 || audio.sampleRate <= 0) {
@@ -75,7 +77,13 @@ namespace hello::kit {
         result.m_frameCount = int(frames / hopSize) + 1;
         result.m_magnitudes.resize(size_t(result.m_frameCount) * binCount);
         std::vector<std::complex<double>> data(windowSize);
+        // 16 frames take a fraction of a millisecond, therefore a cancellation still stops
+        // promptly with one call for every 16 frames.
+        constexpr int framesPerCheck = 16;
         for (int frame = 0; frame < result.m_frameCount; ++frame) {
+            if (frame % framesPerCheck == 0 && canceled()) {
+                return std::nullopt;
+            }
             const qsizetype first = qsizetype(frame) * hopSize - windowSize / 2;
             for (int n = 0; n < windowSize; ++n) {
                 const auto at = first + n;
@@ -91,6 +99,15 @@ namespace hello::kit {
             }
         }
         return result;
+    }
+
+    Spectrogram Spectrogram::of(const WaveAudio &audio) {
+        return *compute(audio, [] { return false; });
+    }
+
+    std::optional<Spectrogram> Spectrogram::of(const WaveAudio &audio,
+                                               const std::function<bool()> &canceled) {
+        return compute(audio, canceled);
     }
 
     int Spectrogram::sampleRate() const {

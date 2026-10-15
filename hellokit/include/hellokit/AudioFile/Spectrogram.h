@@ -1,6 +1,8 @@
 #ifndef HELLOKIT_AUDIOFILE_SPECTROGRAM_H
 #define HELLOKIT_AUDIOFILE_SPECTROGRAM_H
 
+#include <functional>
+#include <optional>
 #include <vector>
 
 #include <hellokit/AudioFile/HelloKitAudioFileGlobal.h>
@@ -25,6 +27,13 @@ namespace hello::kit {
         /// Computes the spectrogram of \a audio, which is empty without samples.
         static Spectrogram of(const WaveAudio &audio);
 
+        /// \overload that calls \a canceled before every 16 frames, from the calling thread, and
+        /// stops if it returns true.
+        ///
+        /// \return the spectrogram, or \c std::nullopt if canceled
+        static std::optional<Spectrogram> of(const WaveAudio &audio,
+                                             const std::function<bool()> &canceled);
+
         int sampleRate() const;
         int frameCount() const;
 
@@ -45,6 +54,11 @@ namespace hello::kit {
         float peak() const;
 
     private:
+        // Computes the spectrogram of audio and stops if canceled() returns true, which it calls
+        // before every 16 frames. Defined and instantiated in the source only.
+        template <class Canceled>
+        static std::optional<Spectrogram> compute(const WaveAudio &audio, const Canceled &canceled);
+
         int m_sampleRate = 0;
         int m_frameCount = 0;
         float m_peak = 0;

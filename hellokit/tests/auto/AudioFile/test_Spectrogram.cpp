@@ -65,6 +65,29 @@ private Q_SLOTS:
         QCOMPARE(spectrogram.frameCount(), 0);
         QCOMPARE(spectrogram.peak(), 0.0f);
     }
+
+    // A cancellation stops the computation, which is checked before every 16 frames and
+    // otherwise gives the same spectrogram.
+    void a_cancellation_stops_the_computation() {
+        const auto audio = sine(440, 0.5);
+        int calls = 0;
+        const auto stopped = Spectrogram::of(audio, [&calls] { return ++calls > 3; });
+        QVERIFY(!stopped);
+        QCOMPARE(calls, 4);
+
+        calls = 0;
+        const auto whole = Spectrogram::of(audio, [&calls] {
+            ++calls;
+            return false;
+        });
+        QVERIFY(whole);
+        // 87 frames, checked before the frames 0, 16, 32, 48, 64 and 80
+        QCOMPARE(whole->frameCount(), 87);
+        QCOMPARE(calls, 6);
+        const auto plain = Spectrogram::of(audio);
+        QCOMPARE(whole->frameCount(), plain.frameCount());
+        QCOMPARE(whole->peak(), plain.peak());
+    }
 };
 
 QTEST_APPLESS_MAIN(test_Spectrogram)
