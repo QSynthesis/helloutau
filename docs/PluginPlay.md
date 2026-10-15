@@ -31,7 +31,7 @@ plugin-play 以同样的命令行接受调用，把请求交给运行该插件�
 
 | 部分 | 位置 | 职责 |
 |---|---|---|
-| `hello-plugin-play` | `hellokit/tools/plugin-play` | 解析命令行，经命名管道把请求交给宿主，等待回复后退出 |
+| `hello-plugin-play` | `helloutau/tools/plugin-play`（2026-10-15 由 `hellokit/tools` 移入，作者决定，因为它只服务于 ClassicPluginHost 插件；测试在 `helloutau/tests/auto/tools/plugin-play`） | 解析命令行，经命名管道把请求交给宿主，等待回复后退出 |
 | 管道服务器 | ClassicPluginHost | 插件运行期间接受请求，核对、叠加修改、渲染，回复结果 |
 | 试听对话框 | ClassicPluginHost（`Internal`） | 显示渲染进度，播放，取消 |
 
@@ -127,7 +127,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 ## 实施步骤
 
 1. ~~**叠加修改**~~：`ClassicPluginExchange::preview()`，以临时会话复用 `apply()`，无须拆出合并逻辑。QtTest。
-2. ~~**`hello-plugin-play`**~~：`hellokit/tools/plugin-play`，命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`，只在 Windows 上构建。测试 `hellokit/tests/auto/tools/plugin-play` 用 Python 运行程序：测试进程创建作业，在其中启动充当插件的进程，以 CPython 的 `_winapi` 创建以该进程命名的管道充当宿主，检查请求的内容、等待回复、管道关闭后退出，以及作业中没有宿主时以原样的参数运行原版（`plugin-play-original-stub` 充当原版）并返回其退出码。
+2. ~~**`hello-plugin-play`**~~：`helloutau/tools/plugin-play`，命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`，只在 Windows 上构建。测试 `hellokit/tests/auto/tools/plugin-play` 用 Python 运行程序：测试进程创建作业，在其中启动充当插件的进程，以 CPython 的 `_winapi` 创建以该进程命名的管道充当宿主，检查请求的内容、等待回复、管道关闭后退出，以及作业中没有宿主时以原样的参数运行原版（`plugin-play-original-stub` 充当原版）并返回其退出码。
 3. ~~**管道服务器与渲染入口**~~：`Playback` 的重载与 `ProjectWindow::playback()`。`ClassicPluginRunner::processId()` 提供插件进程的进程号，`ClassicPluginPreviewServer` 以它命名管道，每个连接读取一行请求，核对输入文件的音符数与选区起点，以 `ClassicPluginExchange::preview()` 叠加修改后发出 `requested()`，由接收方渲染并调用 `reply()`，连接在回复前关闭时发出 `abandoned()`。QtTest 以 `QLocalSocket` 模拟 plugin-play。
 4. ~~**试听对话框**~~：`Internal/ClassicPluginPreview`，在插件运行期间（`ClassicPluginRun.cpp` 的等待对话框之内）建立管道服务器与试听缓存，插件结束、应用结果之前停止渲染并删除缓存。合成工具不存在或不可信时显示错误窗口。`/noplay` 以 `Playback::renderTrack()` 的重载只渲染。其余请求显示试听对话框，渲染完成后自动播放，`/o:` 的文件为渲染结果的副本。作者已试用。
 5. ~~**部署**~~：见上节。`plugin.json` 的 `ustversion` 与 `hostData` 键（2026-10-15 由根上的 `ClassicPluginHost` 键移入 `hostData`），安装类 `ClassicPluginPreviewInstallation`（QtTest），设置页（作者已试用）。
