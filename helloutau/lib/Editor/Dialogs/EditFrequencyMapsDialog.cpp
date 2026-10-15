@@ -1,12 +1,17 @@
 #include "EditFrequencyMapsDialog.h"
 
+#include <atomic>
 #include <functional>
+#include <limits>
 #include <map>
 #include <optional>
 
 #include <QtCore/QDir>
+#include <QtCore/QEventLoop>
 #include <QtCore/QHash>
 #include <QtCore/QSignalBlocker>
+#include <QtCore/QThread>
+#include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>
@@ -14,6 +19,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
@@ -122,9 +128,94 @@ namespace hello::daw {
             return entry ? entry->buffer.get() : nullptr;
         }
 
-        // Reads the map of the file at index, or explains in the message why it cannot be
-        // edited, and shows the file in the editing area.
-        void show(int index) {
+        QAction *spectrumAction() const {
+            return actions.value(QStringLiteral("helloutau.frequencyMap.showSpectrogram"));
+        }
+
+        // Runs work in a thread while a progress dialog that appears after progressDelay
+        // cancels it. work receives the function that returns whether it is canceled. Returns
+        // whether the work completed.
+        bool runInBackground(const QString &label,
+                             const std::function<void(const std::function<bool()> &)> &work) {
+            stdc_decl_t;
+            QProgressDialog progress(label, tr("Cancel"), 0, 0, &decl);
+            progress.setWindowTitle(decl.windowTitle());
+            progress.setWindowModality(Qt::WindowModal);
+            // Shown by the delay below only
+            progress.setMinimumDuration(std::numeric_limits<int>::max());
+            std::atomic<bool> canceled = false;
+            QObject::connect(&progress, &QProgressDialog::canceled, &decl,
+                             [&canceled] { canceled = true; });
+            if (progressDelay <= 0) {
+                progress.show();
+            } else {
+                QTimer::singleShot(progressDelay, &progress, [&progress] { progress.show(); });
+            }
+            QEventLoop loop;
+            QThread *worker = nullptr;
+            // Started once the event loop runs, so that nothing is read if a cancellation comes
+            // first, such as a click on the dialog just shown.
+            QTimer::singleShot(0, &loop, [&] {
+                worker = QThread::create([&] {
+                    if (!canceled.load()) {
+                        work([&canceled] { return canceled.load(); });
+                    }
+                });
+                QObject::connect(worker, &QThread::finished, &loop, &QEventLoop::quit);
+                worker->start();
+            });
+            loop.exec();
+            worker->wait();
+            delete worker;
+            progress.reset();
+            return !canceled.load();
+        }
+
+        // Reads the audio of the file at index, its spectrogram if shown and its map if not read
+        // yet in the background, then shows the file in the editing area, or explains in the
+        // message why it cannot be edited. A cancellation keeps the current file, and returns
+        // false.
+        bool show(int index) {
+            stdc_decl_t;
+            const auto &file = files.at(index);
+            const bool readsMap = file.hasMap && !openedOf(index);
+            const bool showsSpectrum = spectrumAction()->isChecked();
+            std::shared_ptr<const kit::WaveAudio> read;
+            std::shared_ptr<const kit::Spectrogram> spectrum;
+            std::optional<kit::FrequencyMap> map;
+            kit::DiagnosticList audioDiagnostics;
+            kit::DiagnosticList mapDiagnostics;
+            const bool completed = runInBackground(
+                tr("Reading the audio file and its frequency map..."),
+                [&](const std::function<bool()> &canceled) {
+                    auto wave = kit::WaveAudio::read(file.path, audioDiagnostics);
+                    if (!wave) {
+                        return;
+                    }
+                    read = std::make_shared<const kit::WaveAudio>(std::move(*wave));
+                    if (showsSpectrum) {
+                        auto computed = kit::Spectrogram::of(*read, canceled);
+                        if (!computed) {
+                            return;
+                        }
+                        spectrum = std::make_shared<const kit::Spectrogram>(std::move(*computed));
+                    }
+                    if (readsMap && !canceled()) {
+                        map = format.read(file.path, read->sampleRate, mapDiagnostics);
+                    }
+                });
+            if (!completed) {
+                {
+                    const QSignalBlocker blocker(list);
+                    list->setCurrentItem(current >= 0 ? list->topLevelItem(current) : nullptr);
+                }
+                QMessageBox::warning(&decl, decl.windowTitle(),
+                                     tr("The reading of %1 was canceled. The file in the editing "
+                                        "area does not change.")
+                                         .arg(textOf(file.path.filename())));
+                return false;
+            }
+
             // A map left without a history is read again when it is shown again.
             if (const auto left = openedOf(current);
                 left && current != index && !left->buffer->canUndo() && !left->buffer->canRedo()) {
@@ -135,36 +226,28 @@ namespace hello::daw {
                 const QSignalBlocker blocker(list);
                 list->setCurrentItem(list->topLevelItem(index));
             }
-            const auto &file = files.at(index);
-            kit::DiagnosticList diagnostics;
-            audio.reset();
-            if (auto read = kit::WaveAudio::read(file.path, diagnostics)) {
-                audio = std::make_shared<const kit::WaveAudio>(std::move(*read));
-            }
-            updateSpectrogram();
+            audio = read;
+            view->setSpectrogram(spectrum);
             QString reason;
             if (!openedOf(index)) {
                 if (!file.hasMap) {
                     reason = tr("This audio file has no frequency map in the format %1.")
                                  .arg(format.name());
-                } else if (!audio) {
-                    reason =
-                        tr("The audio file cannot be read: %1").arg(diagnostics.value(0).message);
+                } else if (!read) {
+                    reason = tr("The audio file cannot be read: %1")
+                                 .arg(audioDiagnostics.value(0).message);
+                } else if (!map) {
+                    reason = tr("The frequency map cannot be read: %1")
+                                 .arg(mapDiagnostics.value(0).message);
                 } else {
-                    auto map = format.read(file.path, audio->sampleRate, diagnostics);
-                    if (!map) {
-                        reason = tr("The frequency map cannot be read: %1")
-                                     .arg(diagnostics.value(0).message);
-                    } else {
-                        Opened entry;
-                        entry.buffer =
-                            std::make_unique<kit::FrequencyMapRevisionBuffer>(std::move(*map));
-                        entry.sampleRate = audio->sampleRate;
-                        if (const auto mapFile = mapFileOf(index)) {
-                            entry.stamp = FileStamp::of(*mapFile);
-                        }
-                        opened.emplace(index, std::move(entry));
+                    Opened entry;
+                    entry.buffer =
+                        std::make_unique<kit::FrequencyMapRevisionBuffer>(std::move(*map));
+                    entry.sampleRate = read->sampleRate;
+                    if (const auto mapFile = mapFileOf(index)) {
+                        entry.stamp = FileStamp::of(*mapFile);
                     }
+                    opened.emplace(index, std::move(entry));
                 }
             }
             if (!reason.isEmpty()) {
@@ -175,19 +258,43 @@ namespace hello::daw {
             message->setVisible(!reason.isEmpty());
             view->setBuffer(currentBuffer());
             updateActions();
+            return true;
         }
 
         // The audio of the current file, if it can be read, kept to compute its spectrogram when
         // the spectrogram is shown again
         std::shared_ptr<const kit::WaveAudio> audio;
+        // The milliseconds after which the progress dialog of a reading appears
+        int progressDelay = 400;
+        // The file made current once the dialog is shown
+        int initial = -1;
+        bool shownOnce = false;
 
+        // Computes the spectrogram of the current file in the background if it is shown, and
+        // hides it again if the user cancels.
         void updateSpectrogram() {
-            const auto action =
-                actions.value(QStringLiteral("helloutau.frequencyMap.showSpectrogram"));
-            view->setSpectrogram(
-                audio && action && action->isChecked()
-                    ? std::make_shared<const kit::Spectrogram>(kit::Spectrogram::of(*audio))
-                    : nullptr);
+            stdc_decl_t;
+            const auto action = spectrumAction();
+            if (!audio || !action->isChecked()) {
+                view->setSpectrogram(nullptr);
+                return;
+            }
+            const auto source = audio;
+            std::shared_ptr<const kit::Spectrogram> spectrum;
+            if (!runInBackground(
+                    tr("Computing the spectrogram..."), [&](const std::function<bool()> &canceled) {
+                        if (auto computed = kit::Spectrogram::of(*source, canceled)) {
+                            spectrum =
+                                std::make_shared<const kit::Spectrogram>(std::move(*computed));
+                        }
+                    })) {
+                const QSignalBlocker blocker(action);
+                action->setChecked(false);
+                QMessageBox::warning(&decl, decl.windowTitle(),
+                                     tr("The computation of the spectrogram was canceled."));
+                return;
+            }
+            view->setSpectrogram(spectrum);
         }
 
         void updateRow(int index) {
@@ -521,7 +628,7 @@ namespace hello::daw {
                 });
 
         if (!impl.files.isEmpty()) {
-            impl.show(initial >= 0 ? initial : std::max(0, firstWithMap));
+            impl.initial = initial >= 0 ? initial : std::max(0, firstWithMap);
         }
     }
 
@@ -532,11 +639,9 @@ namespace hello::daw {
         return impl.current;
     }
 
-    void EditFrequencyMapsDialog::setCurrentFile(int index) {
+    bool EditFrequencyMapsDialog::setCurrentFile(int index) {
         stdc_impl_t;
-        if (index >= 0 && index < impl.files.size()) {
-            impl.show(index);
-        }
+        return index >= 0 && index < impl.files.size() && impl.show(index);
     }
 
     kit::FrequencyMapRevisionBuffer *EditFrequencyMapsDialog::bufferOf(int index) const {
@@ -599,6 +704,25 @@ namespace hello::daw {
     QAK::WidgetActionContext *EditFrequencyMapsDialog::actionContext() const {
         stdc_impl_t;
         return impl.context;
+    }
+
+    void EditFrequencyMapsDialog::setProgressDelay(int milliseconds) {
+        stdc_impl_t;
+        impl.progressDelay = milliseconds;
+    }
+
+    void EditFrequencyMapsDialog::showEvent(QShowEvent *event) {
+        stdc_impl_t;
+        QDialog::showEvent(event);
+        // Read once the dialog is shown, so that the progress dialog of the reading has the
+        // dialog as its window.
+        if (!impl.shownOnce && impl.initial >= 0) {
+            impl.shownOnce = true;
+            QTimer::singleShot(0, this, [this] {
+                stdc_impl_t;
+                impl.show(impl.initial);
+            });
+        }
     }
 
     void EditFrequencyMapsDialog::reject() {

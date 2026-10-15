@@ -33,7 +33,9 @@ namespace hello::daw {
     /// The files are listed with the presence of their maps and of each analysis cache of the
     /// format, and whether their maps are modified. The map of the current file is read when the
     /// file becomes current, and is edited in the editing area. A file without a map, or with a
-    /// map that cannot be read, cannot be edited.
+    /// map that cannot be read, cannot be edited. The audio, its spectrogram and the map are read
+    /// in the background with a progress dialog. A cancellation keeps the previous file current
+    /// and is reported.
     ///
     /// Each map has a history of its own, which ends with the dialog. Save writes the current
     /// map, and Save All writes every modified map in order and stops at the first failure. A
@@ -68,9 +70,17 @@ namespace hello::daw {
                                 QWidget *parent = nullptr);
         ~EditFrequencyMapsDialog();
 
-        /// Returns the index of the current file.
+        /// Returns the index of the current file, or -1 before the first file is read once the
+        /// dialog is shown.
         int currentFile() const;
-        void setCurrentFile(int index);
+
+        /// Makes the file \a index current after reading it in the background. Returns false if
+        /// the user cancels the reading, which keeps the current file.
+        bool setCurrentFile(int index);
+
+        /// Sets the milliseconds after which the progress dialog of a reading appears, 400 by
+        /// default. With 0 the progress dialog appears at once.
+        void setProgressDelay(int milliseconds);
 
         /// Returns the buffer of the map of the file \a index, or null if the map was not read,
         /// could not be read, or was released after it was left without a history.
@@ -99,6 +109,9 @@ namespace hello::daw {
     public Q_SLOTS:
         /// Closes the dialog after asking whether to save every modified map, if any.
         void reject() override;
+
+    protected:
+        void showEvent(QShowEvent *event) override;
 
     private:
         class Impl;

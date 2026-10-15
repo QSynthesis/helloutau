@@ -3165,8 +3165,9 @@ private Q_SLOTS:
                 QVERIFY(action && action->isEnabled());
                 action->trigger();
             };
-            // The audio file of the current row is current, and its map is read.
-            QCOMPARE(dialog->currentFile(), 0);
+            // The audio file of the current row is current, and its map is read once the dialog
+            // is shown.
+            QTRY_COMPARE(dialog->currentFile(), 0);
             const auto buffer = dialog->bufferOf(0);
             QVERIFY(buffer);
             QCOMPARE(buffer->map().frames.size(), size_t(100));
@@ -3175,7 +3176,35 @@ private Q_SLOTS:
             dialog->setCurrentFile(1);
             QVERIFY(!dialog->messageLabel()->isHidden());
             QVERIFY(!dialog->view()->buffer());
-            dialog->setCurrentFile(0);
+            QVERIFY(dialog->setCurrentFile(0));
+
+            // A canceled reading keeps the current file, and is reported.
+            dialog->setProgressDelay(0);
+            // A click on the button, since QProgressDialog::cancel() emits no canceled()
+            QTimer::singleShot(0, [] {
+                if (const auto progress =
+                        qobject_cast<QProgressDialog *>(QApplication::activeModalWidget())) {
+                    progress->findChild<QPushButton *>()->click();
+                }
+            });
+            // Polled, since the dialog is the active modal widget between the progress dialog and
+            // the warning
+            bool warned = false;
+            int tries = 0;
+            std::function<void()> answer = [&] {
+                if (const auto box =
+                        qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                    warned = true;
+                    box->close();
+                } else if (++tries < 200) {
+                    QTimer::singleShot(10, answer);
+                }
+            };
+            QTimer::singleShot(0, answer);
+            QVERIFY(!dialog->setCurrentFile(1));
+            QVERIFY(warned);
+            QCOMPARE(dialog->currentFile(), 0);
+            QVERIFY(dialog->view()->buffer());
 
             dialog->view()->selectAll();
             trigger("helloutau.frequencyMap.multiplyBy2");

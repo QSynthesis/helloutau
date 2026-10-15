@@ -852,6 +852,18 @@
 <context>
     <name>hello::daw::EditFrequencyMapsDialog</name>
     <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Reading the audio file and its frequency map...</source>
+        <translation>正在读取音频文件及其频率表...</translation>
+    </message>
+    <message>
+        <source>The reading of %1 was canceled. The file in the editing area does not change.</source>
+        <translation>已取消读取 %1，编辑区中的文件保持不变。</translation>
+    </message>
+    <message>
         <source>This audio file has no frequency map in the format %1.</source>
         <translation>此音频文件没有格式为 %1 的频率表。</translation>
     </message>
@@ -866,6 +878,14 @@
     <message>
         <source>Tools &gt; Generate Frequency Maps in the voice bank window generates the frequency map.</source>
         <translation>音源窗口的「工具 &gt; 生成频率表」可以生成频率表。</translation>
+    </message>
+    <message>
+        <source>Computing the spectrogram...</source>
+        <translation>正在计算频谱图...</translation>
+    </message>
+    <message>
+        <source>The computation of the spectrogram was canceled.</source>
+        <translation>已取消计算频谱图。</translation>
     </message>
     <message>
         <source>Save Frequency Map</source>
