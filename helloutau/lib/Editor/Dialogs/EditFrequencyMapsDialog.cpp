@@ -8,7 +8,6 @@
 #include <map>
 #include <optional>
 
-#include <QtCore/QDir>
 #include <QtCore/QEventLoop>
 #include <QtCore/QHash>
 #include <QtCore/QSignalBlocker>
@@ -54,6 +53,7 @@
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyMapRevisionBuffer.h>
 
+#include <helloutau/Widgets/FolderTree.h>
 #include <helloutau/Widgets/ToolBarPalette.h>
 
 #include "AppSettings.h"
@@ -150,6 +150,9 @@ namespace hello::daw {
         bool correctionForward = true;
 
         QTreeWidget *list = nullptr;
+        // The item of each file in the list, in the order of files. The data of the item is the
+        // index of the file, which the items of the folders lack.
+        std::vector<QTreeWidgetItem *> fileItems;
         FrequencyMapView *view = nullptr;
         FrequencyMapWaveform *waveform = nullptr;
         QToolBar *toolBar = nullptr;
@@ -444,7 +447,7 @@ namespace hello::daw {
             if (!completed) {
                 {
                     const QSignalBlocker blocker(list);
-                    list->setCurrentItem(current >= 0 ? list->topLevelItem(current) : nullptr);
+                    list->setCurrentItem(current >= 0 ? fileItems.at(current) : nullptr);
                 }
                 QMessageBox::warning(&decl, decl.windowTitle(),
                                      tr("The reading of %1 was canceled. The file in the editing "
@@ -466,7 +469,7 @@ namespace hello::daw {
             current = index;
             {
                 const QSignalBlocker blocker(list);
-                list->setCurrentItem(list->topLevelItem(index));
+                list->setCurrentItem(fileItems.at(index));
             }
             audio = read;
             waveform->setAudio(read);
@@ -581,7 +584,7 @@ namespace hello::daw {
         };
 
         void updateRow(int index) {
-            const auto item = list->topLevelItem(index);
+            const auto item = fileItems.at(index);
             const auto &file = files.at(index);
             item->setText(1, presence(file.hasMap));
             const auto caches = format.analysisCaches();
@@ -1206,7 +1209,6 @@ namespace hello::daw {
         headers.push_back(tr("Corrections"));
         impl.correctionColumn = int(headers.size() - 1);
         impl.list = new QTreeWidget();
-        impl.list->setRootIsDecorated(false);
         impl.list->setHeaderLabels(headers);
         impl.list->header()->setSectionResizeMode(QHeaderView::Interactive);
         impl.list->header()->setStretchLastSection(false);
@@ -1215,15 +1217,17 @@ namespace hello::daw {
         }
         int initial = -1;
         int firstWithMap = -1;
+        // The items of the folders cannot be selected.
+        FolderTree folders(impl.list);
         for (int i = 0; i < impl.files.size(); ++i) {
             const auto &file = impl.files.at(i);
             auto relative = file.path.lexically_relative(root);
             if (!file.shownPath.empty()) {
                 relative = file.shownPath;
             }
-            auto item = new QTreeWidgetItem(impl.list);
-            item->setText(
-                0, QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)));
+            auto item = folders.addFile(relative.empty() ? file.path : relative);
+            item->setData(0, Qt::UserRole, i);
+            impl.fileItems.push_back(item);
             for (int column = 1; column < int(headers.size()); ++column) {
                 item->setTextAlignment(column, Qt::AlignCenter);
             }
@@ -1484,8 +1488,9 @@ namespace hello::daw {
                 });
         connect(impl.list, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem *item) {
             stdc_impl_t;
-            if (item) {
-                impl.show(impl.list->indexOfTopLevelItem(item));
+            // The item of a folder does not change the current file.
+            if (item && item->data(0, Qt::UserRole).isValid()) {
+                impl.show(item->data(0, Qt::UserRole).toInt());
             }
         });
         connect(impl.view, &FrequencyMapView::edited, this, [this] {
@@ -1591,6 +1596,11 @@ namespace hello::daw {
     QTreeWidget *EditFrequencyMapsDialog::fileList() const {
         stdc_impl_t;
         return impl.list;
+    }
+
+    QTreeWidgetItem *EditFrequencyMapsDialog::fileItemOf(int index) const {
+        stdc_impl_t;
+        return impl.fileItems.at(index);
     }
 
     FrequencyMapView *EditFrequencyMapsDialog::view() const {

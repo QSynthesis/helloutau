@@ -18,6 +18,7 @@ class QLineEdit;
 class QListWidget;
 class QPushButton;
 class QTreeWidget;
+class QTreeWidgetItem;
 
 namespace QAK {
     class WidgetActionContext;
@@ -38,12 +39,12 @@ namespace hello::daw {
     /// The dialog that edits the frequency maps of the audio files of a voice bank in one format.
     /// See the editing in docs/FrequencyMaps.md.
     ///
-    /// The files are listed with the presence of their maps and of each analysis cache of the
-    /// format, and whether their maps are modified. The map of the current file is read when the
-    /// file becomes current, and is edited in the editing area. A file without a map, or with a
-    /// map that cannot be read, cannot be edited. The audio, its spectrogram and the map are read
-    /// in the background with a progress dialog. A cancellation keeps the previous file current
-    /// and is reported.
+    /// The files are listed in a tree of their folders, with the presence of their maps and of
+    /// each analysis cache of the format, and whether their maps are modified. The map of the
+    /// current file is read when the file becomes current, and is edited in the editing area. A
+    /// file without a map, or with a map that cannot be read, cannot be edited. The audio, its
+    /// spectrogram and the map are read in the background with a progress dialog. A cancellation
+    /// keeps the previous file current and is reported.
     ///
     /// Each map has a history of its own, which ends with the dialog. Save writes the current
     /// map, and Save All writes every modified map in order and stops at the first failure. A
@@ -132,6 +133,8 @@ namespace hello::daw {
         std::vector<kit::FrequencyMapCheck::Correction> correctionsOf(int index) const;
 
         QTreeWidget *fileList() const;
+        /// Returns the item of the file \a index in fileList().
+        QTreeWidgetItem *fileItemOf(int index) const;
         FrequencyMapView *view() const;
         /// Returns the waveform of the audio file below the editing area.
         FrequencyMapWaveform *waveform() const;

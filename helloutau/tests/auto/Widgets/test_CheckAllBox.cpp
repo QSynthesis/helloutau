@@ -98,6 +98,28 @@ private Q_SLOTS:
         tree.setEnabled(true);
         QVERIFY(box.isEnabled());
     }
+
+    // A partially checked item makes the box partially checked, although no item is checked.
+    void a_partially_checked_item_makes_the_box_partial() {
+        QTreeWidget tree;
+        auto folder = new QTreeWidgetItem(&tree);
+        folder->setFlags(Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate);
+        for (const auto state : {Qt::Checked, Qt::Unchecked}) {
+            auto item = new QTreeWidgetItem(folder);
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(0, state);
+        }
+        auto file = new QTreeWidgetItem(&tree);
+        file->setFlags(file->flags() | Qt::ItemIsUserCheckable);
+        file->setCheckState(0, Qt::Unchecked);
+        CheckAllBox box(&tree);
+        QCOMPARE(folder->checkState(0), Qt::PartiallyChecked);
+        QCOMPARE(box.checkState(), Qt::PartiallyChecked);
+
+        box.click();
+        QCOMPARE(folder->child(1)->checkState(0), Qt::Checked);
+        QCOMPARE(box.checkState(), Qt::Checked);
+    }
 };
 
 QTEST_MAIN(test_CheckAllBox)

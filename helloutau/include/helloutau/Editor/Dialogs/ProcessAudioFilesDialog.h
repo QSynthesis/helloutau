@@ -19,7 +19,6 @@ class QLabel;
 class QLineEdit;
 class QPushButton;
 class QSplitter;
-class QTreeWidget;
 
 namespace hello::daw {
 
@@ -72,7 +71,7 @@ namespace hello::daw {
         /// the backup is unchecked.
         std::optional<std::filesystem::path> backupFolder() const;
 
-        QTreeWidget *fileList() const;
+        FileCheckList *fileList() const;
         /// Returns the button that checks exactly the files that the options change
         QPushButton *checkFilesButton() const;
         /// Returns the splitter between the files and the options

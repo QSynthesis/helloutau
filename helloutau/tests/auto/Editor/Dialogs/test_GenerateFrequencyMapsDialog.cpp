@@ -78,10 +78,10 @@ private Q_SLOTS:
         // The columns of the marks are centered, their headers included.
         for (int column = 1; column < 4; ++column) {
             QCOMPARE(tree->headerItem()->textAlignment(column), int(Qt::AlignCenter));
-            QCOMPARE(tree->topLevelItem(0)->textAlignment(column), int(Qt::AlignCenter));
+            QCOMPARE(dialog.fileList()->itemOf(0)->textAlignment(column), int(Qt::AlignCenter));
         }
-        const auto a = tree->topLevelItem(0);
-        const auto b = tree->topLevelItem(1);
+        const auto a = dialog.fileList()->itemOf(0);
+        const auto b = dialog.fileList()->itemOf(1);
         // A mark for a file present, nothing for a file missing
         QVERIFY(!a->text(1).isEmpty());
         QVERIFY(b->text(1).isEmpty());

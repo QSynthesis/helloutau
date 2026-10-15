@@ -13,9 +13,9 @@ namespace {
 
     // A list of three files, the second of which has no frequency map
     void fill(FileCheckList &list) {
-        list.addRow({QStringLiteral("a.wav"), QStringLiteral("present")});
-        list.addRow({QStringLiteral("i.wav"), QStringLiteral("missing")});
-        list.addRow({QStringLiteral("u.wav"), QStringLiteral("present")});
+        list.addRow("a.wav", {QStringLiteral("present")});
+        list.addRow("i.wav", {QStringLiteral("missing")});
+        list.addRow("u.wav", {QStringLiteral("present")});
     }
 
 }
@@ -39,7 +39,7 @@ private Q_SLOTS:
         FileCheckList list({QStringLiteral("File"), QStringLiteral("State")});
         fill(list);
         QCOMPARE(list.rowCount(), 3);
-        QCOMPARE(list.tree()->topLevelItem(1)->text(1), QStringLiteral("missing"));
+        QCOMPARE(list.itemOf(1)->text(1), QStringLiteral("missing"));
         QVERIFY(list.checkedRows().isEmpty());
         QCOMPARE(list.checkAllBox()->checkState(), Qt::Unchecked);
 
@@ -66,7 +66,7 @@ private Q_SLOTS:
         fill(list);
         list.checkWhere([](int) { return true; });
         const auto missing = list.addCheckButton(QStringLiteral("Check Missing"), [&list](int row) {
-            return list.tree()->topLevelItem(row)->text(1) == QStringLiteral("missing");
+            return list.itemOf(row)->text(1) == QStringLiteral("missing");
         });
         missing->click();
         QCOMPARE(list.checkedRows(), QList<int>{1});
@@ -83,17 +83,53 @@ private Q_SLOTS:
         QVERIFY(!changed.isEmpty());
     }
 
+    // The rows lie under the expanded items of their folders, which are not rows. The item of a
+    // folder follows its rows and checks or unchecks every row under it.
+    void the_rows_lie_under_their_folders() {
+        FileCheckList list({QStringLiteral("File"), QStringLiteral("State")});
+        list.addRow("a.wav", {QStringLiteral("present")});
+        list.addRow("sub/i.wav", {QStringLiteral("missing")});
+        list.addRow("sub/deep/u.wav", {QStringLiteral("present")});
+        list.addRow("../e.wav", {QStringLiteral("present")});
+        QCOMPARE(list.rowCount(), 4);
+        const auto tree = list.tree();
+        QCOMPARE(tree->topLevelItemCount(), 3);
+        QVERIFY(!list.itemOf(0)->parent());
+        QVERIFY(!list.itemOf(3)->parent());
+        const auto sub = list.itemOf(1)->parent();
+        QVERIFY(sub);
+        QVERIFY(!sub->parent());
+        QCOMPARE(list.itemOf(2)->parent()->parent(), sub);
+        QVERIFY(sub->isExpanded());
+        QVERIFY(list.itemOf(2)->parent()->isExpanded());
+        QCOMPARE(list.itemOf(1)->text(1), QStringLiteral("missing"));
+
+        list.setChecked(2, true);
+        QCOMPARE(sub->checkState(0), Qt::PartiallyChecked);
+        QCOMPARE(list.checkAllBox()->checkState(), Qt::PartiallyChecked);
+        QSignalSpy changed(&list, &FileCheckList::checkedChanged);
+        sub->setCheckState(0, Qt::Checked);
+        QCOMPARE(list.checkedRows(), (QList<int>{1, 2}));
+        QVERIFY(!changed.isEmpty());
+        sub->setCheckState(0, Qt::Unchecked);
+        QVERIFY(list.checkedRows().isEmpty());
+
+        list.checkAllBox()->click();
+        QCOMPARE(list.checkedRows(), (QList<int>{0, 1, 2, 3}));
+        QCOMPARE(sub->checkState(0), Qt::Checked);
+    }
+
     // A column alignment applies to the header and to the cells, those of later rows included.
     void a_column_is_aligned() {
         FileCheckList list({QStringLiteral("File"), QStringLiteral("State")});
-        list.addRow({QStringLiteral("a.wav"), QStringLiteral("present")});
+        list.addRow("a.wav", {QStringLiteral("present")});
         list.setColumnAlignment(1, Qt::AlignCenter);
-        list.addRow({QStringLiteral("i.wav"), QStringLiteral("missing")});
+        list.addRow("i.wav", {QStringLiteral("missing")});
         const auto tree = list.tree();
         QCOMPARE(tree->headerItem()->textAlignment(1), int(Qt::AlignCenter));
-        QCOMPARE(tree->topLevelItem(0)->textAlignment(1), int(Qt::AlignCenter));
-        QCOMPARE(tree->topLevelItem(1)->textAlignment(1), int(Qt::AlignCenter));
-        QVERIFY(tree->topLevelItem(1)->textAlignment(0) != int(Qt::AlignCenter));
+        QCOMPARE(list.itemOf(0)->textAlignment(1), int(Qt::AlignCenter));
+        QCOMPARE(list.itemOf(1)->textAlignment(1), int(Qt::AlignCenter));
+        QVERIFY(list.itemOf(1)->textAlignment(0) != int(Qt::AlignCenter));
     }
 
     // The columns are resized with the mouse. The first show fits every column to its contents
@@ -103,7 +139,7 @@ private Q_SLOTS:
         FileCheckList list(
             {QStringLiteral("File"), QStringLiteral("State"), QStringLiteral("Note")});
         const auto name = QStringLiteral("a-file-with-a-long-name.wav");
-        list.addRow({name, QStringLiteral("present"), QString()});
+        list.addRow(name.toStdU16String(), {QStringLiteral("present"), QString()});
         const auto header = list.tree()->header();
         for (int column = 0; column < 3; ++column) {
             QCOMPARE(header->sectionResizeMode(column), QHeaderView::Interactive);

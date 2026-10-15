@@ -62,10 +62,10 @@ private Q_SLOTS:
         const auto tree = dialog.fileList()->tree();
         QCOMPARE(tree->columnCount(), 3);
         QCOMPARE(tree->headerItem()->text(2), QStringLiteral("LLSM"));
-        QVERIFY(!tree->topLevelItem(0)->text(1).isEmpty());
-        QVERIFY(!tree->topLevelItem(0)->text(2).isEmpty());
-        QVERIFY(tree->topLevelItem(1)->text(1).isEmpty());
-        QVERIFY(tree->topLevelItem(2)->text(2).isEmpty());
+        QVERIFY(!dialog.fileList()->itemOf(0)->text(1).isEmpty());
+        QVERIFY(!dialog.fileList()->itemOf(0)->text(2).isEmpty());
+        QVERIFY(dialog.fileList()->itemOf(1)->text(1).isEmpty());
+        QVERIFY(dialog.fileList()->itemOf(2)->text(2).isEmpty());
         for (int column = 1; column < 3; ++column) {
             QCOMPARE(tree->headerItem()->textAlignment(column), int(Qt::AlignCenter));
         }

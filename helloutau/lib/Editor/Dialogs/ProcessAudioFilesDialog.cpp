@@ -13,7 +13,6 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSplitter>
-#include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
 #include <helloutau/Widgets/FileCheckList.h>
@@ -117,9 +116,8 @@ namespace hello::daw {
             if (!file.shownPath.empty()) {
                 relative = file.shownPath;
             }
-            m_list->addRow(
-                {QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)),
-                 formatOf(file.inspection), QString()});
+            m_list->addRow(relative.empty() ? file.path : relative,
+                           {formatOf(file.inspection), QString()});
             m_anySelected = m_anySelected || file.selected;
         }
         m_checkFiles = m_list->addCheckButton(tr("Check Files to &Process"), [this](int row) {
@@ -267,8 +265,8 @@ namespace hello::daw {
             QDir::fromNativeSeparators(m_backupFolder->text().trimmed()).toStdU16String());
     }
 
-    QTreeWidget *ProcessAudioFilesDialog::fileList() const {
-        return m_list->tree();
+    FileCheckList *ProcessAudioFilesDialog::fileList() const {
+        return m_list;
     }
 
     QPushButton *ProcessAudioFilesDialog::checkFilesButton() const {

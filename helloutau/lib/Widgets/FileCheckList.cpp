@@ -10,9 +10,9 @@
 
 namespace hello::daw {
 
-    FileCheckList::FileCheckList(const QStringList &headers, QWidget *parent) : QWidget(parent) {
-        m_tree = new QTreeWidget(this);
-        m_tree->setRootIsDecorated(false);
+    FileCheckList::FileCheckList(const QStringList &headers, QWidget *parent)
+        : QWidget(parent), m_tree(new QTreeWidget(this)),
+          m_folders(m_tree, Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate) {
         m_tree->setHeaderLabels(headers);
         m_tree->setSelectionMode(QAbstractItemView::NoSelection);
         m_tree->header()->setSectionResizeMode(QHeaderView::Interactive);
@@ -32,6 +32,9 @@ namespace hello::daw {
         layout->addWidget(m_tree, 1);
 
         connect(m_tree, &QTreeWidget::itemChanged, this, [this] {
+            // QTreeWidgetItem emits no change of a folder whose check state is set to its stored
+            // value, although its rows change. The whole view is therefore repainted.
+            m_tree->viewport()->update();
             if (!m_applying) {
                 Q_EMIT checkedChanged();
             }
@@ -45,39 +48,46 @@ namespace hello::daw {
         delete m_checkAll;
     }
 
-    int FileCheckList::addRow(const QStringList &texts) {
-        auto item = new QTreeWidgetItem(texts);
+    int FileCheckList::addRow(const std::filesystem::path &path, const QStringList &texts) {
+        auto item = m_folders.addFile(path);
+        for (qsizetype i = 0; i < texts.size(); ++i) {
+            item->setText(int(i + 1), texts.at(i));
+        }
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(0, Qt::Unchecked);
         for (auto it = m_alignments.cbegin(); it != m_alignments.cend(); ++it) {
             item->setTextAlignment(it.key(), it.value());
         }
-        m_tree->addTopLevelItem(item);
-        return m_tree->topLevelItemCount() - 1;
+        m_rows.push_back(item);
+        return int(m_rows.size() - 1);
     }
 
     void FileCheckList::setColumnAlignment(int column, Qt::Alignment alignment) {
         m_alignments.insert(column, alignment);
         m_tree->headerItem()->setTextAlignment(column, alignment);
-        for (int row = 0; row < rowCount(); ++row) {
-            m_tree->topLevelItem(row)->setTextAlignment(column, alignment);
+        for (const auto item : std::as_const(m_rows)) {
+            item->setTextAlignment(column, alignment);
         }
     }
 
     int FileCheckList::rowCount() const {
-        return m_tree->topLevelItemCount();
+        return int(m_rows.size());
+    }
+
+    QTreeWidgetItem *FileCheckList::itemOf(int row) const {
+        return m_rows.at(row);
     }
 
     void FileCheckList::setText(int row, int column, const QString &text) {
-        m_tree->topLevelItem(row)->setText(column, text);
+        m_rows.at(row)->setText(column, text);
     }
 
     bool FileCheckList::isChecked(int row) const {
-        return m_tree->topLevelItem(row)->checkState(0) == Qt::Checked;
+        return m_rows.at(row)->checkState(0) == Qt::Checked;
     }
 
     void FileCheckList::setChecked(int row, bool checked) {
-        m_tree->topLevelItem(row)->setCheckState(0, checked ? Qt::Checked : Qt::Unchecked);
+        m_rows.at(row)->setCheckState(0, checked ? Qt::Checked : Qt::Unchecked);
     }
 
     void FileCheckList::checkWhere(const std::function<bool(int row)> &condition) {

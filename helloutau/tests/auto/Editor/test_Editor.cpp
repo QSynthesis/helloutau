@@ -2473,20 +2473,14 @@ private Q_SLOTS:
         const auto chosen = pathIn(dir, "backup");
         fs::create_directories(chosen);
         const auto backup = pathIn(dir, "backup (1)");
-        QStringList checked;
+        QList<fs::path> checked;
         handleNextDialog<ProcessAudioFilesDialog>(
             [&checked, &chosen](ProcessAudioFilesDialog *dialog) {
                 auto options = dialog->options();
                 options.sampleRate.reset();
                 dialog->setOptions(options);
-                const auto list = dialog->fileList();
-                QCOMPARE(list->topLevelItemCount(), 3);
-                for (int i = 0; i < list->topLevelItemCount(); ++i) {
-                    const auto item = list->topLevelItem(i);
-                    if (item->checkState(0) == Qt::Checked) {
-                        checked.push_back(QDir::fromNativeSeparators(item->text(0)));
-                    }
-                }
+                QCOMPARE(dialog->fileList()->rowCount(), 3);
+                checked = dialog->checkedFiles();
                 QVERIFY(dialog->removesFrequencyMaps());
                 const auto edit = dialog->backupFolderEdit();
                 edit->setText(QString::fromStdU16String(chosen.u16string()));
@@ -2495,7 +2489,7 @@ private Q_SLOTS:
         window->entryTable()->clearSelection();
         QVERIFY(window->processAudioFiles());
         // Only the metadata of x.wav differs from 1000 Hz, mono and 16 bits.
-        QCOMPARE(checked, QStringList{QStringLiteral("sub/x.wav")});
+        QCOMPARE(checked, QList<fs::path>{bank / "sub" / "x.wav"});
         QCOMPARE(fs::file_size(bank / "sub" / "x.wav"), std::uintmax_t(44 + 200));
         QVERIFY(fs::exists(backup / "sub" / "x.wav"));
         QCOMPARE(fs::file_size(backup / "sub" / "x.wav"), std::uintmax_t(44 + 200 + 12));
@@ -3235,6 +3229,18 @@ private Q_SLOTS:
             QVERIFY(!dialog->messageLabel()->isHidden());
             QVERIFY(!dialog->view()->buffer());
             QVERIFY(dialog->setCurrentFile(0));
+            // sub/x.wav lies under the item of its folder, and the item of the folder does not
+            // change the current file.
+            QVERIFY(!dialog->fileItemOf(0)->parent());
+            const auto folder = dialog->fileItemOf(2)->parent();
+            QVERIFY(folder);
+            QVERIFY(!folder->parent());
+            QVERIFY(dialog->setCurrentFile(1));
+            dialog->fileList()->setCurrentItem(folder);
+            QCOMPARE(dialog->currentFile(), 1);
+            dialog->fileList()->setCurrentItem(dialog->fileItemOf(2));
+            QCOMPARE(dialog->currentFile(), 2);
+            QVERIFY(dialog->setCurrentFile(0));
 
             // A canceled reading keeps the current file, and is reported.
             dialog->setProgressDelay(0);
@@ -3415,7 +3421,7 @@ private Q_SLOTS:
         handleNextDialog<EditFrequencyMapsDialog>([&](EditFrequencyMapsDialog *dialog) {
             // The only file with a map is current.
             QTRY_VERIFY(dialog->currentFile() >= 0);
-            QCOMPARE(dialog->fileList()->topLevelItem(dialog->currentFile())->text(0),
+            QCOMPARE(dialog->fileItemOf(dialog->currentFile())->text(0),
                      QString::fromUtf8("あ.wav"));
             QCOMPARE(dialog->view()->title(), QString::fromUtf8("あ.wav"));
             dialog->reject();
@@ -3888,8 +3894,8 @@ private Q_SLOTS:
                 for (int column = 0; column < tree->columnCount(); ++column) {
                     headers.push_back(tree->headerItem()->text(column));
                 }
-                for (int row = 0; row < tree->topLevelItemCount(); ++row) {
-                    const auto item = tree->topLevelItem(row);
+                for (int row = 0; row < dialog->fileList()->rowCount(); ++row) {
+                    const auto item = dialog->fileList()->itemOf(row);
                     const auto name = item->text(0);
                     if (name != QStringLiteral("a.wav") && name != QStringLiteral("c.wav")) {
                         continue;

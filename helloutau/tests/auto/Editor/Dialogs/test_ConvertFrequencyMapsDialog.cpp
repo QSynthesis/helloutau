@@ -153,12 +153,12 @@ private Q_SLOTS:
         QCOMPARE(tree->columnCount(), 3);
         QCOMPARE(tree->headerItem()->text(1), QStringLiteral("a"));
         QCOMPARE(tree->headerItem()->text(2), QStringLiteral("b"));
-        QVERIFY(!tree->topLevelItem(0)->text(1).isEmpty());
-        QVERIFY(tree->topLevelItem(0)->text(2).isEmpty());
-        QVERIFY(tree->topLevelItem(1)->text(1).isEmpty());
-        QVERIFY(!tree->topLevelItem(1)->text(2).isEmpty());
+        QVERIFY(!dialog.fileList()->itemOf(0)->text(1).isEmpty());
+        QVERIFY(dialog.fileList()->itemOf(0)->text(2).isEmpty());
+        QVERIFY(dialog.fileList()->itemOf(1)->text(1).isEmpty());
+        QVERIFY(!dialog.fileList()->itemOf(1)->text(2).isEmpty());
         QCOMPARE(tree->headerItem()->textAlignment(1), int(Qt::AlignCenter));
-        QCOMPARE(tree->topLevelItem(0)->textAlignment(2), int(Qt::AlignCenter));
+        QCOMPARE(dialog.fileList()->itemOf(0)->textAlignment(2), int(Qt::AlignCenter));
     }
 
     // The parenthesized part of the name of a format, such as its resampler, is on the second

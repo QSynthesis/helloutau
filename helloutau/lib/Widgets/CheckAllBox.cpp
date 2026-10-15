@@ -61,17 +61,20 @@ namespace hello::daw {
         const auto model = m_view->model();
         int items = 0;
         int checked = 0;
+        bool partial = false;
         for (int row = 0; row < model->rowCount(); ++row) {
             const auto index = model->index(row, m_column);
             if (checkable(model, index)) {
                 ++items;
-                checked += index.data(Qt::CheckStateRole).toInt() == Qt::Checked ? 1 : 0;
+                const auto state = index.data(Qt::CheckStateRole).toInt();
+                checked += state == Qt::Checked ? 1 : 0;
+                partial = partial || state == Qt::PartiallyChecked;
             }
         }
         setEnabled(items > 0 && m_view->isEnabled());
-        setCheckState(checked == 0       ? Qt::Unchecked
-                      : checked == items ? Qt::Checked
-                                         : Qt::PartiallyChecked);
+        setCheckState(partial || (checked > 0 && checked < items) ? Qt::PartiallyChecked
+                      : checked == 0                              ? Qt::Unchecked
+                                                                  : Qt::Checked);
     }
 
 }

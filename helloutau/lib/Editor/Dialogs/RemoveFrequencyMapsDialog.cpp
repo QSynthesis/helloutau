@@ -1,6 +1,5 @@
 #include "RemoveFrequencyMapsDialog.h"
 
-#include <QtCore/QDir>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
@@ -9,14 +8,6 @@
 #include <helloutau/Widgets/FileCheckList.h>
 
 namespace hello::daw {
-
-    namespace {
-
-        QString textOf(const std::filesystem::path &path) {
-            return QString::fromStdU16String(path.u16string());
-        }
-
-    }
 
     RemoveFrequencyMapsDialog::RemoveFrequencyMapsDialog(QList<File> files,
                                                          const std::filesystem::path &root,
@@ -48,13 +39,11 @@ namespace hello::daw {
             if (!file.shownPath.empty()) {
                 relative = file.shownPath;
             }
-            QStringList texts{
-                QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)),
-                presence(file.hasMap)};
+            QStringList texts{presence(file.hasMap)};
             for (qsizetype i = 0; i < cacheNames.size(); ++i) {
                 texts.push_back(presence(file.caches.value(i)));
             }
-            m_list->addRow(texts);
+            m_list->addRow(relative.empty() ? file.path : relative, texts);
         }
         m_checkMaps = m_list->addCheckButton(tr("Check Files with &Maps"),
                                              [this](int row) { return m_files.at(row).hasMap; });

@@ -1,6 +1,7 @@
 #ifndef HELLOUTAU_WIDGETS_FILECHECKLIST_H
 #define HELLOUTAU_WIDGETS_FILECHECKLIST_H
 
+#include <filesystem>
 #include <functional>
 
 #include <QtCore/QHash>
@@ -8,10 +9,12 @@
 #include <QtCore/QStringList>
 #include <QtWidgets/QWidget>
 
+#include <helloutau/Widgets/FolderTree.h>
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 
 class QPushButton;
 class QTreeWidget;
+class QTreeWidgetItem;
 
 namespace hello::daw {
 
@@ -24,6 +27,10 @@ namespace hello::daw {
     /// without a frequency map.
     ///
     /// The rows are identified by their indices in the order of addRow(). Every row is checkable.
+    /// The rows lie in a tree of their folders, as FolderTree places them. The item of a folder
+    /// checks or unchecks every row under it, and is partially checked if only some of the rows
+    /// are checked. The items of the folders are not rows.
+    ///
     /// The user resizes the columns with the mouse. The columns are fitted to their contents when
     /// the list is first shown, and no column is stretched to the width of the list.
     class HELLOUTAU_WIDGETS_EXPORT FileCheckList : public QWidget {
@@ -33,11 +40,14 @@ namespace hello::daw {
         explicit FileCheckList(const QStringList &headers, QWidget *parent = nullptr);
         ~FileCheckList();
 
-        /// Appends an unchecked row with \a texts , the first of which is the file, and returns
-        /// its index.
-        int addRow(const QStringList &texts);
+        /// Appends an unchecked row for the file at \a path, as FolderTree::addFile() places it,
+        /// with \a texts in the columns after the first, and returns its index.
+        int addRow(const std::filesystem::path &path, const QStringList &texts);
 
         int rowCount() const;
+
+        /// Returns the item of \a row in tree().
+        QTreeWidgetItem *itemOf(int row) const;
 
         void setText(int row, int column, const QString &text);
 
@@ -71,6 +81,9 @@ namespace hello::daw {
 
     private:
         QTreeWidget *m_tree;
+        FolderTree m_folders;
+        // The items of the rows, in the order of addRow()
+        QList<QTreeWidgetItem *> m_rows;
         CheckAllBox *m_checkAll;
         QWidget *m_buttons;
         // The alignments of setColumnAlignment() by column, for the rows added later

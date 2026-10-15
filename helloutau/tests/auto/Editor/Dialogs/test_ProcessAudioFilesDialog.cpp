@@ -7,6 +7,7 @@
 
 #include <helloutau/Editor/Dialogs/ProcessAudioFilesDialog.h>
 #include <helloutau/Widgets/CheckAllBox.h>
+#include <helloutau/Widgets/FileCheckList.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -26,11 +27,11 @@ namespace {
         return file;
     }
 
-    QStringList checkedOf(const QTreeWidget *list) {
+    QStringList checkedOf(const FileCheckList *list) {
         QStringList names;
-        for (int i = 0; i < list->topLevelItemCount(); ++i) {
-            if (list->topLevelItem(i)->checkState(0) == Qt::Checked) {
-                names.push_back(list->topLevelItem(i)->text(0));
+        for (int i = 0; i < list->rowCount(); ++i) {
+            if (list->isChecked(i)) {
+                names.push_back(list->itemOf(i)->text(0));
             }
         }
         return names;
@@ -84,8 +85,8 @@ private Q_SLOTS:
             {fileOf("a.wav", 44100, 1), fileOf("b.wav", 48000, 1), fileOf("c.wav", 44100, 2)},
             "C:/bank", "C:/backup");
         const auto list = dialog.fileList();
-        list->topLevelItem(0)->setCheckState(0, Qt::Checked);
-        list->topLevelItem(1)->setCheckState(0, Qt::Unchecked);
+        list->setChecked(0, true);
+        list->setChecked(1, false);
         QCOMPARE(checkedOf(list), (QStringList{"a.wav", "c.wav"}));
         dialog.checkFilesButton()->click();
         QCOMPARE(checkedOf(list), (QStringList{"b.wav", "c.wav"}));
@@ -100,7 +101,7 @@ private Q_SLOTS:
         QVERIFY(dialog.removesFrequencyMaps());
         QCOMPARE(dialog.backupFolder(), std::optional<fs::path>("C:/backup"));
 
-        dialog.fileList()->topLevelItem(0)->setCheckState(0, Qt::Checked);
+        dialog.fileList()->setChecked(0, true);
         QVERIFY(ok->isEnabled());
         dialog.backupFolderEdit()->clear();
         QVERIFY(!ok->isEnabled());

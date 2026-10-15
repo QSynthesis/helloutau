@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include <QtCore/QDir>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFormLayout>
@@ -18,10 +17,6 @@
 namespace hello::daw {
 
     namespace {
-
-        QString textOf(const std::filesystem::path &path) {
-            return QString::fromStdU16String(path.u16string());
-        }
 
         // Returns the header of the column of a format, with a parenthesized part of the name,
         // such as its resampler, on a line of its own, so that the column is narrow
@@ -70,12 +65,11 @@ namespace hello::daw {
             if (!file.shownPath.empty()) {
                 relative = file.shownPath;
             }
-            QStringList texts{
-                QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative))};
+            QStringList texts;
             for (qsizetype i = 0; i < m_formats.size(); ++i) {
                 texts.push_back(file.maps.value(i) ? QString(QChar(0x2713)) : QString());
             }
-            m_list->addRow(texts);
+            m_list->addRow(relative.empty() ? file.path : relative, texts);
             m_anySelected = m_anySelected || file.selected;
         }
         m_checkMaps = m_list->addCheckButton(tr("Check Files with Source &Maps"),

@@ -13,9 +13,11 @@ namespace hello::daw {
     /// A tri-state check box that checks or unchecks every checkable item of a list at once, for
     /// a dialog that lists many files or folders to check. The state of the box indicates whether
     /// all, none or some of the checkable items in a column of the top-level rows of a view are
-    /// checked. A click checks every checkable item, or unchecks every checkable item if all are
-    /// checked. An item that is not checkable or not enabled is left alone. The box is disabled
-    /// while the view is disabled or has no checkable item.
+    /// checked. A partially checked item, such as the item of a folder with only some of its
+    /// files checked, makes the box partially checked. A click checks every checkable item, or
+    /// unchecks every checkable item if all are checked. An item that is not checkable or not
+    /// enabled is left alone. The box is disabled while the view is disabled or has no checkable
+    /// item.
     ///
     /// Each item is changed through the model of the view, so that the view emits the signal of
     /// each changed item. The model of the view must not be replaced.
