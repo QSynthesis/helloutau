@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include <QtCore/QByteArray>
@@ -52,6 +53,13 @@ namespace hello::kit {
 
         /// The duration in milliseconds.
         double duration() const;
+
+        /// Returns the lowest and the highest sample of each channel in each of \a width columns
+        /// of 1 / \a pixelsPerMillisecond milliseconds, the first of which begins at \a start
+        /// milliseconds, as a waveform draws them. A column narrower than a frame holds the frame
+        /// at its start. A column outside the audio is {0, 0}.
+        std::vector<std::vector<std::pair<float, float>>>
+            peaks(double start, double pixelsPerMillisecond, int width) const;
 
         /// Returns the audio converted to the sample rate \a sampleRate, which must be positive.
         /// The samples are converted as by the static overload, and the other members are kept.

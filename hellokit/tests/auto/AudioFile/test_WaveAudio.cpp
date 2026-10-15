@@ -248,6 +248,34 @@ private Q_SLOTS:
         QVERIFY(std::abs(converted.samples[2 * 1000] - 0.25f) < 1e-3);
         QVERIFY(std::abs(converted.samples[2 * 1000 + 1] + 0.5f) < 1e-3);
     }
+
+    // The peaks of each channel in each column. A column narrower than a frame holds the frame at
+    // its start, and a column outside the audio is {0, 0}.
+    void the_peaks_of_columns() {
+        WaveAudio audio;
+        audio.sampleRate = 1000;
+        audio.channels = 2;
+        for (int i = 0; i < 10; ++i) {
+            audio.samples.push_back(float(i) / 10);
+            audio.samples.push_back(-float(i) / 10);
+        }
+        using Peak = std::pair<float, float>;
+        const auto wide = audio.peaks(0, 0.5, 6);
+        QCOMPARE(qsizetype(wide.size()), qsizetype(2));
+        QCOMPARE(qsizetype(wide[0].size()), qsizetype(6));
+        QCOMPARE(wide[0][0], Peak(0.0f, 0.1f));
+        QCOMPARE(wide[0][4], Peak(0.8f, 0.9f));
+        QCOMPARE(wide[1][4], Peak(-0.9f, -0.8f));
+        QCOMPARE(wide[0][5], Peak(0.0f, 0.0f));
+        const auto narrow = audio.peaks(2, 2, 3);
+        QCOMPARE(narrow[0][0], Peak(0.2f, 0.2f));
+        QCOMPARE(narrow[0][1], Peak(0.2f, 0.2f));
+        QCOMPARE(narrow[0][2], Peak(0.3f, 0.3f));
+        const auto before = audio.peaks(-4, 0.5, 2);
+        QCOMPARE(before[0][0], Peak(0.0f, 0.0f));
+        QCOMPARE(before[0][1], Peak(0.0f, 0.0f));
+        QVERIFY(WaveAudio().peaks(0, 1, 4).empty());
+    }
 };
 
 QTEST_APPLESS_MAIN(test_WaveAudio)

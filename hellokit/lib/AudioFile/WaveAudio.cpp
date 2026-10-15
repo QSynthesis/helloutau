@@ -100,6 +100,46 @@ namespace hello::kit {
         return sampleRate > 0 ? double(frameCount()) * 1000 / sampleRate : 0;
     }
 
+    std::vector<std::vector<std::pair<float, float>>>
+        WaveAudio::peaks(double start, double pixelsPerMillisecond, int width) const {
+        std::vector<std::vector<std::pair<float, float>>> result;
+        if (channels <= 0 || frameCount() == 0 || sampleRate <= 0 || width <= 0 ||
+            pixelsPerMillisecond <= 0) {
+            return result;
+        }
+        result.assign(size_t(channels),
+                      std::vector<std::pair<float, float>>(size_t(width), {0.0f, 0.0f}));
+        const double framesPerMs = sampleRate / 1000.0;
+        const auto count = qint64(frameCount());
+        const auto frameAt = [&](int x) {
+            return qint64(std::floor((start + x / pixelsPerMillisecond) * framesPerMs));
+        };
+        std::vector<float> low(static_cast<size_t>(channels));
+        std::vector<float> high(static_cast<size_t>(channels));
+        for (int x = 0; x < width; ++x) {
+            const auto first = frameAt(x);
+            const auto last = std::max(first + 1, frameAt(x + 1));
+            if (first >= count || last <= 0) {
+                continue;
+            }
+            std::fill(low.begin(), low.end(), 1.0f);
+            std::fill(high.begin(), high.end(), -1.0f);
+            for (auto i = std::max<qint64>(0, first); i < std::min(last, count); ++i) {
+                for (int c = 0; c < channels; ++c) {
+                    const float sample = samples[size_t(i * channels + c)];
+                    low[size_t(c)] = std::min(low[size_t(c)], sample);
+                    high[size_t(c)] = std::max(high[size_t(c)], sample);
+                }
+            }
+            for (int c = 0; c < channels; ++c) {
+                if (low[size_t(c)] <= high[size_t(c)]) {
+                    result[size_t(c)][size_t(x)] = {low[size_t(c)], high[size_t(c)]};
+                }
+            }
+        }
+        return result;
+    }
+
     WaveAudio WaveAudio::resampled(int sampleRate) const {
         auto result = *this;
         result.samples = resampled(samples, channels, this->sampleRate, sampleRate);

@@ -248,37 +248,8 @@ namespace hello::daw {
                 return peaks.columns;
             }
             peaks = {scale, viewStart, width, {}};
-            if (!audio || audio->channels <= 0 || audio->frameCount() == 0) {
-                return peaks.columns;
-            }
-            const int channels = audio->channels;
-            const double perMs = audio->sampleRate / 1000.0;
-            const auto count = qint64(audio->frameCount());
-            peaks.columns.assign(size_t(channels), std::vector<std::pair<float, float>>(
-                                                       size_t(std::max(0, width)), {0.0f, 0.0f}));
-            std::vector<float> low(static_cast<size_t>(channels));
-            std::vector<float> high(static_cast<size_t>(channels));
-            for (int x = 0; x < width; ++x) {
-                const auto first = qint64(std::floor(decl.timeAt(x) * perMs));
-                const auto last =
-                    std::max(first + 1, qint64(std::floor(decl.timeAt(x + 1) * perMs)));
-                if (first >= count || last <= 0) {
-                    continue;
-                }
-                std::fill(low.begin(), low.end(), 1.0f);
-                std::fill(high.begin(), high.end(), -1.0f);
-                for (auto i = std::max<qint64>(0, first); i < std::min(last, count); ++i) {
-                    for (int c = 0; c < channels; ++c) {
-                        const float sample = audio->samples[size_t(i * channels + c)];
-                        low[size_t(c)] = std::min(low[size_t(c)], sample);
-                        high[size_t(c)] = std::max(high[size_t(c)], sample);
-                    }
-                }
-                for (int c = 0; c < channels; ++c) {
-                    if (low[size_t(c)] <= high[size_t(c)]) {
-                        peaks.columns[size_t(c)][size_t(x)] = {low[size_t(c)], high[size_t(c)]};
-                    }
-                }
+            if (audio) {
+                peaks.columns = audio->peaks(viewStart, scale, width);
             }
             return peaks.columns;
         }
