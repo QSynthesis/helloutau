@@ -15,6 +15,7 @@
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
+#include <QtGui/QActionGroup>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QGridLayout>
@@ -30,6 +31,7 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QSplitter>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -526,6 +528,12 @@ namespace hello::daw {
             "helloutau.frequencyMap.flameColors", "helloutau.frequencyMap.rubyColors",
         };
 
+        // The actions of the tools of the view, in the order of their buttons
+        static constexpr std::pair<const char *, FrequencyMapView::Tool> toolActionIds[] = {
+            {"helloutau.select.selectTool", FrequencyMapView::SelectTool},
+            {"helloutau.select.penTool",    FrequencyMapView::PenTool   },
+        };
+
         void updateRow(int index) {
             const auto item = list->topLevelItem(index);
             const auto &file = files.at(index);
@@ -725,6 +733,14 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.select.selectAll"), [this] { view->selectAll(); });
             addCommand(QStringLiteral("helloutau.select.deselect"),
                        [this] { view->clearSelection(); });
+            const auto tools = new QActionGroup(&decl);
+            for (const auto &[id, tool] : toolActionIds) {
+                const auto action =
+                    addCommand(QLatin1String(id), [this, tool = tool] { view->setTool(tool); });
+                action->setCheckable(true);
+                action->setChecked(view->tool() == tool);
+                tools->addAction(action);
+            }
             addCommand(QStringLiteral("helloutau.frequencyMap.zoomIn"),
                        [this] { view->setZoomLevel(view->zoomLevel() + 1); });
             addCommand(QStringLiteral("helloutau.frequencyMap.zoomOut"),
@@ -920,6 +936,16 @@ namespace hello::daw {
             impl.editButtons.push_back({button, QLatin1String(id)});
         }
         buttonRow->addStretch(1);
+        // The buttons of the tools of the editing area at the end. Their actions are set after
+        // initActions().
+        QList<std::pair<QToolButton *, QString>> toolButtons;
+        for (const auto &[id, tool] : Impl::toolActionIds) {
+            Q_UNUSED(tool);
+            auto button = new QToolButton();
+            button->setAutoRaise(true);
+            buttonRow->addWidget(button);
+            toolButtons.push_back({button, QLatin1String(id)});
+        }
 
         auto panel = new QWidget();
         auto grid = new QGridLayout(panel);
@@ -947,6 +973,9 @@ namespace hello::daw {
         layout->addWidget(buttons);
         resize(1200, 680);
         impl.initActions(menuBar);
+        for (const auto &[button, id] : std::as_const(toolButtons)) {
+            button->setDefaultAction(impl.actions.value(id));
+        }
 
         connect(buttons, &QDialogButtonBox::rejected, this, &EditFrequencyMapsDialog::reject);
         for (const auto &[button, id] : std::as_const(impl.editButtons)) {

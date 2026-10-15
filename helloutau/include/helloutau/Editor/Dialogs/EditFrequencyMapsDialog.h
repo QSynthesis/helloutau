@@ -52,8 +52,9 @@ namespace hello::daw {
     /// with its button Update, the list of the frequencies of the frames, which selects the
     /// frames of the editing area, the frequency of the current frame with its button Set, the
     /// preview, the information of the audio file, the editing area and a row of buttons for the
-    /// selected frames. The preview synthesizes the audio file at the key with the map as edited
-    /// and the resampler of the settings, or plays the audio file as it is with \c $direct.
+    /// selected frames, which ends with the buttons of the select tool and the pen of the editing
+    /// area. The preview synthesizes the audio file at the key with the map as edited and the
+    /// resampler of the settings, or plays the audio file as it is with \c $direct.
     ///
     /// The menus and the shortcuts are those of Editor::FrequencyMapEditorKind. The actions of
     /// contributions are added when the dialog is created.

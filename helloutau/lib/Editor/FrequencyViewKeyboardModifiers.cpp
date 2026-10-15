@@ -35,7 +35,7 @@ namespace hello::daw {
                 {SelectFrames, "selectFrames",
                  QT_TRANSLATE_NOOP("hello::daw::FrequencyViewKeyboardModifiers",
                                    "Drag: Select Frames"),
-                 ctrl},
+                 none},
                 {Unvoice, "unvoice",
                  QT_TRANSLATE_NOOP("hello::daw::FrequencyViewKeyboardModifiers",
                                    "Right Drag: Unvoice"),
@@ -54,7 +54,8 @@ namespace hello::daw {
             },
             {
                 {WheelScene, {{VerticalScroll}, {HorizontalScroll}, {TimeZoom}, {KeyZoom}}},
-                {LeftDragScene, {{Draw}, {SelectFrames}, {DragZoom, {DragZoomAxisLock}}}},
+                {SelectDragScene, {{SelectFrames}, {DragZoom, {DragZoomAxisLock}}}},
+                {DrawDragScene, {{Draw}, {DragZoom, {DragZoomAxisLock}}}},
                 {RightDragScene, {{Unvoice}}},
                 {KeyLineScene, {{DragKey}}},
             });

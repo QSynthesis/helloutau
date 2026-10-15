@@ -10,11 +10,10 @@ namespace hello::daw {
     /// The modifier scheme \c frequencyView of the editing area of the dialog that edits
     /// frequency maps. See the editing in docs/FrequencyMaps.md.
     ///
-    /// The wheel defaults to the wheel of NoteViewKeyboardModifiers. The drags default to those of
-    /// frqeditor:
-    /// - A left drag draws the frequencies.
-    /// - A left drag with Ctrl selects frames.
-    /// - A right drag unvoices frames.
+    /// The wheel defaults to the wheel of NoteViewKeyboardModifiers. The drags default to these:
+    /// - A left drag with the pen draws the frequencies.
+    /// - A left drag with the select tool selects frames.
+    /// - A right drag unvoices frames, as in frqeditor.
     /// - A left drag of the key line in the labels sets the key.
     class HELLOUTAU_EDITOR_EXPORT FrequencyViewKeyboardModifiers {
     public:
@@ -35,8 +34,11 @@ namespace hello::daw {
             /// A wheel step
             WheelScene,
 
-            /// A left click or drag
-            LeftDragScene,
+            /// A left click or drag with the select tool
+            SelectDragScene,
+
+            /// A left click or drag with the pen
+            DrawDragScene,
 
             /// A right click or drag
             RightDragScene,

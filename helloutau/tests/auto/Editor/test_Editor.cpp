@@ -3169,6 +3169,11 @@ private Q_SLOTS:
             // The audio file of the current row is current, and its map is read once the dialog
             // is shown.
             QTRY_COMPARE(dialog->currentFile(), 0);
+            // The tool actions select the tool of the editing area.
+            trigger("helloutau.select.selectTool");
+            QCOMPARE(dialog->view()->tool(), FrequencyMapView::SelectTool);
+            trigger("helloutau.select.penTool");
+            QCOMPARE(dialog->view()->tool(), FrequencyMapView::PenTool);
             const auto buffer = dialog->bufferOf(0);
             QVERIFY(buffer);
             QCOMPARE(buffer->map().frames.size(), size_t(100));

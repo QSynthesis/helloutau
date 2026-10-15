@@ -30,6 +30,10 @@
                 shortcut="Ctrl+A" />
         <action id="helloutau.select.deselect" text="Desele&amp;ct" category="Select"
                 shortcut="Ctrl+Shift+A" />
+        <!-- The effect of a left drag in the editing area, as the tools of the piano roll -->
+        <action id="helloutau.select.selectTool" text="&amp;Select Tool" category="Select"
+                shortcut="V" />
+        <action id="helloutau.select.penTool" text="P&amp;en Tool" category="Select" shortcut="B" />
 
         <!-- Every modified frequency map in order, as Save All of frqeditor -->
         <action id="helloutau.frequencyMap.saveAll" text="Save &amp;All" category="File"
@@ -108,6 +112,9 @@
             <menu id="helloutau.frequencyMap.select">
                 <action id="helloutau.select.selectAll" />
                 <action id="helloutau.select.deselect" />
+                <separator />
+                <action id="helloutau.select.selectTool" />
+                <action id="helloutau.select.penTool" />
             </menu>
             <menu id="helloutau.frequencyMap.view">
                 <action id="helloutau.frequencyMap.zoomIn" />

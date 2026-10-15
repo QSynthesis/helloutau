@@ -379,10 +379,14 @@ namespace hello::daw {
         }
         m_hovered = hit;
         if (hit) {
-            viewport()->setCursor(hit->cursor);
+            viewport()->setCursor(cursorOf(hit->cursor));
         } else {
             viewport()->unsetCursor();
         }
+    }
+
+    QCursor SceneView::cursorOf(Qt::CursorShape shape) const {
+        return QCursor(shape);
     }
 
     void SceneView::cancelGesture() {

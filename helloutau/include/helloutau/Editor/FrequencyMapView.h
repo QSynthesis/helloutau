@@ -34,10 +34,12 @@ namespace hello::daw {
     /// button \c s in the corner switches the view, and opens the color schemes on a right click.
     /// The button \c * beside it shows the brightness slider.
     ///
-    /// The drags follow the bindings of FrequencyViewKeyboardModifiers:
+    /// The left drags depend on tool(). The drags follow the bindings of
+    /// FrequencyViewKeyboardModifiers:
     /// - Draw and Unvoice write the frames under the pointer as one stroke of the buffer, which
     ///   Escape cancels.
-    /// - SelectFrames selects the frames between the press and the pointer.
+    /// - SelectFrames selects the frames between the press and the pointer, which a band over the
+    ///   whole height marks while the drag lasts.
     /// - DragZoom zooms about the press.
     /// - DragKey sets the key, if the map records one, from the key line in the labels.
     ///
@@ -56,11 +58,18 @@ namespace hello::daw {
         Q_PROPERTY(QColor selectedCurveColor READ selectedCurveColor WRITE setSelectedCurveColor)
         Q_PROPERTY(QColor savedColor READ savedColor WRITE setSavedColor)
         Q_PROPERTY(QColor amplitudeColor READ amplitudeColor WRITE setAmplitudeColor)
+        Q_PROPERTY(QColor bandColor READ bandColor WRITE setBandColor)
     public:
         /// The views of the editing area
         enum ViewMode {
             KeyRowsView,  ///< The rows of the keys with the amplitudes, the default
             SpectrumView, ///< The spectrogram
+        };
+
+        /// The effect of a left drag in the plot, as the tools of the piano roll
+        enum Tool {
+            SelectTool, ///< Selects the frames in a span of time.
+            PenTool,    ///< Draws the frequencies as frqeditor does, and is the default.
         };
 
         /// The lowest note number of the view, C1
@@ -101,6 +110,11 @@ namespace hello::daw {
 
         ViewMode viewMode() const;
         void setViewMode(ViewMode mode);
+
+        Tool tool() const;
+
+        /// Sets the tool of the left presses after the call.
+        void setTool(Tool tool);
 
         /// Returns the brightness of the spectrogram from lowestBrightness to highestBrightness,
         /// 0 by default.
@@ -178,6 +192,9 @@ namespace hello::daw {
         void setSavedColor(const QColor &color);
         QColor amplitudeColor() const;
         void setAmplitudeColor(const QColor &color);
+        /// Returns the color of the band of a drag with the select tool, filled translucent.
+        QColor bandColor() const;
+        void setBandColor(const QColor &color);
 
     Q_SIGNALS:
         /// Emitted when a drag or a double click added a step to the buffer.
@@ -192,6 +209,9 @@ namespace hello::daw {
 
     protected:
         void resizeEvent(QResizeEvent *event) override;
+        /// Returns a black cross with a white outline for Qt::CrossCursor, the cursor of the pen,
+        /// which stays visible over the rows and the spectrogram.
+        QCursor cursorOf(Qt::CursorShape shape) const override;
 
     private:
         class Impl;

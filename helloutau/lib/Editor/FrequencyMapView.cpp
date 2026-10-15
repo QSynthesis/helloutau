@@ -7,6 +7,7 @@
 #include <QtCore/QSignalBlocker>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
+#include <QtGui/QPixmap>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QToolButton>
@@ -111,8 +112,11 @@ namespace hello::daw {
         ViewMode viewMode = KeyRowsView;
         int brightness = 0;
         int colorScheme = 0;
+        Tool tool = PenTool;
         KeyboardModifierBindings bindings{FrequencyViewKeyboardModifiers::scheme()};
         std::optional<std::pair<std::size_t, std::size_t>> selection;
+        // The press and the pointer in milliseconds while the select tool drags
+        std::optional<std::pair<double, double>> band;
         // The key while the key line is dragged
         std::optional<double> keyPreview;
         // Set once the view has a size to place level 0 in
@@ -129,7 +133,7 @@ namespace hello::daw {
         // The milliseconds of a frame that the time axis was set for
         double frameTime = defaultFrameTime;
         QColor whiteRowColor, blackRowColor, rowLineColor, labelColor, frameLineColor, keyLineColor,
-            curveColor, selectedCurveColor, savedColor, amplitudeColor;
+            curveColor, selectedCurveColor, savedColor, amplitudeColor, bandColor;
 
         QToolButton *viewButton = nullptr;
         QToolButton *brightnessButton = nullptr;
@@ -481,25 +485,30 @@ namespace hello::daw {
         }
     };
 
-    // A drag that selects the frames between the press and the pointer
+    // A drag that selects the frames between the press and the pointer and marks them with a band
     class FrequencyMapView::Impl::SelectGesture : public SceneGesture {
     public:
         SelectGesture(Impl *impl, QPointF origin)
             : m_impl(impl), m_anchor(*impl->_decl->frameAt(origin.x())),
-              m_previous(impl->selection) {
+              m_origin(impl->_decl->timeAxis().toTick(origin.x())), m_previous(impl->selection) {
             m_impl->setSelection(between(m_anchor, m_anchor));
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
             Q_UNUSED(modifiers);
-            m_impl->setSelection(between(m_anchor, *m_impl->_decl->frameAt(position.x())));
+            const auto view = m_impl->_decl;
+            m_impl->band = {m_origin, view->timeAxis().toTick(position.x())};
+            m_impl->setSelection(between(m_anchor, *view->frameAt(position.x())));
+            view->viewport()->update();
         }
 
         void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
             move(position, modifiers);
+            clearBand();
         }
 
         void cancel() override {
+            clearBand();
             m_impl->setSelection(m_previous);
         }
 
@@ -510,7 +519,13 @@ namespace hello::daw {
     private:
         Impl *m_impl;
         std::size_t m_anchor;
+        double m_origin;
         std::optional<std::pair<std::size_t, std::size_t>> m_previous;
+
+        void clearBand() {
+            m_impl->band.reset();
+            m_impl->_decl->viewport()->update();
+        }
     };
 
     // A drag of the key line, shown while it lasts and set as one step on the release
@@ -603,6 +618,16 @@ namespace hello::daw {
                     QRect(view->labelWidth(), 0, area.width() - view->labelWidth(), area.height()));
                 drawCurve(painter, *view, impl->buffer->map().frames, view->curveColor(),
                           view->selectedCurveColor(), impl);
+                // Over the whole height, its top and bottom edges out of sight
+                if (impl->band) {
+                    const double left = view->xOf(std::min(impl->band->first, impl->band->second));
+                    const double right = view->xOf(std::max(impl->band->first, impl->band->second));
+                    auto color = view->bandColor();
+                    painter.setPen(QPen(color, 1));
+                    color.setAlphaF(0.15f);
+                    painter.setBrush(color);
+                    painter.drawRect(QRectF(QPointF(left, -1), QPointF(right, area.height() + 1)));
+                }
                 painter.restore();
             }
             if (!impl->title.isEmpty()) {
@@ -631,7 +656,7 @@ namespace hello::daw {
                 return hit;
             }
             hit.part = PlotPart;
-            hit.cursor = Qt::CrossCursor;
+            hit.cursor = impl->tool == PenTool ? Qt::CrossCursor : Qt::ArrowCursor;
             return hit;
         }
 
@@ -675,11 +700,15 @@ namespace hello::daw {
             if (button != Qt::LeftButton) {
                 return nullptr;
             }
+            // The tool of the press, which a shortcut may change before the drag starts
+            const auto scene = impl->tool == PenTool
+                                   ? FrequencyViewKeyboardModifiers::DrawDragScene
+                                   : FrequencyViewKeyboardModifiers::SelectDragScene;
             return std::make_unique<PressGesture>(
                 position,
-                [impl, position](Qt::KeyboardModifiers held) -> std::unique_ptr<SceneGesture> {
-                    const auto activation = impl->bindings.activate(
-                        FrequencyViewKeyboardModifiers::LeftDragScene, held);
+                [impl, position,
+                 scene](Qt::KeyboardModifiers held) -> std::unique_ptr<SceneGesture> {
+                    const auto activation = impl->bindings.activate(scene, held);
                     if (!activation) {
                         return nullptr;
                     }
@@ -941,6 +970,16 @@ namespace hello::daw {
         Q_EMIT viewModeChanged();
     }
 
+    FrequencyMapView::Tool FrequencyMapView::tool() const {
+        stdc_impl_t;
+        return impl.tool;
+    }
+
+    void FrequencyMapView::setTool(Tool tool) {
+        stdc_impl_t;
+        impl.tool = tool;
+    }
+
     int FrequencyMapView::brightness() const {
         stdc_impl_t;
         return impl.brightness;
@@ -1102,6 +1141,7 @@ namespace hello::daw {
     HELLO_COLOR_PROPERTY(selectedCurveColor, setSelectedCurveColor, QColor(255, 0, 0))
     HELLO_COLOR_PROPERTY(savedColor, setSavedColor, QColor(185, 122, 87))
     HELLO_COLOR_PROPERTY(amplitudeColor, setAmplitudeColor, QColor(0, 255, 0))
+    HELLO_COLOR_PROPERTY(bandColor, setBandColor, palette().color(QPalette::Highlight))
 
 #undef HELLO_COLOR_PROPERTY
 
@@ -1121,6 +1161,28 @@ namespace hello::daw {
             impl.placed = true;
             impl.place(0, 0, lowestNote);
         }
+    }
+
+    QCursor FrequencyMapView::cursorOf(Qt::CursorShape shape) const {
+        if (shape != Qt::CrossCursor) {
+            return SceneView::cursorOf(shape);
+        }
+        constexpr int size = 21;
+        constexpr double middle = size / 2.0;
+        const qreal ratio = devicePixelRatioF();
+        QPixmap pixmap(QSize(size, size) * ratio);
+        pixmap.setDevicePixelRatio(ratio);
+        pixmap.fill(Qt::transparent);
+        QPainter painter(&pixmap);
+        // The white outline first, a pixel longer at each end
+        painter.setPen(QPen(Qt::white, 3, Qt::SolidLine, Qt::SquareCap));
+        painter.drawLine(QPointF(middle, 1.5), QPointF(middle, size - 1.5));
+        painter.drawLine(QPointF(1.5, middle), QPointF(size - 1.5, middle));
+        painter.setPen(QPen(Qt::black, 1, Qt::SolidLine, Qt::FlatCap));
+        painter.drawLine(QPointF(middle, 1), QPointF(middle, size - 1));
+        painter.drawLine(QPointF(1, middle), QPointF(size - 1, middle));
+        painter.end();
+        return QCursor(pixmap, size / 2, size / 2);
     }
 
 }

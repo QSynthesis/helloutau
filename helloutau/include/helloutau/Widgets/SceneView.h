@@ -8,6 +8,7 @@
 
 #include <QtCore/QPointF>
 #include <QtCore/QTimer>
+#include <QtGui/QCursor>
 #include <QtWidgets/QAbstractScrollArea>
 
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
@@ -106,6 +107,10 @@ namespace hello::daw {
         void keyPressEvent(QKeyEvent *event) override;
         void leaveEvent(QEvent *event) override;
         void focusOutEvent(QFocusEvent *event) override;
+
+        /// Returns the cursor shown over a hit whose cursor is \a shape, by default the cursor of
+        /// that shape.
+        virtual QCursor cursorOf(Qt::CursorShape shape) const;
 
     private:
         TimeAxis m_timeAxis;

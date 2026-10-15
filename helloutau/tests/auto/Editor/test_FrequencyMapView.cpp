@@ -170,11 +170,13 @@ private Q_SLOTS:
         m_view->setBuffer(m_buffer.get());
     }
 
-    // A left drag draws the frames under the pointer as one step.
+    // A left drag with the pen draws the frames under the pointer as one step, and selects
+    // nothing.
     void a_left_drag_draws_one_step() {
         QSignalSpy edited(m_view.get(), &FrequencyMapView::edited);
         drag(pointOf(10, 400), pointOf(20, 400), Qt::LeftButton);
         QCOMPARE(edited.count(), 1);
+        QCOMPARE(m_view->selection(), std::nullopt);
         for (int i = 10; i <= 20; ++i) {
             // Within a pixel of the view
             QVERIFY2(near(m_buffer->map().frames[i].frequency, 400, 400 * 0.02),
@@ -200,11 +202,16 @@ private Q_SLOTS:
         QCOMPARE(edited.count(), 0);
     }
 
-    // A left drag with Ctrl selects the frames between the press and the pointer.
-    void a_ctrl_drag_selects_frames() {
+    // A left drag with the select tool selects the frames between the press and the pointer, and
+    // edits nothing. The pen is the default tool.
+    void a_drag_with_the_select_tool_selects_frames() {
+        QCOMPARE(m_view->tool(), FrequencyMapView::PenTool);
+        m_view->setTool(FrequencyMapView::SelectTool);
         QSignalSpy changed(m_view.get(), &FrequencyMapView::selectionChanged);
-        drag(pointOf(40, 200), pointOf(30, 300), Qt::LeftButton, Qt::ControlModifier);
+        QSignalSpy edited(m_view.get(), &FrequencyMapView::edited);
+        drag(pointOf(40, 200), pointOf(30, 300), Qt::LeftButton);
         QVERIFY(changed.count() > 0);
+        QCOMPARE(edited.count(), 0);
         QCOMPARE(m_view->selection(), (std::optional<std::pair<std::size_t, std::size_t>>{
                                           {30, 11}
         }));
@@ -215,6 +222,19 @@ private Q_SLOTS:
         }));
         m_view->clearSelection();
         QCOMPARE(m_view->selection(), std::nullopt);
+    }
+
+    // The pen shows a cursor of its own over the plot, which stays visible over the rows, and the
+    // select tool shows the arrow.
+    void the_pen_has_a_cursor_of_its_own() {
+        const auto point = pointOf(50, 200);
+        QTest::mouseMove(m_view->viewport(), point);
+        QCOMPARE(m_view->viewport()->cursor().shape(), Qt::BitmapCursor);
+        m_view->setTool(FrequencyMapView::SelectTool);
+        // A move elsewhere, since the hover is updated only when the hit changes
+        QTest::mouseMove(m_view->viewport(), QPoint(m_view->labelWidth() / 2, point.y()));
+        QTest::mouseMove(m_view->viewport(), point);
+        QCOMPARE(m_view->viewport()->cursor().shape(), Qt::ArrowCursor);
     }
 
     // A right drag unvoices the frames under the pointer.
