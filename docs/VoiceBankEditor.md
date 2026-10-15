@@ -17,7 +17,7 @@
 | 编码 | 打开工程时逐目录询问编码的 `VoiceBankDecodingDialog` 已有，可复用 |
 | 音频 | `WaveAudio` 读取 wav；`HelloUtauAudio` 的 `AudioOutput` 与 `BufferSource` 可播放一段采样 |
 | 合成 | `SynthPlan` / `SynthToolProcess` 可对单个条目调用重采样器，用于试听 |
-| 频率表 | 读写与生成的参考实现 qfrqeditor 已完成（[`claude/frqeditor-reference.md`](claude/frqeditor-reference.md)），尚未移入本仓库 |
+| 频率表 | 读写与生成的参考实现 qfrqeditor 已完成（[`claude/frqeditor-reference.md`](claude/frqeditor-reference.md)），本仓库的读写、生成、编辑、检查与转换见 [`FrequencyMaps.md`](FrequencyMaps.md) |
 | 界面 | 音源窗口 `VoiceBankWindow`：目录树、条目表的编辑、波形区与五个值的拖动、试听与试合成、音频文件的处理（第 1–4 步，见各步的进度） |
 
 ## 参考实现的取舍
@@ -217,7 +217,7 @@
 - 频谱图；读取 frq 等频率表，把 F0 画在波形上。频率表的生成与编辑属于「频率表」一项（移入 qfrqeditor），不在此步。
 - 计划与待作者决定的问题见 [`FrequencyMaps.md`](FrequencyMaps.md)（2026-09-30）：频谱与重采样器无关，F0 曲线按格式与重采样器绑定；内置编辑并入音源窗口的建议；格式驱动与注册表的抽象及其插件。
 
-**进度**（2026-09-30）：只读部分完成。波形区上直接画出当前 wav 的 F0 曲线（frq、dio、mrq，格式默认按设置中的重采样器，可在波形上方采样区工具栏的「F0」下拉框切换，该工具栏见 [`Widgets.md`](Widgets.md)「工具栏」），「视图 → Show Spectrogram」以频谱代替波形。细节见 `FrequencyMaps.md`「进度」。频率表的生成已实现（2026-10-12，「工具」菜单，见 `FrequencyMaps.md`「生成与检查」），编辑待后续。
+**进度**（2026-09-30）：只读部分完成。波形区上直接画出当前 wav 的 F0 曲线（frq、dio、mrq，格式默认按设置中的重采样器，可在波形上方采样区工具栏的「F0」下拉框切换，该工具栏见 [`Widgets.md`](Widgets.md)「工具栏」），「视图 → Show Spectrogram」以频谱代替波形。细节见 `FrequencyMaps.md`「进度」。频率表的生成已实现（2026-10-12，「工具」菜单，见 `FrequencyMaps.md`「生成与检查」），编辑、检查与修正已实现（2026-10-15，见 `FrequencyMaps.md`「编辑」与「检查与修正」）。「F0」框列出格式注册表中的全部格式，曲线不依赖任何一种格式：frq 由编辑器登记，dio 与 mrq 于 2026-10-12 移入 SynthToolSupport 插件，frc 与 pmk 于 2026-10-15 由该插件加入，作者 2026-10-10 与 2026-10-11 关于可扩展与迁移的要求因此均已完成。
 
 ### 第 7 步（可选）：批量操作
 
