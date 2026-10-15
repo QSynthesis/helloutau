@@ -39,6 +39,27 @@ namespace hello::daw {
         bool removesCachesOnSave() const;
         void setRemovesCachesOnSave(bool removes);
 
+        /// \name The editing area
+        /// The state that the editing dialog last left, which the next dialog starts from. The
+        /// zoom is not kept.
+        /// @{
+
+        /// Returns whether the editing area shows the spectrogram rather than the rows of the
+        /// keys. The rows by default.
+        bool showsSpectrogram() const;
+        void setShowsSpectrogram(bool shows);
+
+        /// Returns the brightness of the spectrogram, FrequencyMapView::brightness(), limited to
+        /// its range. 0 by default.
+        int spectrogramBrightness() const;
+        void setSpectrogramBrightness(int brightness);
+
+        /// Returns the color scheme of the spectrogram, FrequencyMapView::colorScheme(), limited
+        /// to its range. 0 by default.
+        int spectrogramColorScheme() const;
+        void setSpectrogramColorScheme(int scheme);
+        /// @}
+
         /// Returns whether the runs held in the log of the generation and its size limit are
         /// those of the render log, the default, rather than isLogAccumulated() and logLimit().
         bool followsRenderLog() const;

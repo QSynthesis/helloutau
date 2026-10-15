@@ -787,6 +787,7 @@ namespace hello::daw {
                                           : FrequencyMapView::KeyRowsView);
                 });
             spectrum->setCheckable(true);
+            spectrum->setChecked(view->viewMode() == FrequencyMapView::SpectrumView);
             for (int i = 0; i < FrequencyMapView::colorSchemeCount; ++i) {
                 addCommand(QLatin1String(colorActionIds[i]), [this, i] {
                     view->setColorScheme(i);
@@ -869,6 +870,13 @@ namespace hello::daw {
         impl.view = new FrequencyMapView();
         impl.view->setKeyboardModifierBindings(editor->keyboardModifierBindings(
             Editor::FrequencyMapEditorKind, FrequencyViewKeyboardModifiers::scheme()));
+        // The view, the brightness and the color scheme that the last dialog left. The first file
+        // computes its spectrogram as it is read if the view shows it.
+        const auto &mapSettings = editor->settings().frequencyMaps();
+        impl.view->setViewMode(mapSettings.showsSpectrogram() ? FrequencyMapView::SpectrumView
+                                                              : FrequencyMapView::KeyRowsView);
+        impl.view->setBrightness(mapSettings.spectrogramBrightness());
+        impl.view->setColorScheme(mapSettings.spectrogramColorScheme());
         impl.message = new QLabel();
         impl.message->setWordWrap(true);
         impl.message->hide();
@@ -1117,13 +1125,20 @@ namespace hello::daw {
             stdc_impl_t;
             impl.updateActions();
         });
-        connect(impl.view, &FrequencyMapView::viewModeChanged, this, [this] {
+        // The view kept for the next dialog after a canceled computation of the spectrogram is the
+        // rows of the keys, which the view returns to.
+        connect(impl.view, &FrequencyMapView::viewModeChanged, this, [this, editor] {
             stdc_impl_t;
             impl.updateSpectrogram();
+            editor->settings().frequencyMaps().setShowsSpectrogram(impl.view->viewMode() ==
+                                                                   FrequencyMapView::SpectrumView);
         });
-        connect(impl.view, &FrequencyMapView::spectrumChanged, this, [this] {
+        connect(impl.view, &FrequencyMapView::spectrumChanged, this, [this, editor] {
             stdc_impl_t;
             impl.updateColorActions();
+            auto &settings = editor->settings().frequencyMaps();
+            settings.setSpectrogramBrightness(impl.view->brightness());
+            settings.setSpectrogramColorScheme(impl.view->colorScheme());
         });
         impl.updateColorActions();
         connect(impl.view, &FrequencyMapView::selectionChanged, this, [this] {

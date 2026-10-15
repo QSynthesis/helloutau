@@ -3155,6 +3155,16 @@ private Q_SLOTS:
         const auto e = editor();
         e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/resampler.exe"));
         const auto restore = qScopeGuard([&e] { e->settings().rendering().setResampler({}); });
+        // The editing area as the last dialog left it
+        auto &mapSettings = e->settings().frequencyMaps();
+        mapSettings.setShowsSpectrogram(true);
+        mapSettings.setSpectrogramBrightness(2);
+        mapSettings.setSpectrogramColorScheme(3);
+        const auto restoreMaps = qScopeGuard([&mapSettings] {
+            mapSettings.setShowsSpectrogram(false);
+            mapSettings.setSpectrogramBrightness(0);
+            mapSettings.setSpectrogramColorScheme(0);
+        });
         const auto window = e->openVoiceBank(bank);
         QVERIFY(window);
         window->setCurrentRow(
@@ -3170,6 +3180,18 @@ private Q_SLOTS:
             // The audio file of the current row is current, and its map is read once the dialog
             // is shown.
             QTRY_COMPARE(dialog->currentFile(), 0);
+            // The editing area starts as the settings keep it, and the settings follow it.
+            QCOMPARE(dialog->view()->viewMode(), FrequencyMapView::SpectrumView);
+            QVERIFY(dialog->view()->spectrogram());
+            QCOMPARE(dialog->view()->brightness(), 2);
+            QCOMPARE(dialog->view()->colorScheme(), 3);
+            trigger("helloutau.frequencyMap.darken");
+            QCOMPARE(mapSettings.spectrogramBrightness(), 3);
+            trigger("helloutau.frequencyMap.coolColors");
+            QCOMPARE(mapSettings.spectrogramColorScheme(), 0);
+            trigger("helloutau.frequencyMap.showSpectrogram");
+            QCOMPARE(dialog->view()->viewMode(), FrequencyMapView::KeyRowsView);
+            QVERIFY(!mapSettings.showsSpectrogram());
             // The tool actions select the tool of the editing area.
             trigger("helloutau.select.selectTool");
             QCOMPARE(dialog->view()->tool(), FrequencyMapView::SelectTool);

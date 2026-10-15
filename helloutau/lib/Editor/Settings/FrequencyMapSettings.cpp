@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "AppSettings_p.h"
+#include "FrequencyMapView.h"
 
 namespace hello::daw {
 
@@ -17,6 +18,9 @@ namespace hello::daw {
         constexpr char KeyFollowsRenderLog[] = "frequencyMaps/log/followsRenderLog";
         constexpr char KeyLogAccumulated[] = "frequencyMaps/log/accumulated";
         constexpr char KeyLogLimit[] = "frequencyMaps/log/limit";
+        constexpr char KeySpectrogram[] = "frequencyMaps/editor/spectrogram";
+        constexpr char KeyBrightness[] = "frequencyMaps/editor/brightness";
+        constexpr char KeyColorScheme[] = "frequencyMaps/editor/colorScheme";
 
     }
 
@@ -51,6 +55,37 @@ namespace hello::daw {
 
     void FrequencyMapSettings::setRemovesCachesOnSave(bool removes) {
         m_store.setValue(KeyRemovesCachesOnSave, removes ? json::Value() : json::Value(false));
+    }
+
+    bool FrequencyMapSettings::showsSpectrogram() const {
+        return m_store.value(KeySpectrogram).toBool(false);
+    }
+
+    void FrequencyMapSettings::setShowsSpectrogram(bool shows) {
+        m_store.setValue(KeySpectrogram, shows ? json::Value(true) : json::Value());
+    }
+
+    int FrequencyMapSettings::spectrogramBrightness() const {
+        return std::clamp(int(m_store.value(KeyBrightness).toInt(0)),
+                          FrequencyMapView::lowestBrightness, FrequencyMapView::highestBrightness);
+    }
+
+    void FrequencyMapSettings::setSpectrogramBrightness(int brightness) {
+        brightness = std::clamp(brightness, FrequencyMapView::lowestBrightness,
+                                FrequencyMapView::highestBrightness);
+        m_store.setValue(KeyBrightness,
+                         brightness != 0 ? json::Value(int64_t(brightness)) : json::Value());
+    }
+
+    int FrequencyMapSettings::spectrogramColorScheme() const {
+        return std::clamp(int(m_store.value(KeyColorScheme).toInt(0)), 0,
+                          FrequencyMapView::colorSchemeCount - 1);
+    }
+
+    void FrequencyMapSettings::setSpectrogramColorScheme(int scheme) {
+        scheme = std::clamp(scheme, 0, FrequencyMapView::colorSchemeCount - 1);
+        m_store.setValue(KeyColorScheme,
+                         scheme != 0 ? json::Value(int64_t(scheme)) : json::Value());
     }
 
     bool FrequencyMapSettings::followsRenderLog() const {

@@ -92,6 +92,39 @@ private Q_SLOTS:
         }
     }
 
+    // The view, the brightness and the color scheme of the editing area of frequency maps
+    // persist, limited to their ranges. The defaults are not written.
+    void the_editing_area_of_frequency_maps_persists() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            AppSettings settings(file);
+            QVERIFY(!settings.frequencyMaps().showsSpectrogram());
+            QCOMPARE(settings.frequencyMaps().spectrogramBrightness(), 0);
+            QCOMPARE(settings.frequencyMaps().spectrogramColorScheme(), 0);
+            settings.frequencyMaps().setShowsSpectrogram(true);
+            settings.frequencyMaps().setSpectrogramBrightness(-2);
+            settings.frequencyMaps().setSpectrogramColorScheme(4);
+        }
+        {
+            AppSettings settings(file);
+            QVERIFY(settings.frequencyMaps().showsSpectrogram());
+            QCOMPARE(settings.frequencyMaps().spectrogramBrightness(), -2);
+            QCOMPARE(settings.frequencyMaps().spectrogramColorScheme(), 4);
+            settings.frequencyMaps().setSpectrogramBrightness(9);
+            settings.frequencyMaps().setSpectrogramColorScheme(-1);
+            QCOMPARE(settings.frequencyMaps().spectrogramBrightness(), 3);
+            QCOMPARE(settings.frequencyMaps().spectrogramColorScheme(), 0);
+            settings.frequencyMaps().setShowsSpectrogram(false);
+            settings.frequencyMaps().setSpectrogramBrightness(0);
+            for (const auto key :
+                 {"frequencyMaps/editor/spectrogram", "frequencyMaps/editor/brightness",
+                  "frequencyMaps/editor/colorScheme"}) {
+                QVERIFY2(settings.value(QLatin1String(key)).isUndefined(), key);
+            }
+        }
+    }
+
     // The thread count of the general tasks persists, independent of the other thread counts.
     // The default is not written.
     void the_task_thread_count_persists() {
