@@ -74,6 +74,7 @@
 #include "CommandEntries_p.h"
 #include "ConvertFrequencyMapsDialog.h"
 #include "DiagnosticBox.h"
+#include "EditFrequencyMapsDialog.h"
 #include "Editor.h"
 #include "FindSupport_p.h"
 #include "GenerateFrequencyMapsDialog.h"
@@ -433,6 +434,10 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.voiceBank.convertEncodings"), [this] {
                 stdc_decl_t;
                 decl.convertEncodings();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.editMaps"), [this] {
+                stdc_decl_t;
+                decl.editFrequencyMaps();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.generateMaps"), [this] {
                 stdc_decl_t;
@@ -2707,6 +2712,41 @@ namespace hello::daw {
             impl.model->refresh();
         }
         return committed;
+    }
+
+    bool VoiceBankWindow::editFrequencyMaps() {
+        stdc_impl_t;
+        const auto title = tr("Edit Frequency Maps");
+        const auto tools = impl.generationTools(title);
+        if (!tools) {
+            return false;
+        }
+        const auto format = tools->second;
+        if (!format->canWrite()) {
+            QMessageBox::information(
+                this, title,
+                tr("HelloUtau cannot write frequency maps in the format %1.").arg(format->name()));
+            return false;
+        }
+        auto files = impl.mapListingOf<EditFrequencyMapsDialog::File>(*format);
+        if (files.isEmpty()) {
+            QMessageBox::information(this, title, tr("The voice bank has no audio files."));
+            return false;
+        }
+        // The audio file of the current row is current in the dialog, rather than the selection.
+        const int row = currentRow();
+        const auto current =
+            row >= 0 ? impl.audioPathOf(row).lexically_normal() : std::filesystem::path();
+        for (auto &file : files) {
+            file.selected = !current.empty() && file.path == current;
+        }
+        EditFrequencyMapsDialog dialog(impl.editor, *format, std::move(files),
+                                       impl.document->rootPath(), this);
+        dialog.exec();
+        impl.model->refreshFrequencyMaps();
+        impl.frequencyShown = {};
+        impl.showFrequency();
+        return true;
     }
 
     bool VoiceBankWindow::generateFrequencyMaps() {

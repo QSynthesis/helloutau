@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -66,9 +67,11 @@
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
+#include <hellokit/VoiceBank/FrequencyMapRevisionBuffer.h>
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Editor/Dialogs/ConvertFrequencyMapsDialog.h>
+#include <helloutau/Editor/Dialogs/EditFrequencyMapsDialog.h>
 #include <helloutau/Editor/Dialogs/GenerateFrequencyMapsDialog.h>
 #include <helloutau/Editor/Dialogs/ProcessAudioFilesDialog.h>
 #include <helloutau/Editor/Dialogs/RemoveFrequencyMapsDialog.h>
@@ -85,6 +88,7 @@
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
+#include <helloutau/Editor/FrequencyMapView.h>
 #include <helloutau/Editor/Dialogs/NotePropertiesDialog.h>
 #include <helloutau/Editor/OtoWaveformView.h>
 #include <helloutau/Editor/Dialogs/ProjectPropertiesDialog.h>
@@ -3125,6 +3129,93 @@ private Q_SLOTS:
         QCOMPARE(unchecked, QStringList{QStringLiteral("c_wav.frq")});
         QCOMPARE(standIn->calls.load(), 1);
         QCOMPARE(qsizetype(fs::file_size(bank / "a_wav.frq")), frq.size());
+    }
+
+    // The editing dialog reads the map of the current file, edits it with its actions, asks
+    // before it overwrites a map file that changed on disk, and asks on closing with a modified
+    // map. A file without a map cannot be edited.
+    void the_frequency_maps_are_edited() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 1000);
+        const auto le = [](auto value) {
+            QByteArray bytes(sizeof(value), '\0');
+            qToLittleEndian(value, bytes.data());
+            return bytes;
+        };
+        // a_wav.frq at 220 Hz, a frame each 10 ms
+        QByteArray frq("FREQ0003");
+        frq += le(qint32(10)) + le(220.0) + QByteArray(16, '\0') + le(qint32(100));
+        for (int i = 0; i < 100; ++i) {
+            frq += le(220.0) + le(1.0);
+        }
+        writeFile(bank / "a_wav.frq", frq.constData(), frq.size());
+        const auto e = editor();
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/resampler.exe"));
+        const auto restore = qScopeGuard([&e] { e->settings().rendering().setResampler({}); });
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        window->setCurrentRow(
+            window->entryModel()->rowOf({}, QStringLiteral("a.wav"), QStringLiteral("a")));
+
+        bool handled = false;
+        handleNextDialog<EditFrequencyMapsDialog>([&](EditFrequencyMapsDialog *dialog) {
+            const auto trigger = [dialog](const char *id) {
+                const auto action = dialog->actionContext()->action(QLatin1String(id));
+                QVERIFY(action && action->isEnabled());
+                action->trigger();
+            };
+            // The audio file of the current row is current, and its map is read.
+            QCOMPARE(dialog->currentFile(), 0);
+            const auto buffer = dialog->bufferOf(0);
+            QVERIFY(buffer);
+            QCOMPARE(buffer->map().frames.size(), size_t(100));
+            QVERIFY(dialog->messageLabel()->isHidden());
+            // c.wav has no map.
+            dialog->setCurrentFile(1);
+            QVERIFY(!dialog->messageLabel()->isHidden());
+            QVERIFY(!dialog->view()->buffer());
+            dialog->setCurrentFile(0);
+
+            dialog->view()->selectAll();
+            trigger("helloutau.frequencyMap.multiplyBy2");
+            QVERIFY(dialog->isModified(0));
+            QCOMPARE(dialog->bufferOf(0)->map().frames.at(0).frequency, 440.0);
+
+            // The map file changes on disk after it was read.
+            writeFile(bank / "a_wav.frq", frq.constData(), frq.size());
+            fs::last_write_time(bank / "a_wav.frq",
+                                fs::last_write_time(bank / "a_wav.frq") + std::chrono::seconds(2));
+            answerMessageBox(QMessageBox::No);
+            QVERIFY(!dialog->save());
+            QVERIFY(dialog->isModified(0));
+            answerMessageBox(QMessageBox::Yes);
+            QVERIFY(dialog->save());
+            QVERIFY(!dialog->isModified(0));
+
+            // Closing discards an edit after asking.
+            trigger("helloutau.frequencyMap.unvoice");
+            QVERIFY(dialog->isModified(0));
+            bool asked = false;
+            handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
+                asked = true;
+                box->button(QMessageBox::Discard)->click();
+            });
+            dialog->reject();
+            QVERIFY(asked);
+            QVERIFY(!dialog->isVisible());
+            handled = true;
+        });
+        QVERIFY(window->editFrequencyMaps());
+        QVERIFY(handled);
+
+        kit::DiagnosticList diagnostics;
+        const auto map = e->frequencyFormats()
+                             .format(QStringLiteral("frq"))
+                             ->read(bank / "a.wav", 1000, diagnostics);
+        QVERIFY(map);
+        QCOMPARE(map->frames.size(), size_t(100));
+        QCOMPARE(map->frames.at(0).frequency, 440.0);
     }
 
     // The conversion writes the map of each audio file that has a map of the source format in the

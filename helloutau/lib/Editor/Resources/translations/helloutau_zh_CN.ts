@@ -274,6 +274,10 @@
         <translation>处理音频文件(&amp;O)...</translation>
     </message>
     <message>
+        <source>&amp;Edit Frequency Maps...</source>
+        <translation>编辑频率表(&amp;E)...</translation>
+    </message>
+    <message>
         <source>&amp;Remove Frequency Maps...</source>
         <translation>删除频率表(&amp;R)...</translation>
     </message>
@@ -843,6 +847,61 @@
     <message>
         <source>Probable causes:</source>
         <translation>可能的原因：</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::EditFrequencyMapsDialog</name>
+    <message>
+        <source>This audio file has no frequency map in the format %1.</source>
+        <translation>此音频文件没有格式为 %1 的频率表。</translation>
+    </message>
+    <message>
+        <source>The audio file cannot be read: %1</source>
+        <translation>无法读取音频文件：%1</translation>
+    </message>
+    <message>
+        <source>The frequency map cannot be read: %1</source>
+        <translation>无法读取频率表：%1</translation>
+    </message>
+    <message>
+        <source>Tools &gt; Generate Frequency Maps in the voice bank window generates the frequency map.</source>
+        <translation>音源窗口的「工具 &gt; 生成频率表」可以生成频率表。</translation>
+    </message>
+    <message>
+        <source>Save Frequency Map</source>
+        <translation>保存频率表</translation>
+    </message>
+    <message>
+        <source>The file %1 changed after the frequency map of %2 was read. Overwrite it?</source>
+        <translation>读取 %2 的频率表之后，文件 %1 已被改动。是否覆盖？</translation>
+    </message>
+    <message>
+        <source>Edit Frequency Maps</source>
+        <translation>编辑频率表</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <source>Frequency Map</source>
+        <translation>频率表</translation>
+    </message>
+    <message>
+        <source>Modified</source>
+        <translation>已修改</translation>
+    </message>
+    <message>
+        <source>Re&amp;move the analysis caches when saving a frequency map</source>
+        <translation>保存频率表时删除分析缓存(&amp;M)</translation>
+    </message>
+    <message>
+        <source>This choice applies while the dialog is open. The default is set on the Frequency Maps page of the settings. Without removing the caches, the resampler keeps synthesizing from the frequencies of the caches.</source>
+        <translation>此选择只在对话框打开期间有效。缺省值在设置的「频率表」页中设置。不删除缓存时，重采样器仍按缓存中的频率合成。</translation>
+    </message>
+    <message>
+        <source>Save the modified frequency maps before closing?</source>
+        <translation>关闭之前是否保存已修改的频率表？</translation>
     </message>
 </context>
 <context>
@@ -3883,6 +3942,14 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>
             <numerusform>已生成 %n 个音频文件的分析缓存或频率表。</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Edit Frequency Maps</source>
+        <translation>编辑频率表</translation>
+    </message>
+    <message>
+        <source>HelloUtau cannot write frequency maps in the format %1.</source>
+        <translation>HelloUtau 无法写出格式为 %1 的频率表。</translation>
     </message>
     <message>
         <source>Generate Frequency Maps</source>

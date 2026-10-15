@@ -191,6 +191,13 @@ namespace hello::daw {
         /// the section on the conversion in docs/Editing.md.
         bool convertEncodings(const VoiceBankTranscodingDialog::Conversion &conversion);
 
+        /// Opens EditFrequencyMapsDialog for the audio files of the voice bank, those of the
+        /// folders not read included, with the maps in the format of the resampler of the
+        /// settings, and shows the maps again once it closes. The audio file of the current row is
+        /// current in the dialog. Returns false if the resampler or its format is not set, the
+        /// format cannot write maps, or the voice bank has no audio files.
+        bool editFrequencyMaps();
+
         /// Opens GenerateFrequencyMapsDialog for the audio files of the voice bank, those of the
         /// folders not read included, and generates the frequency maps of the checked files with
         /// the regeneration chosen in the dialog as the overload does. Returns false if the voice
