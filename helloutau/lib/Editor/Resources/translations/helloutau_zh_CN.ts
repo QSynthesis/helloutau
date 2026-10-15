@@ -366,24 +366,24 @@
         <translation>插入音符(&amp;I)</translation>
     </message>
     <message>
-        <source>S&amp;plit Note...</source>
-        <translation>拆分音符(&amp;P)...</translation>
+        <source>Split N&amp;ote...</source>
+        <translation>拆分音符(&amp;O)...</translation>
     </message>
     <message>
-        <source>Insert &amp;Rest</source>
-        <translation>插入休止符(&amp;R)</translation>
+        <source>In&amp;sert Rest</source>
+        <translation>插入休止符(&amp;S)</translation>
     </message>
     <message>
         <source>Com&amp;bine Notes</source>
         <translation>合并音符(&amp;B)</translation>
     </message>
     <message>
-        <source>Set Te&amp;mpo...</source>
-        <translation>设置曲速(&amp;M)...</translation>
+        <source>Set Tempo...</source>
+        <translation>设置曲速...</translation>
     </message>
     <message>
-        <source>Replace &amp;Lyrics...</source>
-        <translation>替换歌词(&amp;L)...</translation>
+        <source>Repl&amp;ace Lyrics...</source>
+        <translation>替换歌词(&amp;A)...</translation>
     </message>
     <message>
         <source>Set La&amp;bel...</source>
@@ -402,8 +402,8 @@
         <translation>移除区间(&amp;R)</translation>
     </message>
     <message>
-        <source>Note Propert&amp;ies...</source>
-        <translation>音符属性(&amp;I)...</translation>
+        <source>Note Properties...</source>
+        <translation>音符属性...</translation>
     </message>
     <message>
         <source>Mode&amp;2 Pitch</source>
@@ -458,12 +458,12 @@
         <translation>全部(&amp;A)</translation>
     </message>
     <message>
-        <source>Pitch &amp;Control...</source>
-        <translation>音高控制(&amp;C)...</translation>
+        <source>Pitch Control...</source>
+        <translation>音高控制...</translation>
     </message>
     <message>
-        <source>Edit &amp;Lyric</source>
-        <translation>编辑歌词(&amp;L)</translation>
+        <source>&amp;Edit Lyric</source>
+        <translation>编辑歌词(&amp;E)</translation>
     </message>
     <message>
         <source>&amp;Up a Semitone</source>
@@ -606,16 +606,16 @@
         <translation>导出(&amp;E)</translation>
     </message>
     <message>
-        <source>&amp;Transpose</source>
-        <translation>移调(&amp;T)</translation>
+        <source>Transpose</source>
+        <translation>移调</translation>
     </message>
     <message>
-        <source>E&amp;nvelope</source>
-        <translation>包络(&amp;N)</translation>
+        <source>Envelope</source>
+        <translation>包络</translation>
     </message>
     <message>
-        <source>Rese&amp;t</source>
-        <translation>重置(&amp;T)</translation>
+        <source>Reset</source>
+        <translation>重置</translation>
     </message>
     <message>
         <source>&amp;Timeline</source>

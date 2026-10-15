@@ -66,16 +66,16 @@
                 shortcut="Shift+F3" />
         <action id="helloutau.edit.insertNote" text="&amp;Insert Note" category="Edit"
                 shortcut="Ins" />
-        <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
+        <action id="helloutau.edit.splitNote" text="Split N&amp;ote..." category="Edit" />
         <!-- A rest before the first selected note, as UTAU inserts one -->
-        <action id="helloutau.edit.insertRest" text="Insert &amp;Rest" category="Edit"
+        <action id="helloutau.edit.insertRest" text="In&amp;sert Rest" category="Edit"
                 shortcut="Ctrl+R" />
         <!-- The selected notes into the first, their lengths summed, as UTAU combines them -->
         <action id="helloutau.edit.combineNotes" text="Com&amp;bine Notes" category="Edit"
                 shortcut="Ctrl+U" />
         <!-- The tempo of the first selected note, from which it applies -->
-        <action id="helloutau.edit.setTempo" text="Set Te&amp;mpo..." category="Edit" />
-        <action id="helloutau.edit.replaceLyrics" text="Replace &amp;Lyrics..." category="Edit"
+        <action id="helloutau.edit.setTempo" text="Set Tempo..." category="Edit" />
+        <action id="helloutau.edit.replaceLyrics" text="Repl&amp;ace Lyrics..." category="Edit"
                 shortcut="Ctrl+L" />
         <!-- The label of a note and the name of a region, as UTAU shows them on the timeline -->
         <action id="helloutau.edit.setLabel" text="Set La&amp;bel..." category="Edit" />
@@ -83,11 +83,11 @@
         <action id="helloutau.edit.removeLabel" text="Remove &amp;Label" category="Edit" />
         <action id="helloutau.edit.removeRegion" text="&amp;Remove Region" category="Edit" />
         <!-- The properties of the selected notes, as the note property dialog of UTAU -->
-        <action id="helloutau.edit.noteProperties" text="Note Propert&amp;ies..." category="Edit"
+        <action id="helloutau.edit.noteProperties" text="Note Properties..." category="Edit"
                 shortcut="Ctrl+E" />
         <!-- Checked while the project turns Mode2 on -->
         <action id="helloutau.edit.mode2" text="Mode&amp;2 Pitch" category="Edit" />
-        <action id="helloutau.edit.pitchControl" text="Pitch &amp;Control..." category="Edit"
+        <action id="helloutau.edit.pitchControl" text="Pitch Control..." category="Edit"
                 shortcut="Ctrl+T" />
         <action id="helloutau.edit.scalePitch" text="Scale Pitc&amp;h..." category="Edit" />
         <action id="helloutau.edit.convertPitchToMode1" text="Convert Mode2 Pitch to Mode&amp;1"
@@ -103,7 +103,7 @@
         <action id="helloutau.edit.resetEnvelopes" text="Reset &amp;Envelopes"
                 shortText="&amp;Envelopes" category="Reset" />
         <action id="helloutau.edit.resetAll" text="&amp;All" category="Reset" />
-        <action id="helloutau.edit.editLyric" text="Edit &amp;Lyric" category="Edit"
+        <action id="helloutau.edit.editLyric" text="&amp;Edit Lyric" category="Edit"
                 shortcut="F2" />
         <action id="helloutau.edit.transposeUp" text="&amp;Up a Semitone" category="Transpose"
                 shortcut="Ctrl+Up" />
@@ -211,9 +211,9 @@
         <menu id="helloutau.help" text="&amp;Help" />
         <!-- Formats other than .usth, UST first. MIDI and the rest will join it -->
         <menu id="helloutau.file.export" text="&amp;Export" />
-        <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
-        <menu id="helloutau.edit.envelope" text="E&amp;nvelope" />
-        <menu id="helloutau.edit.reset" text="Rese&amp;t" />
+        <menu id="helloutau.edit.transpose" text="Transpose" />
+        <menu id="helloutau.edit.envelope" text="Envelope" />
+        <menu id="helloutau.edit.reset" text="Reset" />
         <menu id="helloutau.edit.timeline" text="&amp;Timeline" />
 
         <!-- The tool bar, which the window places -->
