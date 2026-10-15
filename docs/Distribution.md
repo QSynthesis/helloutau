@@ -71,7 +71,7 @@
 
 Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中文、繁体中文与日语（7.0.2 起两种中文均为官方翻译）。脚本为 `dist/installer/windows/setup.iss`，是可以直接用 Inno Setup 打开和编译的普通脚本，提示文字与卸载页分别在同目录的 `messages.iss` 与 `uninstall.iss` 中。版本号、源目录与输出文件名由命令行的 `/D` 传入，不经 `configure_file()`（作者 2026-10-11 决定）。
 
-同目录的 `package.ps1` 打包一个已完成的 Release 构建：`cmake --install`，补上构建时复制到程序旁的依赖 DLL，以 windeployqt 部署 Qt，删除只供开发者使用的文件，复制 C++ 运行库，生成 zip、安装包与 `SHA256SUMS`。它从构建目录的 `CMakeCache.txt` 读取版本号（`CMAKE_PROJECT_VERSION`）与 triplet（`HELLO_TRIPLET`）。脚本不负责构建，因为构建需要编译器的环境。
+同目录的 `package.ps1` 打包一个已完成的 Release 构建：`cmake --install`，补上构建时复制到程序旁的依赖 DLL，以 windeployqt 部署 Qt（不带 Direct3D 的着色器编译器 `d3dcompiler_47.dll`、`dxcompiler.dll`、`dxil.dll` 与软件 OpenGL `opengl32sw.dll`，因为界面以光栅方式绘制，不使用 Qt Quick、OpenGL 控件与 RHI 控件，作者 2026-10-15 同意），删除只供开发者使用的文件，复制 C++ 运行库，生成 zip、安装包与 `SHA256SUMS`。它从构建目录的 `CMakeCache.txt` 读取版本号（`CMAKE_PROJECT_VERSION`）与 triplet（`HELLO_TRIPLET`）。脚本不负责构建，因为构建需要编译器的环境。
 
 ### 标识与安装模式
 

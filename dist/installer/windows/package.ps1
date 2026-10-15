@@ -103,13 +103,17 @@ foreach ($dll in Get-ChildItem -LiteralPath (Join-Path $BuildDir "out\bin") -Fil
 
 # Qt for the program, every library and every plugin of the application, with the plugins of Qt
 # in lib/Qt/plugins. The C++ runtime is copied below instead of the installer of windeployqt.
+# The shader compilers of Direct3D and the software OpenGL are left out: the widgets draw with the
+# raster engine, and no Qt Quick, OpenGL widget or RHI widget is used. A program that adds one of
+# these needs the three options removed.
 $binaries = @(Join-Path $bin "helloutau.exe")
 $binaries += Get-ChildItem -LiteralPath $bin -Filter *.dll | ForEach-Object { $_.FullName }
 $binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\helloutau\plugins") -Recurse `
     -Filter *.dll | ForEach-Object { $_.FullName }
 Invoke-Step "windeployqt" {
     & (Join-Path $Qt "bin\windeployqt.exe") --release --dir $bin --plugindir $qtPlugins `
-        --no-translations --no-compiler-runtime @binaries
+        --no-translations --no-compiler-runtime --no-system-d3d-compiler `
+        --no-system-dxc-compiler --no-opengl-sw @binaries
 }
 
 Write-Output "== Remove the development files"
