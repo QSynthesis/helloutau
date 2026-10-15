@@ -29,8 +29,8 @@ namespace hello::kit {
             }
         };
 
-        /// The period of the frames in samples, which is not integral for some formats, such as
-        /// dio at a sample rate other than 44100 Hz.
+        /// The distance between consecutive frames in samples, the hop, which is not integral for
+        /// some formats, such as dio at a sample rate other than 44100 Hz.
         double hop = 0;
 
         /// In the order of time.

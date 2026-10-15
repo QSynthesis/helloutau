@@ -150,7 +150,7 @@ namespace hello::daw {
             if (std::abs(write.map.hop - hop) > hop * 1e-9) {
                 return unwritable(write.wav,
                                   tr("The format records a frame every %1 samples at %2 Hz, and "
-                                     "the period of the frames is %3 samples.")
+                                     "the frames of the map are %3 samples apart.")
                                       .arg(hop)
                                       .arg(*rate)
                                       .arg(write.map.hop),

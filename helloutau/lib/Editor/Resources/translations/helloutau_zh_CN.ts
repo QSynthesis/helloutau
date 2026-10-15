@@ -4770,8 +4770,8 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>「%1」的频率表无法写出。%2</translation>
     </message>
     <message>
-        <source>The format records the period of the frames in whole samples, and the period is %1 samples.</source>
-        <translation>该格式以整数个样本记录帧间隔，而帧间隔为 %1 个样本。</translation>
+        <source>The format records the distance between the frames in whole samples, and the frames of the map are %1 samples apart.</source>
+        <translation>该格式以整数个样本记录帧间隔，而频率表的帧间隔为 %1 个样本。</translation>
     </message>
     <message>
         <source>The format %1 does not support writing maps.</source>

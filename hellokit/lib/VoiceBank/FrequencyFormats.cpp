@@ -120,8 +120,8 @@ namespace hello::kit {
         }
         return unwritable(
             write.wav,
-            tr("The format records the period of the frames in whole samples, and the period is "
-               "%1 samples.")
+            tr("The format records the distance between the frames in whole samples, and the "
+               "frames of the map are %1 samples apart.")
                 .arg(hop),
             diagnostics);
     }
