@@ -261,13 +261,15 @@ private Q_SLOTS:
     // The pen shows a cursor of its own over the plot, which stays visible over the rows, and the
     // select tool shows the arrow.
     void the_pen_has_a_cursor_of_its_own() {
+        // Sent directly, because QTest::mouseMove moves the pointer of the system on Windows,
+        // whose move may not reach the viewport
         const auto point = pointOf(50, 200);
-        QTest::mouseMove(m_view->viewport(), point);
+        moveTo(point, Qt::NoButton);
         QCOMPARE(m_view->viewport()->cursor().shape(), Qt::BitmapCursor);
         m_view->setTool(FrequencyMapView::SelectTool);
         // A move elsewhere, since the hover is updated only when the hit changes
-        QTest::mouseMove(m_view->viewport(), QPoint(m_view->labelWidth() / 2, point.y()));
-        QTest::mouseMove(m_view->viewport(), point);
+        moveTo(QPoint(m_view->labelWidth() / 2, point.y()), Qt::NoButton);
+        moveTo(point, Qt::NoButton);
         QCOMPARE(m_view->viewport()->cursor().shape(), Qt::ArrowCursor);
     }
 
