@@ -11,6 +11,7 @@
 #include <QtCore/QMimeData>
 #include <QtCore/QSet>
 #include <QtCore/QStringList>
+#include <QtCore/QVariantAnimation>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QKeyEvent>
@@ -334,6 +335,44 @@ namespace hello::daw {
         connect(impl.view, &SceneView::keyAxisChanged, this, [this] {
             stdc_impl_t;
             impl.finishEditing(true);
+        });
+
+        // The movements of the view after the playhead, which a scroll or a zoom of the user stops
+        impl.timeFollow = new QVariantAnimation(this);
+        impl.keyFollow = new QVariantAnimation(this);
+        for (const auto animation : {impl.timeFollow, impl.keyFollow}) {
+            animation->setDuration(PianoRollState::FollowDuration);
+            animation->setEasingCurve(QEasingCurve::OutCubic);
+        }
+        connect(impl.timeFollow, &QVariantAnimation::valueChanged, this,
+                [this](const QVariant &value) {
+                    stdc_impl_t;
+                    auto time = impl.view->timeAxis();
+                    time.left = value.toDouble();
+                    impl.following = true;
+                    impl.view->setTimeAxis(time);
+                    impl.following = false;
+                });
+        connect(impl.keyFollow, &QVariantAnimation::valueChanged, this,
+                [this](const QVariant &value) {
+                    stdc_impl_t;
+                    auto keys = impl.view->keyAxis();
+                    keys.top = value.toDouble();
+                    impl.following = true;
+                    impl.view->setKeyAxis(keys);
+                    impl.following = false;
+                });
+        connect(impl.view, &SceneView::timeAxisChanged, this, [this] {
+            stdc_impl_t;
+            if (!impl.following) {
+                impl.timeFollow->stop();
+            }
+        });
+        connect(impl.view, &SceneView::keyAxisChanged, this, [this] {
+            stdc_impl_t;
+            if (!impl.following) {
+                impl.keyFollow->stop();
+            }
         });
         impl.refresh();
         scrollToNotes();
@@ -1098,16 +1137,19 @@ namespace hello::daw {
         }
         impl.playhead = tick;
         if (tick) {
-            // A page at a time, so that the view does not move under the pointer continuously
-            auto time = impl.view->timeAxis();
-            const double width = impl.view->viewport()->width();
-            const double x = time.toX(*tick);
-            if (x < 0 || x > width) {
-                time.left = *tick - width / time.pixelsPerTick * PianoRollState::FollowMargin;
-                impl.view->setTimeAxis(time);
-            }
+            impl.followPlayhead(*tick);
         }
         impl.view->viewport()->update();
+    }
+
+    PianoRoll::PlayheadFollow PianoRoll::playheadFollow() const {
+        stdc_impl_t;
+        return impl.playheadFollow;
+    }
+
+    void PianoRoll::setPlayheadFollow(PlayheadFollow follow) {
+        stdc_impl_t;
+        impl.playheadFollow = follow;
     }
 
     double PianoRoll::cursorPosition() const {

@@ -41,6 +41,17 @@ namespace hello::daw {
         bool isToolBarVisible() const;
         void setToolBarVisible(bool visible);
 
+        /// The ways in which the piano roll follows the playhead across (View > Follow Playhead)
+        enum PlayheadFollow {
+            PageFollow,   ///< Turns a page once the playhead leaves the view, stored as page
+            SmoothFollow, ///< Keeps the playhead at the center of the view, stored as smooth
+        };
+
+        /// Returns the way in which the piano roll follows the playhead. The default, also for a
+        /// value that is not known, is PageFollow.
+        PlayheadFollow playheadFollow() const;
+        void setPlayheadFollow(PlayheadFollow follow);
+
     private:
         explicit ViewSettings(AppSettingsStore &store);
 

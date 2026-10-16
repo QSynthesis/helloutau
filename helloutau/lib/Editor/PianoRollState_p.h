@@ -36,6 +36,7 @@
 class QButtonGroup;
 class QComboBox;
 class QToolButton;
+class QVariantAnimation;
 class QWidget;
 
 namespace hello::daw {
@@ -75,8 +76,14 @@ namespace hello::daw {
         /// The type of the notes that PianoRoll::copySelected() puts on the clipboard
         static constexpr char NotesMimeType[] = "application/x-helloutau-notes+json";
 
-        /// The part of the view to the left of the playhead after the view follows it
+        /// The part of the view to the left of the playhead after the view turns a page
         static constexpr double FollowMargin = 0.1;
+
+        /// The milliseconds of a movement of the view that follows the playhead
+        static constexpr int FollowDuration = 500;
+
+        /// The keys kept in sight above and below the notes that the view follows
+        static constexpr double FollowKeyMargin = 1;
 
         /// The pitch curves are sampled this many pixels apart, and at least a tick apart.
         static constexpr double CurveStep = 2;
@@ -255,6 +262,12 @@ namespace hello::daw {
         QColor faintPointColor;
 
         std::optional<double> playhead;
+        PianoRoll::PlayheadFollow playheadFollow = PianoRoll::PageFollow;
+        /// The movements of the axes of the view that follow the playhead
+        QVariantAnimation *timeFollow = nullptr;
+        QVariantAnimation *keyFollow = nullptr;
+        /// Set while a movement sets an axis, so that only the other changes stop the movements
+        bool following = false;
         /// The playhead at rest, and whether it is drawn and moved
         double cursor = 0;
         bool cursorEnabled = true;
@@ -383,6 +396,18 @@ namespace hello::daw {
 
         /// Shows every value of the lane in the height of the parameter area
         void fitParameters();
+
+        /// Moves the view after the playhead at \a tick, across as playheadFollow selects and
+        /// up or down as followKeys() does.
+        void followPlayhead(double tick);
+
+        /// Scrolls the keys with an easing, if needed, so that the keys of the notes from \a tick
+        /// to the right edge of \a time are in sight, or the key of the note at \a tick if those
+        /// keys do not fit. \a time is the time axis that the view reaches after its movement.
+        void followKeys(double tick, const TimeAxis &time);
+
+        /// Starts \a animation from \a from to \a to, unless it is already moving to \a to.
+        static void moveTo(QVariantAnimation *animation, double from, double to);
 
         /// The keys that a lane spans, and the value it draws a line at: the value of UTAU if a
         /// note gives none

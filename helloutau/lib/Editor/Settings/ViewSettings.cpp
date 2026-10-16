@@ -6,6 +6,8 @@
 
 namespace hello::daw {
 
+    namespace json = stdc::json;
+
     namespace {
 
         constexpr char KeyQuantization[] = "view/quantization";
@@ -14,6 +16,9 @@ namespace hello::daw {
         constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
         constexpr char KeyParametersVisible[] = "view/showParameters";
         constexpr char KeyToolBarVisible[] = "view/showToolBar";
+        constexpr char KeyPlayheadFollow[] = "view/playheadFollow";
+        constexpr char PageFollowValue[] = "page";
+        constexpr char SmoothFollowValue[] = "smooth";
 
     }
 
@@ -68,6 +73,17 @@ namespace hello::daw {
 
     void ViewSettings::setToolBarVisible(bool visible) {
         m_store.setValue(KeyToolBarVisible, visible);
+    }
+
+    ViewSettings::PlayheadFollow ViewSettings::playheadFollow() const {
+        return m_store.value(KeyPlayheadFollow).toString() == SmoothFollowValue ? SmoothFollow
+                                                                                : PageFollow;
+    }
+
+    void ViewSettings::setPlayheadFollow(PlayheadFollow follow) {
+        m_store.setValue(
+            KeyPlayheadFollow,
+            json::Value(std::string(follow == SmoothFollow ? SmoothFollowValue : PageFollowValue)));
     }
 
 }

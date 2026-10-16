@@ -546,6 +546,18 @@
         <translation>显示参数(&amp;A)</translation>
     </message>
     <message>
+        <source>Follo&amp;w Playhead</source>
+        <translation>跟随播放头(&amp;W)</translation>
+    </message>
+    <message>
+        <source>Follow Playhead by Pages</source>
+        <translation>按页跟随播放头</translation>
+    </message>
+    <message>
+        <source>Follow Playhead Smoothly</source>
+        <translation>平滑跟随播放头</translation>
+    </message>
+    <message>
         <source>Go to &amp;Start</source>
         <translation>跳转到开始(&amp;S)</translation>
     </message>
@@ -636,6 +648,14 @@
     <message>
         <source>&amp;UST...</source>
         <translation>UST(&amp;U)...</translation>
+    </message>
+    <message>
+        <source>By &amp;Pages</source>
+        <translation>按页(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Smoothly</source>
+        <translation>平滑(&amp;S)</translation>
     </message>
     <message>
         <source>Synthesize and &amp;Play</source>

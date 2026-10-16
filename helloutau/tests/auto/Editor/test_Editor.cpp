@@ -1151,6 +1151,21 @@ private Q_SLOTS:
         show->trigger();
         QVERIFY(e->settings().view().isToolBarVisible());
 
+        // The ways of following the playhead are checked one at a time and stored.
+        const auto byPages =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.view.followPlayheadByPages"));
+        const auto smoothly =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.view.followPlayheadSmoothly"));
+        QVERIFY(byPages && byPages->isChecked() && smoothly && !smoothly->isChecked());
+        QCOMPARE(roll->playheadFollow(), PianoRoll::PageFollow);
+        smoothly->trigger();
+        QVERIFY(!byPages->isChecked());
+        QCOMPARE(roll->playheadFollow(), PianoRoll::SmoothFollow);
+        QCOMPARE(e->settings().view().playheadFollow(), ViewSettings::SmoothFollow);
+        byPages->trigger();
+        QCOMPARE(roll->playheadFollow(), PianoRoll::PageFollow);
+        QCOMPARE(e->settings().view().playheadFollow(), ViewSettings::PageFollow);
+
         QVERIFY(
             !declaredActionOf(*e, window, QStringLiteral("helloutau.edit.undo"))->icon().isNull());
 

@@ -1744,6 +1744,23 @@ namespace hello::daw {
                 });
             showToolBar->setCheckable(true);
             showToolBar->setChecked(editor->settings().view().isToolBarVisible());
+            // The way of following the playhead, one checked at a time
+            const auto follows = new QActionGroup(&decl);
+            const std::pair<const char *, ViewSettings::PlayheadFollow> followIds[] = {
+                {"helloutau.view.followPlayheadByPages",  ViewSettings::PageFollow  },
+                {"helloutau.view.followPlayheadSmoothly", ViewSettings::SmoothFollow},
+            };
+            for (const auto &[id, follow] : followIds) {
+                const auto action = addCommand(QLatin1String(id), [this, follow = follow] {
+                    editor->settings().view().setPlayheadFollow(follow);
+                    roll->setPlayheadFollow(follow == ViewSettings::SmoothFollow
+                                                ? PianoRoll::SmoothFollow
+                                                : PianoRoll::PageFollow);
+                });
+                action->setCheckable(true);
+                action->setChecked(editor->settings().view().playheadFollow() == follow);
+                follows->addAction(action);
+            }
             addCommand(QStringLiteral("helloutau.view.timeSignature"),
                        [this] { editTimeSignature(); });
             addCommand(QStringLiteral("helloutau.select.decreaseQuantizationInterval"),
@@ -1995,6 +2012,10 @@ namespace hello::daw {
                 actions.value(QStringLiteral("helloutau.view.showEnvelopes"))->isChecked());
             roll->setParametersVisible(
                 actions.value(QStringLiteral("helloutau.view.showParameters"))->isChecked());
+            roll->setPlayheadFollow(
+                actions.value(QStringLiteral("helloutau.view.followPlayheadSmoothly"))->isChecked()
+                    ? PianoRoll::SmoothFollow
+                    : PianoRoll::PageFollow);
             decl.setCentralWidget(roll);
             // setCentralWidget() only schedules the deletion of the previous piano roll, which a
             // nested event loop, such as that of a message box, does not carry out. The piano roll

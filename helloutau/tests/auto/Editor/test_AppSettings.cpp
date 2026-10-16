@@ -31,6 +31,7 @@ private Q_SLOTS:
         QVERIFY(!settings.view().areParametersVisible());
         QCOMPARE(settings.rendering().threadCount(), 0);
         QCOMPARE(settings.view().quantization(), 120);
+        QCOMPARE(settings.view().playheadFollow(), ViewSettings::PageFollow);
         QVERIFY(settings.rendering().isLogAccumulated());
         QCOMPARE(settings.rendering().logLimit(), 1024 * 1024);
     }
@@ -347,6 +348,7 @@ private Q_SLOTS:
             settings.view().setRenderedPitchVisible(false);
             settings.view().setEnvelopesVisible(false);
             settings.view().setParametersVisible(true);
+            settings.view().setPlayheadFollow(ViewSettings::SmoothFollow);
         }
         const AppSettings settings(file);
         QVERIFY(!settings.view().isPitchVisible());
@@ -354,6 +356,7 @@ private Q_SLOTS:
         QVERIFY(!settings.view().isRenderedPitchVisible());
         QVERIFY(!settings.view().areEnvelopesVisible());
         QVERIFY(settings.view().areParametersVisible());
+        QCOMPARE(settings.view().playheadFollow(), ViewSettings::SmoothFollow);
         QCOMPARE(settings.utau().directory(), utau);
         QCOMPARE(settings.rendering().resampler(),
                  QDir::toNativeSeparators(QStringLiteral("C:/UTAU/resampler.exe")));

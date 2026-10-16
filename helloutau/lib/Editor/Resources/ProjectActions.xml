@@ -153,6 +153,14 @@
              as in UTAU -->
         <action id="helloutau.view.showParameters" text="Show P&amp;arameters" category="View"
                 shortcut="Z" />
+        <!-- The ways in which the piano roll follows the playhead across, one checked at a time
+             and stored in the settings. The view turns a page with an easing, or keeps the
+             playhead at its center -->
+        <menu id="helloutau.view.followPlayhead" text="Follo&amp;w Playhead" />
+        <action id="helloutau.view.followPlayheadByPages" text="Follow Playhead by Pages"
+                shortText="By &amp;Pages" category="View" />
+        <action id="helloutau.view.followPlayheadSmoothly" text="Follow Playhead Smoothly"
+                shortText="&amp;Smoothly" category="View" />
         <action id="helloutau.view.goToStart" text="Go to &amp;Start" category="View"
                 shortcut="Ctrl+Home" />
         <action id="helloutau.view.goToEnd" text="G&amp;o to End" category="View"
@@ -304,6 +312,11 @@
                 <action id="helloutau.view.zoomOutTime" />
                 <action id="helloutau.view.zoomInKeys" />
                 <action id="helloutau.view.zoomOutKeys" />
+                <separator />
+                <menu id="helloutau.view.followPlayhead">
+                    <action id="helloutau.view.followPlayheadByPages" />
+                    <action id="helloutau.view.followPlayheadSmoothly" />
+                </menu>
                 <separator />
                 <action id="helloutau.view.loadRegion" />
                 <separator />

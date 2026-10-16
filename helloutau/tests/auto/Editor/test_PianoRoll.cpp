@@ -543,11 +543,13 @@ private Q_SLOTS:
         QVERIFY(diagnostics.empty());
     }
 
-    // The view stays still while the playhead is in it, and follows once it leaves.
+    // The view stays still while the playhead is in it, and turns a page with an easing once the
+    // playhead leaves it. A scroll of the user stops the movement.
     void the_view_follows_the_playhead() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
         show(roll);
+        QCOMPARE(roll.playheadFollow(), PianoRoll::PageFollow);
         const auto &time = roll.view()->timeAxis();
         const double visible = roll.view()->viewport()->width() / time.pixelsPerTick;
 
@@ -556,10 +558,23 @@ private Q_SLOTS:
         QCOMPARE(time.left, 0.0);
 
         roll.setPlayheadPosition(visible * 1.5);
-        QCOMPARE(time.left, visible * 1.4);
+        // The movement starts where the view is, instead of jumping.
+        QCOMPARE(time.left, 0.0);
+        // The loop of QTRY_COMPARE compares with ==, and the arithmetic of the movement does not
+        // reach the exact value.
+        QTRY_VERIFY(qFuzzyCompare(time.left, visible * 1.4));
         roll.setPlayheadPosition(std::nullopt);
         QVERIFY(!roll.playheadPosition());
         QCOMPARE(time.left, visible * 1.4);
+
+        // The next page, stopped by a scroll of the user before the movement ends
+        roll.setPlayheadPosition(visible * 2.5);
+        auto scrolled = time;
+        scrolled.left = 500;
+        roll.view()->setTimeAxis(scrolled);
+        // Twice the duration of a movement
+        QTest::qWait(1000);
+        QCOMPARE(time.left, 500.0);
     }
 
     // The playhead at rest moves where the ruler is pressed or dragged, snapped to the
@@ -2678,6 +2693,58 @@ private Q_SLOTS:
         roll.setIntensityBorderColor(QColor(10, 11, 12));
         QCOMPARE(roll.intensityBackgroundColor(), QColor(7, 8, 9));
         QCOMPARE(roll.intensityBorderColor(), QColor(10, 11, 12));
+    }
+
+    // In the smooth way the playhead stays at the horizontal center of the view.
+    void the_view_keeps_the_playhead_at_its_center() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setPlayheadFollow(PianoRoll::SmoothFollow);
+        const auto view = roll.view();
+        const double width = view->viewport()->width();
+        for (const double tick : {10000.0, 10050.0}) {
+            roll.setPlayheadPosition(tick);
+            QCOMPARE(view->timeAxis().toX(tick), width / 2);
+        }
+    }
+
+    // The view scrolls up or down to the keys of the notes from the playhead to the right edge,
+    // or to the key of the current note if those keys do not fit.
+    void the_view_follows_the_keys_of_the_notes() {
+        const auto noteOf = [](int key) {
+            kit::Note note;
+            note.lyric = QStringLiteral("la");
+            note.length = 480;
+            note.noteNum = key;
+            return note;
+        };
+        kit::Track track;
+        track.notes = {noteOf(40), noteOf(100), noteOf(70), noteOf(74)};
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back(track);
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        show(roll);
+        const auto view = roll.view();
+        const double height = view->viewport()->height();
+        const auto shows = [view, height](int key) {
+            const auto keys = view->keyAxis();
+            return keys.toY(key + 1) >= 0 && keys.toY(key) <= height;
+        };
+        auto keys = view->keyAxis();
+        keys.top = 60;
+        view->setKeyAxis(keys);
+        QVERIFY(!shows(40));
+
+        // From the first note, the keys from 40 to 100 do not fit, and the current note is
+        // shown.
+        roll.setPlayheadPosition(10);
+        QTRY_VERIFY(shows(40));
+        // From the third note, the keys 70 and 74 fit and are both shown.
+        roll.setPlayheadPosition(960 + 10);
+        QTRY_VERIFY(shows(70) && shows(74));
     }
 };
 

@@ -358,10 +358,22 @@ namespace hello::daw {
         /// @}
 
         /// The position of playback in ticks, drawn as a vertical line, or none. The view
-        /// scrolls to keep it in sight: once it passes the right edge, or is left of the view,
-        /// it continues from near the left edge.
+        /// follows it as playheadFollow() selects, and scrolls up or down with an easing so that
+        /// the keys of the notes from the playhead to the right edge are in sight, or the key of
+        /// the current note if those keys do not fit. A scroll or a zoom of the user stops a
+        /// movement in progress.
         std::optional<double> playheadPosition() const;
         void setPlayheadPosition(std::optional<double> tick);
+
+        /// The ways in which the view follows the playhead across
+        enum PlayheadFollow {
+            PageFollow,   ///< Turns a page with an easing once the playhead leaves the view
+            SmoothFollow, ///< Keeps the playhead at the horizontal center of the view
+        };
+
+        /// Returns the way in which the view follows the playhead. The default is PageFollow.
+        PlayheadFollow playheadFollow() const;
+        void setPlayheadFollow(PlayheadFollow follow);
 
         /// The playhead at rest, in ticks, 0 at first: where a preview starts and where the line
         /// returns to when playback stops. The line is drawn there while playheadPosition() is

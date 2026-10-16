@@ -5,6 +5,7 @@
 #include <numeric>
 
 #include <QtCore/QTimer>
+#include <QtCore/QVariantAnimation>
 #include <QtGui/QKeyEvent>
 #include <QtWidgets/QMenu>
 
@@ -340,6 +341,89 @@ namespace hello::daw {
             std::max(0.01, (height - 2 * ParameterMargin) / (range.maximum - range.minimum));
         axis.top = range.maximum + ParameterMargin / axis.pixelsPerKey;
         parameters->setKeyAxis(axis);
+    }
+
+    void PianoRollState::followPlayhead(double tick) {
+        const double width = view->viewport()->width();
+        auto time = view->timeAxis();
+        if (playheadFollow == PianoRoll::SmoothFollow) {
+            timeFollow->stop();
+            time.left = tick - width / time.pixelsPerTick / 2;
+            following = true;
+            view->setTimeAxis(time);
+            following = false;
+            time = view->timeAxis();
+        } else {
+            // The page is turned against the axis that a movement in progress reaches, so that
+            // the movement is not started again on each step of the playhead.
+            if (timeFollow->state() == QAbstractAnimation::Running) {
+                time.left = timeFollow->endValue().toDouble();
+            }
+            const double x = time.toX(tick);
+            if (x < 0 || x > width) {
+                const double left = tick - width / time.pixelsPerTick * FollowMargin;
+                moveTo(timeFollow, view->timeAxis().left, left);
+                time.left = left;
+            }
+        }
+        followKeys(tick, time);
+    }
+
+    void PianoRollState::followKeys(double tick, const TimeAxis &time) {
+        const auto [first, last] =
+            timeline->notesBetween(tick, time.toTick(view->viewport()->width()));
+        std::optional<int> lowest;
+        std::optional<int> highest;
+        std::optional<int> current;
+        for (int i = first; i < last; ++i) {
+            const auto &note = timeline->note(i);
+            if (note.rest) {
+                continue;
+            }
+            lowest = std::min(lowest.value_or(note.key), note.key);
+            highest = std::max(highest.value_or(note.key), note.key);
+            if (note.start <= tick && tick < note.start + note.length) {
+                current = note.key;
+            }
+        }
+        if (!lowest) {
+            return;
+        }
+        auto keys = view->keyAxis();
+        if (keyFollow->state() == QAbstractAnimation::Running) {
+            keys.top = keyFollow->endValue().toDouble();
+        }
+        const double rows = view->viewport()->height() / keys.pixelsPerKey;
+        // Key k occupies the row from k to k + 1.
+        double top = *highest + 1 + FollowKeyMargin;
+        double bottom = *lowest - FollowKeyMargin;
+        if (top - bottom > rows) {
+            if (!current) {
+                return;
+            }
+            top = *current + 1 + FollowKeyMargin;
+            bottom = *current - FollowKeyMargin;
+        }
+        double target = keys.top;
+        if (top > keys.top) {
+            target = top;
+        } else if (bottom < keys.top - rows) {
+            target = bottom + rows;
+        }
+        if (target != keys.top) {
+            moveTo(keyFollow, view->keyAxis().top, target);
+        }
+    }
+
+    void PianoRollState::moveTo(QVariantAnimation *animation, double from, double to) {
+        if (animation->state() == QAbstractAnimation::Running &&
+            animation->endValue().toDouble() == to) {
+            return;
+        }
+        animation->stop();
+        animation->setStartValue(from);
+        animation->setEndValue(to);
+        animation->start();
     }
 
     double PianoRollState::keyOf(PianoRoll::Lane lane, double value) {
