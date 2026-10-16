@@ -48,7 +48,8 @@ private Q_SLOTS:
         QCOMPARE(others->userData.value(QStringLiteral("$plugin")), QStringLiteral("2"));
     }
 
-    // With entries that differ between the notes, the entries are read only and give nothing.
+    // With entries that differ between the notes, the entries are read only, and the dialog gives
+    // nothing.
     void the_entries_of_different_notes_are_read_only() {
         NoteEntriesDialog dialog({labeled(QStringLiteral("a")), labeled(QStringLiteral("b"))});
         QVERIFY(!dialog.isEditable());
@@ -58,7 +59,8 @@ private Q_SLOTS:
         QVERIFY(!dialog.others());
     }
 
-    // A refused line of either box is an error that names the box, and gives no note.
+    // A refused line of either box is an error that names the box, and the dialog gives no
+    // note.
     void a_refused_line_gives_no_note() {
         NoteEntriesDialog dialog({labeled(QString())});
         dialog.builtInEdit()->setPlainText(QStringLiteral("Lyric=b"));
@@ -76,7 +78,7 @@ private Q_SLOTS:
         QVERIFY(dialog.warningLabel()->text().isEmpty());
         dialog.userDataEdit()->setPlainText(QStringLiteral("$plugin=1\nplain=1"));
         QVERIFY(!dialog.warningLabel()->text().isEmpty());
-        // In the color of the warnings, which a theme sets
+        // The warnings are shown in the color that a theme sets.
         QVERIFY(dialog.warningLabel()->text().contains(dialog.warningColor().name()));
         dialog.setWarningColor(QColor(1, 2, 3));
         QVERIFY(dialog.warningLabel()->text().contains(QColor(1, 2, 3).name()));

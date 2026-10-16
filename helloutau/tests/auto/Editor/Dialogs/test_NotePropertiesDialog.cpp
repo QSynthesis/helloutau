@@ -69,8 +69,8 @@ private Q_SLOTS:
         QCOMPARE(tempo.tempo(), std::optional(96.0));
     }
 
-    // The box of the key shows the key that the notes share, chosen from C1 to B8 or from a key
-    // of the notes outside them, and no key if the notes differ. Only a chosen key is given.
+    // The box of the key offers C1 to B8 and a key of the notes outside them, and shows the key
+    // that the notes share, or no key if the notes differ. Only a chosen key is given.
     void the_key_is_chosen_from_the_keys_of_utau() {
         kit::Note a;
         a.lyric = QStringLiteral("a");

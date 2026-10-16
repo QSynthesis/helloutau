@@ -571,7 +571,7 @@ private Q_SLOTS:
         QVERIFY(!roll.playheadPosition());
         QCOMPARE(time.left, visible * 1.4);
 
-        // The next page is stopped by a scroll of the user before the movement ends.
+        // The movement to the next page is stopped by a scroll of the user before it ends.
         roll.setPlayheadPosition(visible * 2.5);
         auto scrolled = time;
         scrolled.left = 500;

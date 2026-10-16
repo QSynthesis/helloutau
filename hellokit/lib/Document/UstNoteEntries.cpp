@@ -248,7 +248,7 @@ namespace hello::kit {
             static const QRegularExpression space(QStringLiteral("\\s"));
             if (key.isEmpty() || key.contains(space)) {
                 addError(diagnostics,
-                         tr("Line %1: the key is empty or has a space.").arg(number));
+                         tr("Line %1: the key is empty or contains white space.").arg(number));
                 continue;
             }
             if (readKeys().contains(key)) {

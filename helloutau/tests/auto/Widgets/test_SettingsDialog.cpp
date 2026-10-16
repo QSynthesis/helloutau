@@ -61,7 +61,7 @@ namespace {
         QString m_label;
     };
 
-    // A page of many rows above a list, higher than the dialog
+    // A page of many rows above a tree, higher than the dialog
     class TallPage : public SettingPage {
     public:
         TallPage() : SettingPage(QStringLiteral("tall")) {
@@ -80,7 +80,7 @@ namespace {
         }
     };
 
-    // A page with a high part that can be hidden above a line
+    // A page with a high part that can be hidden above a line edit
     class FoldingPage : public SettingPage {
     public:
         FoldingPage() : SettingPage(QStringLiteral("folding")) {

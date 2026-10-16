@@ -123,8 +123,8 @@ private Q_SLOTS:
     }
 
     // The user data are the part before the first = as the key and the rest as the value. A key
-    // that is empty, has a space or is read by UTAU, a repeated key and a line without = are
-    // refused, each with an error.
+    // that is empty, contains white space or is read by UTAU, a repeated key and a line without =
+    // are refused, each with an error.
     void the_user_data_are_keys_and_values() {
         DiagnosticList diagnostics;
         const auto userData = UstNoteEntries::userDataOf(
@@ -143,9 +143,9 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 6);
     }
 
-    // An entry that UTAU drops or changes on saving has a warning: a key without $, and a value
-    // that is empty or has a tab, = or a space.
-    void the_changes_of_utau_are_warned() {
+    // The warnings are for the entries that UTAU drops or changes on saving: a key without $,
+    // and a value that is empty or has a tab, = or a space.
+    void the_changes_of_utau_are_reported() {
         QMap<QString, QString> userData;
         userData.insert(QStringLiteral("$kept"), QStringLiteral("a,b"));
         QVERIFY(UstNoteEntries::utauChangesOf(userData).isEmpty());

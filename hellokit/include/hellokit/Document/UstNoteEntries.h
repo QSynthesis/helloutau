@@ -43,14 +43,16 @@ namespace hello::kit {
 
         /// Returns the user data of \a lines, the part of each line before the first \c = as the
         /// key and the rest as the value, or \c std::nullopt with an error for each line without
-        /// \c =, with an empty key or a key with a space, with a key of an entry that UTAU reads,
-        /// or with a repeated key. Empty lines are skipped.
+        /// \c =, with an empty key or a key that contains white space, with a key of an entry that
+        /// UTAU reads, or with a repeated key. Empty lines are skipped.
         static std::optional<QMap<QString, QString>> userDataOf(const QStringList &lines,
                                                                 DiagnosticList &diagnostics);
 
         /// Returns a warning for each entry of \a userData that UTAU drops or changes when it
         /// saves a file: a key without \c $, and a value that is empty or has \c =, a space or a
-        /// tab. See docs/claude/utau-ust-preservation.md.
+        /// tab.
+        ///
+        /// \sa docs/claude/utau-ust-preservation.md
         static DiagnosticList utauChangesOf(const QMap<QString, QString> &userData);
     };
 

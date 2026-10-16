@@ -394,7 +394,7 @@ namespace hello::daw {
             keys.top = keyFollow->endValue().toDouble();
         }
         const double rows = view->viewport()->height() / keys.pixelsPerKey;
-        // Key k occupies the row from k to k + 1.
+        // The row of the highest key ends at highest + 1, and the margin lies above it.
         double top = *highest + 1 + FollowKeyMargin;
         double bottom = *lowest - FollowKeyMargin;
         if (top - bottom > rows) {

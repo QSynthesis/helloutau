@@ -1585,7 +1585,7 @@
         <translation>其他</translation>
     </message>
     <message>
-        <source>The envelope, the vibrato, the pitch, the label, $direct, $patch and the regions, one entry a line as a UST writes them.</source>
+        <source>The envelope, the vibrato, the pitch, the label, $direct, $patch and the regions, one entry per line as a UST writes them.</source>
         <translation>包络、颤音、音高曲线、标签、$direct、$patch 与区间，每行一条，按 UST 的写法书写。</translation>
     </message>
     <message>
@@ -1593,7 +1593,7 @@
         <translation>内置条目(&amp;B)</translation>
     </message>
     <message>
-        <source>One entry a line, as key=value.</source>
+        <source>One entry per line, as key=value.</source>
         <translation>每行一条，写作 键=值。</translation>
     </message>
     <message>
@@ -5665,8 +5665,8 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>第 %1 行：%2 的值不符合 UST 的写法。</translation>
     </message>
     <message>
-        <source>Line %1: the key is empty or has a space.</source>
-        <translation>第 %1 行：键名为空或含有空格。</translation>
+        <source>Line %1: the key is empty or contains white space.</source>
+        <translation>第 %1 行：键名为空或含有空白字符。</translation>
     </message>
     <message>
         <source>Line %1: %2 is an entry that UTAU reads, which belongs to the built-in entries or to the note properties.</source>

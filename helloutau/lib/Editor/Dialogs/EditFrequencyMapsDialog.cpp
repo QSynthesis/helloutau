@@ -513,7 +513,7 @@ namespace hello::daw {
             return true;
         }
 
-        // The name of the dialog, the title of its message boxes
+        // The name of the dialog, the title of its message boxes and of its progress dialog
         static QString dialogTitle() {
             return EditFrequencyMapsDialog::tr("Edit Frequency Maps");
         }

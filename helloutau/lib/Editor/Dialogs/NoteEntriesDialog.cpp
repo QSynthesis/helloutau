@@ -45,7 +45,7 @@ namespace hello::daw {
         m_builtIn = entriesEdit(builtIn, m_editable);
         auto builtInNote =
             new QLabel(tr("The envelope, the vibrato, the pitch, the label, $direct, "
-                          "$patch and the regions, one entry a line as a UST "
+                          "$patch and the regions, one entry per line as a UST "
                           "writes them."));
         builtInNote->setWordWrap(true);
         auto builtInGroup = new QGroupBox(tr("&Built-in Entries"));
@@ -54,7 +54,7 @@ namespace hello::daw {
         builtInLayout->addWidget(builtInNote);
 
         m_userData = entriesEdit(userData, m_editable);
-        auto userDataNote = new QLabel(tr("One entry a line, as key=value."));
+        auto userDataNote = new QLabel(tr("One entry per line, as key=value."));
         userDataNote->setWordWrap(true);
         m_warnings = new QLabel();
         m_warnings->setTextFormat(Qt::RichText);

@@ -361,7 +361,7 @@ namespace hello::daw {
         /// follows it as playheadFollow() selects, and scrolls up or down with an easing so that
         /// the keys of the notes from the playhead to the right edge are in sight, or the key of
         /// the current note if those keys do not fit. A scroll or a zoom of the user stops a
-        /// movement in progress.
+        /// movement in progress along the same axis.
         std::optional<double> playheadPosition() const;
         void setPlayheadPosition(std::optional<double> tick);
 
