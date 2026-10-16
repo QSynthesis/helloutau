@@ -7,6 +7,7 @@ add_subdirectory(VoiceBank)
 add_subdirectory(Synth)
 add_subdirectory(Interchange)
 add_subdirectory(Update)
+add_subdirectory(NativeSystem)
 
 # The entry point of the programs of the Windows subsystem, see WinMain/CMakeLists.txt.
 if(WIN32)
