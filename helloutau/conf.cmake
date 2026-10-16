@@ -15,13 +15,9 @@ set(HELLOUTAU_INSTALL_CONFIG_TEMPLATE
     "${CMAKE_CURRENT_LIST_DIR}/${HELLOUTAU_INSTALL_NAME}Config.cmake.in"
 )
 
-# The plugin layout of an application: <lib>/<name>/plugins, with the plugins of Qt in
-# <lib>/Qt/plugins. A macOS bundle keeps that of qmsetup, Contents/Plugins beside Contents/MacOS
-# of the program.
-if(NOT(APPLE AND HELLOUTAU_MACOSX_BUNDLE_NAME))
-    set(HELLOUTAU_BUILD_PLUGINS_DIR ${QMSETUP_BUILD_DIR}/lib/${HELLOUTAU_INSTALL_NAME}/plugins)
-    set(HELLOUTAU_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/${HELLOUTAU_INSTALL_NAME}/plugins)
-endif()
+# The plugin layout is that of qmsetup: lib/<name>/plugins, or Contents/Plugins in a macOS bundle.
+# The plugins of Qt are in lib/Qt/plugins. CMAKE_INSTALL_LIBDIR does not apply, because qmsetup
+# installs the libraries into lib and sets the run path of a plugin relative to it.
 
 # The interface ID of the native plugins, the same as hello::daw::AppLoader::pluginIid, which
 # test_AppLoader checks by loading a plugin built with this one.
