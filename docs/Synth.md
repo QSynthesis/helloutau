@@ -46,7 +46,7 @@ SynthRunner                 纯虚，render(plan, synth tools, observer, diagnos
 
 官方 UTAU 在 `%TEMP%\utauX\` 下写出批处理文件并执行。单核时为 `temp.bat` 加 `temp_helper.bat`，多核时为 `temp.bat` 加 `temp1.bat`…`tempN.bat`：**重采样并行执行完毕后，才执行 `temp.bat` 进行合成**，与第二种策略结构相同。
 
-**该策略是跨平台的。** 在 Windows 上写出 `temp.bat` 交给命令处理器执行，在其他系统上写出 `temp.sh` 交给 `/bin/sh` 执行（合成工具在那些系统上运行于 Wine 中）。布局完全相同，只有语法不同：以 `cat` 代替 `copy /B`，以 `${var}` 代替 `%var%`，以单引号代替 `set "name=value"`。QSynthesis 当时采用的也是这种做法。
+**该策略是跨平台的。** 在 Windows 上写出 `temp.bat` 交给命令处理器执行，在其他系统上写出 `temp.sh` 交给 `/bin/sh` 执行。那些系统上只支持原生的合成工具，HelloUtau 不启动 Wine，需要运行 Windows 的合成工具时由用户自行编写包装脚本，作为合成工具设置（作者 2026-10-16 决定）。为这类包装脚本中的 moresampler 等程序，同一目录另写一份 `temp.bat`。布局完全相同，只有语法不同：以 `cat` 代替 `copy /B`，以 `${var}` 代替 `%var%`，以单引号代替 `set "name=value"`。QSynthesis 当时采用的也是这种做法。
 
 脚本类型由**运行时**选项 `ScriptShell` 决定，而非 `#ifdef`，因此两种脚本在任一平台上都能生成并测试，为另一平台生成的内容不必等到在该平台上运行时才首次检验。
 

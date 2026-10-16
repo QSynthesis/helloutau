@@ -250,8 +250,8 @@ namespace hello::kit {
             {directory / syntax.helperName(), written->second},
         };
 #ifndef _WIN32
-        // A synth tool run through Wine, such as moresampler, reads temp.bat in its working
-        // directory, which is this directory.
+        // A synth tool that a wrapper script of the user runs through Wine, such as moresampler,
+        // reads temp.bat in its working directory, which is this directory.
         auto batchSelf = self;
         batchSelf.shell = Batch;
         const auto batch = batchSelf.scripts(plan, synthTools, diagnostics);

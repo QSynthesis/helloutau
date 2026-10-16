@@ -610,9 +610,9 @@ private Q_SLOTS:
         QCOMPARE(batch.argument(QStringLiteral("it's")), QStringLiteral("it's"));
     }
 
-    // On other systems the UTAU synth tools run under Wine, and the script that starts them is a
-    // shell script. The layout is the same and the syntax differs. The script is generated and
-    // verified here, so that its content is not first observed when a user runs it.
+    // On other systems the script that starts the synth tools is a shell script. The layout is the
+    // same and the syntax differs. The script is generated and verified here, so that its content
+    // is not first observed when a user runs it.
     void the_shell_script_has_the_same_shape() {
         const auto plan = planFor(QStringLiteral("a"), QString());
         QVERIFY(plan.has_value());
