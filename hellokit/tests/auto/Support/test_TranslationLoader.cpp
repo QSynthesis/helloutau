@@ -67,6 +67,17 @@ private Q_SLOTS:
         QCOMPARE(okText(), QStringLiteral("&OK"));
     }
 
+    // The first of the directories that holds the file is used, and a directory without it is
+    // passed over.
+    void the_first_directory_with_the_file_is_used() {
+        TranslationLoader loader(QLocale(QStringLiteral("zh_CN")));
+        const QStringList directories{QStringLiteral("no such directory"), qtTranslations()};
+        QVERIFY(loader.load(QStringLiteral("qtbase"), directories));
+        QCOMPARE(okText(), QStringLiteral("确定(&O)"));
+        QVERIFY(!loader.load(QStringLiteral("missing"), directories));
+        QVERIFY(!loader.load(QStringLiteral("qtbase"), QStringList()));
+    }
+
     // Threads that translate at the same time all receive the translation, as the warnings of
     // the synth tools are translated on the worker threads of a render.
     void the_translations_are_found_on_concurrent_threads() {

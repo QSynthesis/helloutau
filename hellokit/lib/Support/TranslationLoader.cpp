@@ -76,6 +76,15 @@ namespace hello::kit {
         return true;
     }
 
+    bool TranslationLoader::load(const QString &name, const QStringList &directories) {
+        for (const auto &directory : directories) {
+            if (load(name, directory)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void TranslationLoader::remove(const QString &name) {
         const auto it = std::find_if(m_translators.begin(), m_translators.end(),
                                      [&name](const auto &entry) { return entry.first == name; });

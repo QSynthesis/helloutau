@@ -7,6 +7,7 @@
 
 #include <QtCore/QLocale>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <hellokit/Support/HelloKitSupportGlobal.h>
 
@@ -42,6 +43,12 @@ namespace hello::kit {
         /// \return Whether a file for locale() was found and installed. For English, the language
         ///         of the sources, none is installed.
         bool load(const QString &name, const QString &directory);
+
+        /// Installs the translation file \a name for locale() from the first of \a directories
+        /// that holds it, as load() with one directory.
+        ///
+        /// \return Whether a file for locale() was found and installed.
+        bool load(const QString &name, const QStringList &directories);
 
         /// Removes the translation installed under \a name. A plugin removes its translation
         /// before its library is unloaded, because the translation may refer to the resources of
