@@ -27,7 +27,7 @@ namespace hello::daw {
 
         /// Creates the item of the file at \a path, which is relative to the folder that the tree
         /// lists, under the items of its folders, with the file name in the first column. If
-        /// \a path has a root or begins with .., the item lies at the top level with the whole
+        /// \a path has a root or begins with \c .., the item lies at the top level with the whole
         /// path in native separators.
         QTreeWidgetItem *addFile(const std::filesystem::path &path);
 

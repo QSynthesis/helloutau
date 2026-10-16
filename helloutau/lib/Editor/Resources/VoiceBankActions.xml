@@ -85,8 +85,8 @@
         <!-- An entry with an empty alias for each selected audio file without one -->
         <action id="helloutau.voiceBank.includeAudio" text="In&amp;clude Audio Files"
                 category="Edit" />
-        <!-- The folder of the audio file of the current entry, with the file selected. The text
-             names the file manager of the platform, which the reserved variables of AEC select -->
+        <!-- The folder of the audio file of the current entry, with the file selected. The reserved
+             variables of AEC select the text, which names the file manager of the platform -->
         <action id="helloutau.voiceBank.openInFileManager" if="_OS_WINDOWS_"
                 text="&amp;Open in File Explorer" category="Edit" />
         <action id="helloutau.voiceBank.openInFileManager" if="_OS_MACOS_"

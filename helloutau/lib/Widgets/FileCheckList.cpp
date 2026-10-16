@@ -32,7 +32,7 @@ namespace hello::daw {
         layout->addWidget(m_tree, 1);
 
         connect(m_tree, &QTreeWidget::itemChanged, this, [this] {
-            // QTreeWidgetItem emits no change of a folder whose check state is set to its stored
+            // No itemChanged() is emitted for a folder whose check state is set to its stored
             // value, although its rows change. The whole view is therefore repainted.
             m_tree->viewport()->update();
             if (!m_applying) {

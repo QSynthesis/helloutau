@@ -150,7 +150,7 @@ namespace hello::daw {
         bool correctionForward = true;
 
         QTreeWidget *list = nullptr;
-        // The item of each file in the list, in the order of files. The data of the item is the
+        // The item of each file in the list, in the order of the files. The data of the item is the
         // index of the file, which the items of the folders lack.
         std::vector<QTreeWidgetItem *> fileItems;
         FrequencyMapView *view = nullptr;
