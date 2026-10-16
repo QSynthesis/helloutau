@@ -163,14 +163,19 @@ runs:
         QT_QPA_PLATFORM: offscreen
       run: |
         set +e
-        for name in $(cut -d: -f2 build/Release/Testing/Temporary/LastTestsFailed.log); do
+        # The lines of the list end with CR LF on Windows, and the CR would be part of the name.
+        for name in $(tr -d '\r' < build/Release/Testing/Temporary/LastTestsFailed.log |
+                      cut -d: -f2); do
           echo "::group::$name"
           ctest --test-dir build/Release -R "^${name}\$" -V --timeout 120
           program="$(find build/Release/out -type f \( -name "${name}.exe" -o -name "$name" \) |
             head -1)"
           if [ -n "$program" ]; then
-            timeout 120 "$program" -v2
+            # The results also into a file, in case the standard output is lost, and the plugins
+            # that Qt loads, in case the platform plugin does not load
+            QT_DEBUG_PLUGINS=1 timeout 120 "$program" -v2 -o "build/$name.txt,txt" -o -,txt
             echo "$name exited with status $?"
+            cat "build/$name.txt" 2>/dev/null | tail -40
           fi
           echo "::endgroup::"
         done
