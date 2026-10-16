@@ -87,11 +87,11 @@
                 category="Edit" />
         <!-- The folder of the audio file of the current entry, with the file selected. The text
              names the file manager of the platform, which the reserved variables of AEC select -->
-        <action id="helloutau.voiceBank.openInFileManager" if="_WINDOWS_"
+        <action id="helloutau.voiceBank.openInFileManager" if="_OS_WINDOWS_"
                 text="&amp;Open in File Explorer" category="Edit" />
-        <action id="helloutau.voiceBank.openInFileManager" if="_MACOS_"
+        <action id="helloutau.voiceBank.openInFileManager" if="_OS_MACOS_"
                 text="&amp;Open in Finder" category="Edit" />
-        <action id="helloutau.voiceBank.openInFileManager" if="_LINUX_"
+        <action id="helloutau.voiceBank.openInFileManager" if="_OS_LINUX_"
                 text="&amp;Open in File Manager" category="Edit" />
         <!-- A value of the current entry at the time under the pointer, while the pointer is over
              the waveform. The keys are those of OpenUtau -->
