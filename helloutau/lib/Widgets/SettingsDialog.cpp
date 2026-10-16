@@ -8,8 +8,8 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QScrollArea>
 #include <QtWidgets/QSplitter>
-#include <QtWidgets/QStackedWidget>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -94,7 +94,9 @@ namespace hello::daw {
         messagePalette.setColor(QPalette::WindowText, QColor(Qt::red));
         m_message->setPalette(messagePalette);
         m_message->hide();
-        m_stack = new QStackedWidget();
+        m_scroll = new QScrollArea();
+        m_scroll->setWidgetResizable(true);
+        m_scroll->setFrameShape(QFrame::NoFrame);
 
         auto right = new QWidget();
         auto rightLayout = new QVBoxLayout(right);
@@ -102,7 +104,7 @@ namespace hello::daw {
         rightLayout->addWidget(m_title);
         rightLayout->addWidget(m_description);
         rightLayout->addWidget(m_message);
-        rightLayout->addWidget(m_stack, 1);
+        rightLayout->addWidget(m_scroll, 1);
 
         auto splitter = new QSplitter();
         splitter->addWidget(left);
@@ -242,9 +244,7 @@ namespace hello::daw {
 
     void SettingsDialog::showPage(SettingPage *page) {
         // The page is taken out, not deleted: it keeps its edits until the dialog closes.
-        while (m_stack->count() > 0) {
-            m_stack->removeWidget(m_stack->widget(0));
-        }
+        m_scroll->takeWidget();
         delete m_category;
         m_message->hide();
         if (!page) {
@@ -262,8 +262,11 @@ namespace hello::daw {
         m_description->setVisible(!page->description().isEmpty());
 
         if (const auto widget = page->widget()) {
-            m_stack->addWidget(widget);
-            m_stack->setCurrentWidget(widget);
+            // The page keeps its preferred height with the style of the dialog, which the scroll
+            // area scrolls if the dialog is lower.
+            m_scroll->setWidget(widget);
+            widget->ensurePolished();
+            widget->setMinimumHeight(widget->sizeHint().height());
         } else {
             // A category shows the links to its pages.
             m_category = new QWidget();
@@ -277,8 +280,7 @@ namespace hello::daw {
                 layout->addWidget(link, 0, Qt::AlignLeft);
             }
             layout->addStretch(1);
-            m_stack->addWidget(m_category);
-            m_stack->setCurrentWidget(m_category);
+            m_scroll->setWidget(m_category);
         }
         highlight();
     }
@@ -365,9 +367,8 @@ namespace hello::daw {
     }
 
     void SettingsDialog::releaseAll() {
-        while (m_stack->count() > 0) {
-            m_stack->removeWidget(m_stack->widget(0));
-        }
+        m_scroll->takeWidget();
+        delete m_category;
         m_highlighted.clear();
         for (const auto page : m_catalog->allPages()) {
             page->release();

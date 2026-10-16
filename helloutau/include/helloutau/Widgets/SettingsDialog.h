@@ -13,7 +13,7 @@ class QDialogButtonBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
-class QStackedWidget;
+class QScrollArea;
 class QTreeWidget;
 class QTreeWidgetItem;
 
@@ -26,6 +26,9 @@ namespace hello::daw {
     /// search box and the tree of pages on the left, the path of the current page, its
     /// description and the page on the right, and OK, Cancel and Apply. See the settings dialog
     /// in docs/Widgets.md.
+    ///
+    /// The page lies in a scroll area below its path and its description, at least as high as
+    /// its preferred height, so that the dialog can be lower than a page, which then scrolls.
     ///
     /// Apply is enabled while a page is modified, and the modified pages are bold in the tree.
     /// Apply and OK apply them, and a page that rejects the settings keeps the dialog open on
@@ -76,7 +79,7 @@ namespace hello::daw {
         QLabel *m_title;
         QLabel *m_description;
         QLabel *m_message;
-        QStackedWidget *m_stack;
+        QScrollArea *m_scroll;
         QDialogButtonBox *m_buttons;
         QHash<SettingPage *, QTreeWidgetItem *> m_items;
         QPointer<QWidget> m_category;

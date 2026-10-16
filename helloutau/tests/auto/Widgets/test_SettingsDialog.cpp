@@ -6,8 +6,8 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QStackedWidget>
 #include <QtWidgets/QTreeWidget>
+#include <QtWidgets/QVBoxLayout>
 
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
@@ -59,6 +59,25 @@ namespace {
 
     private:
         QString m_label;
+    };
+
+    // A page of many rows above a list, higher than the dialog
+    class TallPage : public SettingPage {
+    public:
+        TallPage() : SettingPage(QStringLiteral("tall")) {
+            setTitle(QStringLiteral("Tall"));
+        }
+
+    protected:
+        QWidget *createWidget() override {
+            auto widget = new QWidget();
+            auto layout = new QVBoxLayout(widget);
+            for (int i = 0; i < 30; ++i) {
+                layout->addWidget(new QLineEdit());
+            }
+            layout->addWidget(new QTreeWidget());
+            return widget;
+        }
     };
 
     // Audio, a category of Output and Export, and Appearance
@@ -228,6 +247,24 @@ private Q_SLOTS:
         QCOMPARE(dialog.result(), int(QDialog::Accepted));
         QCOMPARE(pages.output->value, QStringLiteral("1024"));
         QVERIFY(!pages.output->hasWidget());
+    }
+
+    // A page higher than the dialog keeps its preferred height in a scroll area, so that the
+    // dialog can be lower than the page.
+    void a_high_page_scrolls_in_a_lower_dialog() {
+        SettingCatalog catalog;
+        const auto page = new TallPage();
+        catalog.addPage(page);
+        SettingsDialog dialog(&catalog);
+        dialog.selectPage(QStringLiteral("tall"));
+        const auto widget = page->widget();
+        const int preferred = widget->sizeHint().height();
+        QVERIFY(dialog.minimumSizeHint().height() < preferred);
+        dialog.resize(800, 300);
+        dialog.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&dialog));
+        QVERIFY(dialog.height() < preferred);
+        QVERIFY(widget->height() >= preferred);
     }
 
     // Cancel releases the pages, and their edits with them. The next dialog reads the values
