@@ -1404,7 +1404,7 @@
     </message>
     <message>
         <source>Remove the existing &amp;frequency maps and analysis caches before generating</source>
-        <translation>生成频率表时，先删除频率表和分析缓存再生成(&amp;F)</translation>
+        <translation>生成频率表时，先删除已存在的频率表和分析缓存再生成(&amp;F)</translation>
     </message>
     <message>
         <source>Frequency Map</source>
@@ -1529,7 +1529,7 @@
     </message>
     <message>
         <source>Remove the existing &amp;frequency maps and analysis caches before generating</source>
-        <translation>生成频率表时，先删除频率表和分析缓存再生成(&amp;F)</translation>
+        <translation>生成频率表时，先删除已存在的频率表和分析缓存再生成(&amp;F)</translation>
     </message>
     <message>
         <source>This choice applies to this generation only. The default is set on the Frequency Maps page of the settings.</source>
