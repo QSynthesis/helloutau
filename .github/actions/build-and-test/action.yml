@@ -153,7 +153,9 @@ runs:
 
     # Each failed test once more, through ctest with its environment and then as the program
     # itself with its exit status. A test that ends without flushing its output, such as on an
-    # uncaught exception, shows nothing in the step Test, and the exit status tells the cause.
+    # uncaught exception, shows nothing in the step Test, and the exit status tells the cause. -v2
+    # prints the location of every check, so that the last line of a test that blocks is the check
+    # it blocks in.
     - name: Failed tests
       if: failure() && hashFiles('build/Release/Testing/Temporary/LastTestsFailed.log') != ''
       shell: bash
@@ -167,7 +169,7 @@ runs:
           program="$(find build/Release/out -type f \( -name "${name}.exe" -o -name "$name" \) |
             head -1)"
           if [ -n "$program" ]; then
-            timeout 120 "$program" -v1
+            timeout 120 "$program" -v2
             echo "$name exited with status $?"
           fi
           echo "::endgroup::"
