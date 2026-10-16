@@ -9,13 +9,17 @@
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFormLayout>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
 #include <stdutau/utaconst.h>
 
 #include <helloutau/Widgets/PianoKeyboard.h>
+
+#include "NoteEntriesDialog.h"
 
 namespace hello::daw {
 
@@ -49,7 +53,7 @@ namespace hello::daw {
 
     NotePropertiesDialog::NotePropertiesDialog(const QList<kit::Note> &notes,
                                                const QList<Defaults> &defaults, QWidget *parent)
-        : QDialog(parent) {
+        : QDialog(parent), m_notes(notes) {
         setWindowTitle(tr("Note Properties"));
 
         const auto various = tr("(various)");
@@ -195,6 +199,18 @@ namespace hello::daw {
                                   "An emptied number returns the note to the default."));
         note->setWordWrap(true);
 
+        // The entries that the fields do not edit, in a dialog of their own as in UTAU
+        m_othersButton = new QPushButton(tr("Ot&hers..."));
+        connect(m_othersButton, &QPushButton::clicked, this, [this] {
+            NoteEntriesDialog dialog(m_others ? QList<kit::Note>{*m_others} : m_notes, this);
+            if (dialog.exec() == QDialog::Accepted && dialog.others()) {
+                m_others = dialog.others();
+            }
+        });
+        auto othersRow = new QHBoxLayout();
+        othersRow->addStretch();
+        othersRow->addWidget(m_othersButton);
+
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -202,6 +218,7 @@ namespace hello::daw {
         auto layout = new QVBoxLayout(this);
         layout->addLayout(form);
         layout->addWidget(note);
+        layout->addLayout(othersRow);
         layout->addWidget(buttons);
         resize(420, 0);
     }
@@ -254,6 +271,7 @@ namespace hello::daw {
         if (edited(Flags)) {
             changes.flags = textOf(Flags);
         }
+        changes.others = m_others;
         return changes;
     }
 
@@ -263,6 +281,10 @@ namespace hello::daw {
 
     QComboBox *NotePropertiesDialog::keyBox() const {
         return m_key;
+    }
+
+    QPushButton *NotePropertiesDialog::othersButton() const {
+        return m_othersButton;
     }
 
     TempoDialog::TempoDialog(std::optional<double> tempo, double current, QWidget *parent)

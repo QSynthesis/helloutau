@@ -6,6 +6,7 @@ add_auto_test(test_PortamentoPoint.cpp HelloKitDocument)
 add_auto_test(test_Project.cpp HelloKitDocument)
 add_auto_test(test_TempoMap.cpp HelloKitDocument)
 add_auto_test(test_UstDocument.cpp HelloKitDocument)
+add_auto_test(test_UstNoteEntries.cpp HelloKitDocument)
 add_auto_test(test_Vibrato.cpp HelloKitDocument)
 
 add_subdirectory(Operation)

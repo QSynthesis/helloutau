@@ -15,6 +15,7 @@ class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
 class QLineEdit;
+class QPushButton;
 
 namespace hello::daw {
 
@@ -68,11 +69,19 @@ namespace hello::daw {
         /// differ.
         QComboBox *keyBox() const;
 
+        /// Returns the button that opens NoteEntriesDialog, whose accepted entries changes()
+        /// gives as kit::NotePropertyChanges::others. The dialog opens again with the entries
+        /// accepted before.
+        QPushButton *othersButton() const;
+
     private:
+        QList<kit::Note> m_notes;
         QList<QLineEdit *> m_fields;
         QList<bool> m_edited;
         QComboBox *m_key;
         bool m_keyEdited = false;
+        QPushButton *m_othersButton;
+        std::optional<kit::Note> m_others;
     };
 
     /// A dialog in which the user enters the tempo of a note: a value in BPM, or none to follow

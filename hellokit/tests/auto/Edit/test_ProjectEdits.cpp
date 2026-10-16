@@ -666,6 +666,42 @@ private Q_SLOTS:
 
     // The properties set change on every note in one step. A cleared property goes back to the
     // default, and the others stay. None that differs makes no step.
+    // The entries of the Others dialog replace those of every note in the same step, the user data
+    // removed, changed and added, and the other fields stay. The same entries make no step.
+    void the_others_of_the_notes_change_in_one_step() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto notes = ProjectRef(&session).tracks().at(0).notes();
+        const QList<NoteRef> both{notes.at(0), notes.at(1)};
+
+        Note others;
+        others.label = QStringLiteral("chorus");
+        others.vibrato = Vibrato{50, 100, 20, 10, 10, 0, 0, 0};
+        others.userData.insert(QStringLiteral("$custom"), QStringLiteral("changed"));
+        others.userData.insert(QStringLiteral("$new"), QStringLiteral("1"));
+        NotePropertyChanges changes;
+        changes.others = others;
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setNoteProperties(both, changes, diagnostics));
+        const auto edited = session.snapshot();
+        for (int i : {0, 1}) {
+            const auto &note = edited.tracks[0].notes[i];
+            const auto &before = project.tracks[0].notes[i];
+            QCOMPARE(note.label, QStringLiteral("chorus"));
+            QCOMPARE(note.vibrato, others.vibrato);
+            QVERIFY(!note.envelope && note.portamento.isEmpty() && !note.pitchBend);
+            QVERIFY(note.direct.isEmpty() && note.patch.isEmpty());
+            QVERIFY(note.regions.isEmpty() && note.regionEnds.isEmpty());
+            QCOMPARE(note.userData, others.userData);
+            QCOMPARE(note.lyric, before.lyric);
+            QCOMPARE(note.tempo, before.tempo);
+            QCOMPARE(note.intensity, before.intensity);
+        }
+        QCOMPARE(session.currentStep(), 1);
+        QVERIFY(ProjectEdits::setNoteProperties(both, changes, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+    }
+
     void the_note_properties_change_in_one_step() {
         const auto project = richProject();
         ProjectSession session(project);

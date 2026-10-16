@@ -70,9 +70,15 @@ namespace hello::kit {
         std::optional<std::optional<double>> startPoint;
         std::optional<QString> flags;
 
+        /// The entries of the dialog that UTAU opens with the Others button, those of
+        /// UstNoteEntries: the envelope, the vibrato, the pitch of both modes, the label,
+        /// \c $direct, \c $patch, the regions and the user data of this note replace those of
+        /// every note. The other fields of this note are ignored.
+        std::optional<Note> others;
+
         inline bool isEmpty() const {
             return !lyric && !noteNum && !length && !tempo && !intensity && !modulation &&
-                   !velocity && !preUtterance && !voiceOverlap && !startPoint && !flags;
+                   !velocity && !preUtterance && !voiceOverlap && !startPoint && !flags && !others;
         }
     };
 

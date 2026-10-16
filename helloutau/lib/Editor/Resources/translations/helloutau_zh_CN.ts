@@ -1579,6 +1579,41 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::NoteEntriesDialog</name>
+    <message>
+        <source>Others</source>
+        <translation>其他</translation>
+    </message>
+    <message>
+        <source>The envelope, the vibrato, the pitch, the label, $direct, $patch and the regions, one entry a line as a UST writes them.</source>
+        <translation>包络、颤音、音高曲线、标签、$direct、$patch 与区间，每行一条，按 UST 的写法书写。</translation>
+    </message>
+    <message>
+        <source>&amp;Built-in Entries</source>
+        <translation>内置条目(&amp;B)</translation>
+    </message>
+    <message>
+        <source>One entry a line, as key=value.</source>
+        <translation>每行一条，写作 键=值。</translation>
+    </message>
+    <message>
+        <source>&amp;User Data</source>
+        <translation>用户数据(&amp;U)</translation>
+    </message>
+    <message>
+        <source>The selected notes have different entries, which cannot be edited together. The entries of the first note are shown.</source>
+        <translation>选中的音符这些条目不完全相同，不能一起编辑。下面显示的是第一个音符的条目。</translation>
+    </message>
+    <message>
+        <source>Built-in entries: %1</source>
+        <translation>内置条目：%1</translation>
+    </message>
+    <message>
+        <source>User data: %1</source>
+        <translation>用户数据：%1</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::NotePropertiesDialog</name>
     <message>
         <source>Note Properties</source>
@@ -1647,6 +1682,10 @@
     <message>
         <source>Only the fields that are edited change, on every selected note. An emptied number returns the note to the default.</source>
         <translation>所有选中的音符仅修改被编辑的字段。清空数值将使音符恢复为默认值。</translation>
+    </message>
+    <message>
+        <source>Ot&amp;hers...</source>
+        <translation>其他(&amp;H)...</translation>
     </message>
 </context>
 <context>
@@ -5605,6 +5644,53 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>This UST specifies no synth tool, so UTAU cannot render it until a synth tool is configured.</source>
         <translation>此 UST 未指定合成工具，在配置合成工具之前 UTAU 无法渲染该文件。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::UstNoteEntries</name>
+    <message>
+        <source>Line %1 is not of the form key=value.</source>
+        <translation>第 %1 行不是 键=值 的形式。</translation>
+    </message>
+    <message>
+        <source>Line %1: %2 is not a built-in entry. An entry of another key belongs to the user data.</source>
+        <translation>第 %1 行：%2 不是内置条目。其他键名的条目应写在用户数据中。</translation>
+    </message>
+    <message>
+        <source>Line %1 repeats the entry %2.</source>
+        <translation>第 %1 行重复了条目 %2。</translation>
+    </message>
+    <message>
+        <source>Line %1: the value of %2 is not written as a UST writes it.</source>
+        <translation>第 %1 行：%2 的值不符合 UST 的写法。</translation>
+    </message>
+    <message>
+        <source>Line %1: the key is empty or has a space.</source>
+        <translation>第 %1 行：键名为空或含有空格。</translation>
+    </message>
+    <message>
+        <source>Line %1: %2 is an entry that UTAU reads, which belongs to the built-in entries or to the note properties.</source>
+        <translation>第 %1 行：%2 是 UTAU 会读取的条目，应写在内置条目或音符属性中。</translation>
+    </message>
+    <message>
+        <source>UTAU drops the entry %1 when it saves the file, because the key does not begin with $.</source>
+        <translation>UTAU 保存文件时会丢弃条目 %1，因为键名不以 $ 开头。</translation>
+    </message>
+    <message>
+        <source>UTAU drops the entry %1 when it saves the file, because the value is empty.</source>
+        <translation>UTAU 保存文件时会丢弃条目 %1，因为值为空。</translation>
+    </message>
+    <message>
+        <source>UTAU cuts the value of %1 at the tab when it saves the file, and drops the entries of the note after it.</source>
+        <translation>UTAU 保存文件时会在制表符处截断 %1 的值，并丢弃该音符中其后的条目。</translation>
+    </message>
+    <message>
+        <source>UTAU cuts the value of %1 at the first = when it saves the file.</source>
+        <translation>UTAU 保存文件时会在第一个 = 处截断 %1 的值。</translation>
+    </message>
+    <message>
+        <source>UTAU replaces the spaces in the value of %1 with commas when it saves the file.</source>
+        <translation>UTAU 保存文件时会把 %1 的值中的空格替换为逗号。</translation>
     </message>
 </context>
 <context>

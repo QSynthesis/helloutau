@@ -1,14 +1,18 @@
 #include <optional>
 
+#include <QtCore/QTimer>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPlainTextEdit>
+#include <QtWidgets/QPushButton>
 
 #include <stdutau/utaconst.h>
 
+#include <helloutau/Editor/Dialogs/NoteEntriesDialog.h>
 #include <helloutau/Editor/Dialogs/NotePropertiesDialog.h>
 
 using namespace hello;
@@ -139,6 +143,39 @@ private Q_SLOTS:
 
         dialog.tempoBox()->setValue(140);
         QCOMPARE(dialog.tempo(), std::optional(140.0));
+    }
+
+    // The entries accepted in the Others dialog are part of the changes, and the Others dialog
+    // opens again with them.
+    void the_note_properties_give_the_others() {
+        kit::Note note;
+        note.lyric = QStringLiteral("a");
+        note.length = 480;
+        note.label = QStringLiteral("verse");
+        NotePropertiesDialog properties({note});
+        QVERIFY(!properties.changes().others);
+        QTimer::singleShot(0, [] {
+            const auto dialog =
+                qobject_cast<NoteEntriesDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            dialog->builtInEdit()->setPlainText(QStringLiteral("Label=chorus"));
+            dialog->accept();
+        });
+        properties.othersButton()->click();
+        QVERIFY(properties.changes().others);
+        QCOMPARE(properties.changes().others->label, QStringLiteral("chorus"));
+
+        QString shown;
+        QTimer::singleShot(0, [&shown] {
+            const auto dialog =
+                qobject_cast<NoteEntriesDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            shown = dialog->builtInEdit()->toPlainText();
+            dialog->reject();
+        });
+        properties.othersButton()->click();
+        QCOMPARE(shown, QStringLiteral("Label=chorus"));
+        QCOMPARE(properties.changes().others->label, QStringLiteral("chorus"));
     }
 };
 

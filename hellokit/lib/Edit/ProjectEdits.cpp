@@ -48,6 +48,72 @@ namespace hello::kit {
                                          .arg(region.last));
         }
 
+        // Replaces the Mode2 points of note with points, changing only the points that differ
+        void assignPortamento(const NoteRef &note, const QList<PortamentoPoint> &points) {
+            const auto list = note.portamento();
+            const int kept = std::min(list.size(), int(points.size()));
+            for (int i = 0; i < kept; ++i) {
+                const auto point = list.at(i);
+                const auto &wanted = points[i];
+                if (point.x() != wanted.x) {
+                    point.setX(wanted.x);
+                }
+                if (point.y() != wanted.y) {
+                    point.setY(wanted.y);
+                }
+                if (point.type() != wanted.type) {
+                    point.setType(wanted.type);
+                }
+            }
+            if (list.size() > kept) {
+                list.remove(kept, list.size() - kept);
+            } else if (points.size() > kept) {
+                list.insert(kept, points.mid(kept));
+            }
+        }
+
+        // Replaces the entries of the Others dialog of note with those of others, changing only
+        // the entries that differ
+        void assignOthers(const NoteRef &note, const Note &others) {
+            const auto current = note.toNote();
+            if (current.envelope != others.envelope) {
+                note.setEnvelope(others.envelope);
+            }
+            if (current.vibrato != others.vibrato) {
+                note.setVibrato(others.vibrato);
+            }
+            assignPortamento(note, others.portamento);
+            if (current.pitchBend != others.pitchBend) {
+                note.setPitchBend(others.pitchBend);
+            }
+            if (current.label != others.label) {
+                note.setLabel(others.label);
+            }
+            if (current.direct != others.direct) {
+                note.setDirect(others.direct);
+            }
+            if (current.patch != others.patch) {
+                note.setPatch(others.patch);
+            }
+            if (current.regions != others.regions) {
+                note.setRegions(others.regions);
+            }
+            if (current.regionEnds != others.regionEnds) {
+                note.setRegionEnds(others.regionEnds);
+            }
+            const auto userData = note.userData();
+            for (const auto &key : userData.keys()) {
+                if (!others.userData.contains(key)) {
+                    userData.remove(key);
+                }
+            }
+            for (auto it = others.userData.cbegin(); it != others.userData.cend(); ++it) {
+                if (!userData.contains(it.key()) || userData.value(it.key()) != it.value()) {
+                    userData.setValue(it.key(), it.value());
+                }
+            }
+        }
+
     }
 
     bool ProjectEdits::transpose(const QList<NoteRef> &notes, int semitones,
@@ -162,26 +228,7 @@ namespace hello::kit {
     bool ProjectEdits::setPortamento(const NoteRef &note, const QList<PortamentoPoint> &points,
                                      DiagnosticList &diagnostics) {
         auto transaction = note.session()->transaction(tr("Change Pitch"));
-        const auto list = note.portamento();
-        const int kept = std::min(list.size(), int(points.size()));
-        for (int i = 0; i < kept; ++i) {
-            const auto point = list.at(i);
-            const auto &wanted = points[i];
-            if (point.x() != wanted.x) {
-                point.setX(wanted.x);
-            }
-            if (point.y() != wanted.y) {
-                point.setY(wanted.y);
-            }
-            if (point.type() != wanted.type) {
-                point.setType(wanted.type);
-            }
-        }
-        if (list.size() > kept) {
-            list.remove(kept, list.size() - kept);
-        } else if (points.size() > kept) {
-            list.insert(kept, points.mid(kept));
-        }
+        assignPortamento(note, points);
         return transaction.commit(diagnostics);
     }
 
@@ -420,6 +467,9 @@ namespace hello::kit {
             }
             if (changes.flags) {
                 note.setFlags(*changes.flags);
+            }
+            if (changes.others) {
+                assignOthers(note, *changes.others);
             }
         }
         return transaction.commit(diagnostics);
