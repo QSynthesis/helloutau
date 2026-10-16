@@ -243,8 +243,16 @@ namespace hello::daw {
 #else
     bool ClassicPluginRunner::Impl::startProgram(const ClassicPlugin &plugin, QString *error) {
         process = new QProcess();
-        process->setProgram(QString::fromStdU16String(plugin.program.u16string()));
-        process->setArguments({file});
+        const auto program = QString::fromStdU16String(plugin.program.u16string());
+        if (plugin.shell) {
+            // A script of the shell, which requires no execute permission, as a plugin packed on
+            // Windows has none
+            process->setProgram(QStringLiteral("/bin/sh"));
+            process->setArguments({program, file});
+        } else {
+            process->setProgram(program);
+            process->setArguments({file});
+        }
         process->setWorkingDirectory(QString::fromStdU16String(plugin.folder.u16string()));
         // A dedicated process group, so that cancel() terminates the processes started by the
         // program
