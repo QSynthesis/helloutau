@@ -70,7 +70,8 @@ namespace hello::daw {
         std::filesystem::path program;
 
         /// Whether the program is started by the handler of its file type (\c shell=use ), as
-        /// with \c ShellExecuteEx , rather than as an executable.
+        /// with \c ShellExecuteEx , rather than as an executable. Ignored on systems other than
+        /// Windows, where the program is always executed directly.
         bool shell = false;
 
         /// Whether the plugin receives every note of the track rather than the selection

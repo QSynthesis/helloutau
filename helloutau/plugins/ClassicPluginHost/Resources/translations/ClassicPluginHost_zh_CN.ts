@@ -53,10 +53,6 @@
         <source>plugin.txt cannot be opened.</source>
         <translation>无法打开 plugin.txt。</translation>
     </message>
-    <message>
-        <source>It runs on Windows only.</source>
-        <translation>该插件仅能在 Windows 上运行。</translation>
-    </message>
 </context>
 <context>
     <name>hello::daw::ClassicPluginContribution</name>

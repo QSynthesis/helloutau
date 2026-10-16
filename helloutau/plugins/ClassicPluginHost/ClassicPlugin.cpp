@@ -24,14 +24,6 @@ namespace hello::daw {
             return std::filesystem::path(text.toStdU16String());
         }
 
-#ifndef Q_OS_WINDOWS
-        // Returns whether the extension of \a path is .exe, compared case-insensitively.
-        bool isExe(const std::filesystem::path &path) {
-            return textOf(path.extension()).compare(QLatin1String(".exe"), Qt::CaseInsensitive) ==
-                   0;
-        }
-#endif
-
         // Returns the program that \a execute specifies in \a folder , or an empty path with
         // the reason in \a reason . The name is read from a file on disk and is untrusted. An
         // absolute path, a .. component, or a link that leaves the folder would run a program
@@ -146,13 +138,6 @@ namespace hello::daw {
         if (plugin.isAvailable()) {
             plugin.unavailableReason = programReason;
         }
-
-#ifndef Q_OS_WINDOWS
-        // Support for Wine is deferred. See docs/ClassicPluginHost.md.
-        if (plugin.isAvailable() && (plugin.shell || isExe(plugin.program))) {
-            plugin.unavailableReason = tr("It runs on Windows only.");
-        }
-#endif
         return plugin;
     }
 
