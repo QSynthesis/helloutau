@@ -29,7 +29,7 @@
 | 校验文件 | `SHA256SUMS` |
 
 - `<version>` 为 `HELLO_VERSION` 的四段版本号。
-- `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x64` 或 `arm64`，系统为 `windows`、`linux` 或 `osx`，ABI 为 `msvc`、`mingw` 或 `gcc`，例如 `x64-windows-msvc`。架构与系统的写法沿用 vcpkg 的 triplet。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入缓存项 `HELLO_TRIPLET`，可以 `-DHELLO_TRIPLET=` 覆盖。
+- `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x64` 或 `arm64`，系统为 `windows`、`linux` 或 `osx`，ABI 为 `msvc`、`mingw`、`gcc` 或 `appleclang`，例如 `x64-windows-msvc`。其余编译器取 CMake 编译器 ID 的小写，macOS 上 Xcode 的编译器因此为 `appleclang`，与 vcpkg 沿用的 CMake 编译器 ID 一致，macOS 版为 `arm64-osx-appleclang`（作者 2026-10-16 决定）。vcpkg 的 triplet 本身不含 ABI 段，HelloUtau 仍然保留这一段。架构与系统的写法沿用 vcpkg 的 triplet。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入缓存项 `HELLO_TRIPLET`，可以 `-DHELLO_TRIPLET=` 覆盖。
 - 程序编译时由 CMake 写入自己的 triplet，更新时按它挑选附件，不在运行时推断。
 - `SHA256SUMS` 每行为一个附件的 SHA-256 摘要与文件名，格式同 `sha256sum` 的输出。更新前必须以它校验下载的附件。
 - 附件由本地脚本上传到 Gitee（`.cache/claude/tools/sync_gitee_assets.py`），可能晚于 release 本身出现。客户端只在当前 triplet 的附件与 `SHA256SUMS` 都已存在时，才把该源视为有新版本。
