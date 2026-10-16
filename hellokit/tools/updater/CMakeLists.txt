@@ -32,8 +32,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 if(WIN32)
     # The entry point of the GUI program, which passes the arguments to main in UTF-8
     target_link_libraries(${PROJECT_NAME} PRIVATE HelloKitWinMain)
-    # The manifest of qmsetup: the common controls 6, for the visual styles of the message
-    # boxes, and the awareness of the DPI of each monitor
+    # The manifest of qmsetup, for the visual styles of the message boxes
     qm_add_win_manifest(${PROJECT_NAME})
     if(MINGW)
         target_link_options(${PROJECT_NAME} PRIVATE -static)

@@ -20,3 +20,6 @@ helloutau_add_application(${PROJECT_NAME}
     LINKS HelloUtauEditor
     QT_LINKS Core Widgets
 )
+
+# The manifest of qmsetup, without the UTF-8 code page, so that GetACP() reports the ANSI one
+qm_add_win_manifest(${PROJECT_NAME} NAME "${HELLOUTAU_RC_NAME}")

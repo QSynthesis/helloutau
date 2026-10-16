@@ -43,6 +43,9 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE stdcorelib::stdcorelib)
 
+# The manifest of qmsetup, without the UTF-8 code page, so that GetACP() reports the ANSI one
+qm_add_win_manifest(${PROJECT_NAME})
+
 if(APPLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE "-framework CoreServices")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
