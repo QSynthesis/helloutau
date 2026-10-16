@@ -92,6 +92,15 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 现阶段不签名，首次运行时 Windows SmartScreen 会提示。以后取得证书时以 `SignTool` 签名安装包，并设 `SignedUninstaller=yes` 签名卸载程序。
 
+## 应用图标
+
+图标是一条蓝色的粗缎带：卷帘上一低一高两个音符由滑音连成一笔，滑音两端的控制点是缎带上挖空的圆孔，放在浅色的圆角方形底板上（作者 2026-10-16 选定）。缎带用飞书图标的蓝 `#3370FF` 一系的轻微渐变，底板沿对角线从 `#FBFBFB` 渐变到左下角的 `#E6EAF0`，比例与渐变参照 DeepSeek 的图标：四周各留约 3%，圆角约为边长的 22%。
+
+- **设计理由**：只用一个隐喻，形状粗壮，细节以挖空表现，不用细线，因为细线在小尺寸下会失去质感，这是此前几稿被否定的原因。Microsoft 的[应用图标设计指南](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-design)推荐透明背景，作者选择在 Windows 上同样使用底板。底板在深色任务栏上醒目，在浅色任务栏上靠一像素极淡的边勾出轮廓。
+- **源稿**：48 格的主稿为 `helloutau/lib/Editor/Resources/icons/brand/app.svg`。16、20、24 与 32 像素各有一张对齐像素网格的小稿，因为 Microsoft 要求小尺寸单独绘制，而不由大图缩小。小稿不纳入仓库，仓库只提交由主稿与小稿生成的 `helloutau/tools/driver/helloutau.ico`（作者 2026-10-16 决定）。32 像素以下底板铺满画布，缎带为纯色，16 像素的控制点各为一个像素。缎带的曲线在两端放缓，以免粗线内侧的半径小于线宽的一半，在衔接处出现折角。
+- **`helloutau.ico`** 共 14 帧：16、20、24、30、32、36、40、48、60、64、72、80、96 与 256，即[应用图标构造](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction)一页中标题栏、任务栏与开始菜单在各缩放比例下所用尺寸的并集。30 像素用 24 像素的小稿，36 像素起用主稿。各帧由 QtSvg 渲染，256 像素帧以 PNG 压缩，其余帧为 32 位 BGRA 位图。driver 把图标列为配置依赖，换了图标后任何生成器都会重新配置并重新编译资源。
+- macOS 需要另做一个满幅方形、由系统加圆角的版本，Linux 安装 `helloutau.svg` 到 `hicolor/scalable/apps`，两者在补充相应平台的打包时再做。
+
 ## 卸载
 
 卸载程序在开始卸载前显示一页选项，写法同 diffscope 的 `uninstall.iss.in`：
