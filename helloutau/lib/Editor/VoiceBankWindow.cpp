@@ -72,6 +72,7 @@
 #include "AboutDialog.h"
 #include "VoiceAliasRuleDialog.h"
 #include "AppSettings.h"
+#include "SoftwareBuildChannel.h"
 #include "CommandEntries_p.h"
 #include "ConvertFrequencyMapsDialog.h"
 #include "DiagnosticBox.h"
@@ -2186,7 +2187,9 @@ namespace hello::daw {
 
         void updateTitle() {
             stdc_decl_t;
-            decl.setWindowTitle(QStringLiteral("%1[*] - HelloUtau").arg(document->displayName()));
+            decl.setWindowTitle(
+                QStringLiteral("%1[*] - %2")
+                    .arg(document->displayName(), SoftwareBuildChannel::applicationTitle()));
             decl.setWindowModified(document->isModified());
         }
 

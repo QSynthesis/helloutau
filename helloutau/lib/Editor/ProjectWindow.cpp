@@ -71,6 +71,7 @@
 
 #include "AboutDialog.h"
 #include "AppSettings.h"
+#include "SoftwareBuildChannel.h"
 #include "CommandEntries_p.h"
 #include "DiagnosticBox.h"
 #include "Editor.h"
@@ -2139,8 +2140,9 @@ namespace hello::daw {
 
         void updateTitle() {
             stdc_decl_t;
-            decl.setWindowTitle(
-                QStringLiteral("%1[*] - HelloUtau").arg(editor->projectDisplayName(&decl)));
+            decl.setWindowTitle(QStringLiteral("%1[*] - %2")
+                                    .arg(editor->projectDisplayName(&decl),
+                                         SoftwareBuildChannel::applicationTitle()));
             decl.setWindowModified(document->isModified());
         }
 

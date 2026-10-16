@@ -12,6 +12,9 @@ param(
 #     helloutau-<version>-<triplet>-setup.exe   the installer, compiled from setup.iss
 #     SHA256SUMS                                the digests of both, as sha256sum writes them
 #
+# A build of another channel than release (HELLO_BUILD_CHANNEL) appends -<channel>-<commit> to
+# the base name, such as helloutau-<version>-<triplet>-ci-1a2b3c4.zip.
+#
 # The installation is laid out as
 #
 #     bin/                    helloutau.exe, the libraries of the application, of Qt and of the
@@ -78,7 +81,26 @@ if (-not $Qt) {
     }
     $Qt = (Resolve-Path (Join-Path $qtDir "..\..\..")).Path
 }
+# The channel of the build. A build of another channel than release is named by its channel and
+# its abbreviated commit, in the file names and in the name of the installer, so that it is not
+# taken for a release. The commit is that of hellokit/BuildInfo.h, which the About dialog shows.
+$channel = Get-Value $cache "HELLO_BUILD_CHANNEL" ":[A-Z]+="
+if ($channel -notin @("release", "ci", "dev")) {
+    throw "HELLO_BUILD_CHANNEL is '$channel' in $cache, not release, ci or dev."
+}
 $base = "helloutau-$version-$triplet"
+$appVerName = "HelloUtau $version"
+if ($channel -ne "release") {
+    $buildInfo = Join-Path $BuildDir "out\include\hellokit\BuildInfo.h"
+    $commit = (Select-String -LiteralPath $buildInfo `
+        -Pattern '^#define HELLOKIT_GIT_LAST_COMMIT_HASH "([0-9a-f]{7})').Matches.Groups[1].Value
+    if (-not $commit) {
+        throw "The commit is missing from $buildInfo."
+    }
+    $base = "$base-$channel-$commit"
+    $label = if ($channel -eq "ci") { "CI" } else { $channel }
+    $appVerName = "HelloUtau $label $commit"
+}
 Write-Output "Packaging $base from $BuildDir"
 
 $staging = Join-Path $OutputDir "HelloUtau"
@@ -180,8 +202,9 @@ if (-not $NoInstaller) {
         }
     }
     Invoke-Step "Compile the installer" {
-        & $Iscc /Q "/DAppVersion=$version" "/DSourceDir=$staging" "/DOutputDir=$OutputDir" `
-            "/DOutputBaseFilename=$base-setup" (Join-Path $PSScriptRoot "setup.iss")
+        & $Iscc /Q "/DAppVersion=$version" "/DAppVerName=$appVerName" "/DSourceDir=$staging" `
+            "/DOutputDir=$OutputDir" "/DOutputBaseFilename=$base-setup" `
+            (Join-Path $PSScriptRoot "setup.iss")
     }
     $assets += Join-Path $OutputDir "$base-setup.exe"
 }

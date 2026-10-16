@@ -25,6 +25,15 @@ option(HELLO_INSTALL_TESTING "Install the helper libraries of the tests" OFF)
 option(HELLO_INSTALL_MSVC_RUNTIME "Install MSVC runtime" OFF)
 
 # ----------------------------------
+# Build Variables
+# ----------------------------------
+# The channel of the build: release for the tag of a version, ci for the other builds of the
+# workflow, and dev for a local build. A build of another channel than release is named by its
+# commit in the window titles, the About dialog and the release assets. See docs/Distribution.md.
+set(HELLO_BUILD_CHANNEL dev CACHE STRING "The channel of the build: release, ci or dev")
+set_property(CACHE HELLO_BUILD_CHANNEL PROPERTY STRINGS release ci dev)
+
+# ----------------------------------
 # CMake Settings
 # ----------------------------------
 if(MSVC)

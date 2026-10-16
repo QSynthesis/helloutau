@@ -2,12 +2,17 @@
 ; file. See docs/Distribution.md. The command line defines the following values:
 ;
 ;   AppVersion           HELLO_VERSION, such as 0.1.6.0
+;   AppVerName           the name of the build, such as HelloUtau 0.1.6.0, or HelloUtau CI 1a2b3c4
+;                        for a build of another channel than release, as the window titles show it
 ;   SourceDir            the deployed installation, which holds bin and lib
 ;   OutputDir            the directory of the installer
 ;   OutputBaseFilename   the file name of the installer without .exe
 
 #ifndef AppVersion
   #error AppVersion is not defined
+#endif
+#ifndef AppVerName
+  #error AppVerName is not defined
 #endif
 #ifndef SourceDir
   #error SourceDir is not defined
@@ -39,6 +44,8 @@ AppId={#AppId}
 AppMutex={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
+; The name in the wizard and in the list of installed programs
+AppVerName={#AppVerName}
 AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}/issues
