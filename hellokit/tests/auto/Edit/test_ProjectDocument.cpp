@@ -225,7 +225,7 @@ private Q_SLOTS:
         const auto document = ProjectDocument::open(path, nullptr, diagnostics);
         QVERIFY(document);
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
         QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("a|b.wav")));
         QCOMPARE(document->session()->snapshot().settings.outputFile, QStringLiteral("a|b.wav"));
         QVERIFY(!document->isModified());
@@ -243,7 +243,7 @@ private Q_SLOTS:
         const auto imported = ProjectDocument::open(ust, nullptr, ustDiagnostics);
         QVERIFY(imported);
         QVERIFY(std::any_of(ustDiagnostics.cbegin(), ustDiagnostics.cend(), [](const auto &d) {
-            return d.severity == DiagnosticSeverity::Warning &&
+            return d.severity == Diagnostic::Warning &&
                    d.message.contains(QStringLiteral("a|b.wav"));
         }));
         QCOMPARE(imported->session()->snapshot().settings.outputFile, QStringLiteral("a|b.wav"));

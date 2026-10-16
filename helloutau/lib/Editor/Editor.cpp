@@ -721,7 +721,7 @@ namespace hello::daw {
         auto document = kit::ProjectDocument::open(path, &selector, diagnostics);
         const auto title = tr("Open");
         const auto pathDiagnostic =
-            kit::Diagnostic{kit::DiagnosticSeverity::Note,
+            kit::Diagnostic{kit::Diagnostic::Note,
                             tr("File: %1").arg(normalizedPathText(path)), std::nullopt};
         if (!document) {
             // Without diagnostics, the user declined to choose an encoding, which is no error.

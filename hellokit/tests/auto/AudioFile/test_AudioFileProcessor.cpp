@@ -252,7 +252,7 @@ private Q_SLOTS:
         const auto result = Processor::processed(file, options, diagnostics);
         QVERIFY(result);
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.front().severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.front().severity, Diagnostic::Warning);
         QCOMPARE(read(*result).samples.front(), 32767.0f / 32768);
     }
 

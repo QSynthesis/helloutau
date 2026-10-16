@@ -57,14 +57,14 @@ namespace {
 
     void report(const DiagnosticList &diagnostics) {
         for (const auto &diagnostic : diagnostics) {
-            if (diagnostic.severity == DiagnosticSeverity::Note) {
+            if (diagnostic.severity == Diagnostic::Note) {
                 continue;
             }
             const auto note = diagnostic.noteIndex
                                   ? " (note " + std::to_string(*diagnostic.noteIndex + 1) + ")"
                                   : std::string();
             stdc::console::u8fprintf(stderr, "%s: %s%s\n",
-                                     diagnostic.severity == DiagnosticSeverity::Error ? "error"
+                                     diagnostic.severity == Diagnostic::Error ? "error"
                                                                                       : "warning",
                                      toStd(diagnostic.message).c_str(), note.c_str());
         }

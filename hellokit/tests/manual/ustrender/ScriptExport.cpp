@@ -476,9 +476,9 @@ int ScriptExport::write(const SynthPlan &plan) const {
     const Layout layout(*this, plan);
 
     const auto batchSyntax =
-        ShellSyntax(ClassicSynthRunner::ScriptShell::Batch, ClassicSynthRunner::Quoting::Escaped);
+        ShellSyntax(ClassicSynthRunner::Batch, ClassicSynthRunner::Escaped);
     const auto shellSyntax =
-        ShellSyntax(ClassicSynthRunner::ScriptShell::Posix, ClassicSynthRunner::Quoting::Escaped);
+        ShellSyntax(ClassicSynthRunner::Posix, ClassicSynthRunner::Escaped);
     const auto batch = ScriptWriter(layout, batchSyntax, *this).text();
     if (!batch) {
         return 1;

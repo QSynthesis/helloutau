@@ -274,7 +274,7 @@ namespace hello::daw {
         }
         const auto ignored = [&](const QString &section) {
             diagnostics.push_back(
-                {kit::DiagnosticSeverity::Warning,
+                {kit::Diagnostic::Warning,
                  tr("The section %1 written by the plugin has no corresponding note and was "
                     "ignored.")
                      .arg(section)});

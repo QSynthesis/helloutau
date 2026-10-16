@@ -39,7 +39,7 @@ namespace hello::daw {
         constexpr char OutputFileName[] = "temp.wav";
 
         void fail(kit::DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({kit::Diagnostic::Error, message, std::nullopt});
         }
 
         // Returns the folder of the file of document, against which $patch is resolved, or an
@@ -1177,7 +1177,7 @@ namespace hello::daw {
             if (fs::remove(it->path(), removal)) {
                 ++deleted;
             } else {
-                diagnostics.push_back({kit::DiagnosticSeverity::Warning,
+                diagnostics.push_back({kit::Diagnostic::Warning,
                                        tr("\"%1\" could not be deleted.")
                                            .arg(QDir::toNativeSeparators(
                                                QString::fromStdU16String(it->path().u16string()))),

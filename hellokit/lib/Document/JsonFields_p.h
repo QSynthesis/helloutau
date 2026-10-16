@@ -18,11 +18,11 @@ namespace hello::kit {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::JsonFields)
     public:
         static inline void fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Error, message, std::nullopt});
         }
 
         static inline void complain(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Warning, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Warning, message, std::nullopt});
         }
 
         /// Returns the number in the field \a key, or \c std::nullopt if the field is absent or

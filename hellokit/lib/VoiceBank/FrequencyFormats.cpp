@@ -78,7 +78,7 @@ namespace hello::kit {
         QFile file(text);
         if (!file.open(QIODevice::ReadOnly)) {
             diagnostics.push_back(
-                {DiagnosticSeverity::Error, tr("\"%1\" could not be read.").arg(text)});
+                {Diagnostic::Error, tr("\"%1\" could not be read.").arg(text)});
             return std::nullopt;
         }
         return file.readAll();
@@ -86,7 +86,7 @@ namespace hello::kit {
 
     std::optional<FrequencyMap> FrequencyFormat::damaged(const std::filesystem::path &path,
                                                          DiagnosticList &diagnostics) {
-        diagnostics.push_back({DiagnosticSeverity::Error,
+        diagnostics.push_back({Diagnostic::Error,
                                tr("\"%1\" is no frequency map of its format, or it is incomplete.")
                                    .arg(QString::fromStdU16String(path.u16string()))});
         return std::nullopt;
@@ -106,7 +106,7 @@ namespace hello::kit {
 
     std::nullopt_t FrequencyFormat::unwritable(const std::filesystem::path &wav,
                                                const QString &reason, DiagnosticList &diagnostics) {
-        diagnostics.push_back({DiagnosticSeverity::Error,
+        diagnostics.push_back({Diagnostic::Error,
                                tr("The frequency map of \"%1\" cannot be written. %2")
                                    .arg(QString::fromStdU16String(wav.u16string()), reason)});
         return std::nullopt;
@@ -136,7 +136,7 @@ namespace hello::kit {
                                         DiagnosticList &diagnostics) const {
         Q_UNUSED(directory);
         Q_UNUSED(writes);
-        diagnostics.push_back({DiagnosticSeverity::Error,
+        diagnostics.push_back({Diagnostic::Error,
                                tr("The format %1 does not support writing maps.").arg(name())});
         return std::nullopt;
     }
@@ -154,7 +154,7 @@ namespace hello::kit {
                                           const std::filesystem::path &path,
                                           DiagnosticList &diagnostics) const {
         Q_UNUSED(directory);
-        diagnostics.push_back({DiagnosticSeverity::Error,
+        diagnostics.push_back({Diagnostic::Error,
                                tr("The format %1 does not support repairing \"%2\".")
                                    .arg(name(), QString::fromStdU16String(path.u16string()))});
         return std::nullopt;
@@ -204,7 +204,7 @@ namespace hello::kit {
             const auto to = sidecarNameOf(rename.to);
             if (!from || !to) {
                 diagnostics.push_back(
-                    {DiagnosticSeverity::Warning,
+                    {Diagnostic::Warning,
                      tr("The maps of the format %1 cannot be renamed with their audio files.")
                          .arg(name())});
                 return std::nullopt;
@@ -226,7 +226,7 @@ namespace hello::kit {
             const auto sidecar = sidecarNameOf(wav);
             if (!sidecar) {
                 diagnostics.push_back(
-                    {DiagnosticSeverity::Warning,
+                    {Diagnostic::Warning,
                      tr("The maps of the format %1 cannot be removed.").arg(name())});
                 return std::nullopt;
             }
@@ -416,7 +416,7 @@ namespace hello::kit {
                                    DiagnosticList &diagnostics) {
         namespace fs = std::filesystem;
         const auto fail = [&diagnostics](const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message});
+            diagnostics.push_back({Diagnostic::Error, message});
             return false;
         };
         bool done = true;

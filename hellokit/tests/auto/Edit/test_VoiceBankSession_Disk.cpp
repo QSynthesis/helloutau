@@ -813,7 +813,7 @@ private Q_SLOTS:
             &formats, diagnostics));
         QCOMPARE(read(QString::fromUtf8("あ.wav")), QByteArray("RIFF"));
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
     }
 
     // 你 in GBK is an invalid byte sequence in Shift_JIS, so it has no restored name.

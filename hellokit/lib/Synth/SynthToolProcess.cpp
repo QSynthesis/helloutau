@@ -29,7 +29,7 @@ namespace hello::kit {
     namespace {
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message});
+            diagnostics.push_back({Diagnostic::Error, message});
         }
 
         // The interval in milliseconds at which a running synth tool or script is checked for

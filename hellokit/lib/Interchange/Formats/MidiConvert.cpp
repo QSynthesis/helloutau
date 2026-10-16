@@ -18,7 +18,7 @@ namespace hello::kit {
         constexpr char OptionEncoding[] = "encoding";
         constexpr char OptionDefaultLyric[] = "defaultLyric";
 
-        void say(DiagnosticList &diagnostics, DiagnosticSeverity severity, const QString &message,
+        void say(DiagnosticList &diagnostics, Diagnostic::Severity severity, const QString &message,
                  std::optional<int> noteIndex = std::nullopt) {
             diagnostics.push_back({severity, message, noteIndex});
         }
@@ -90,7 +90,7 @@ namespace hello::kit {
                 }
             }
             if (unfinished > 0) {
-                say(diagnostics, DiagnosticSeverity::Warning,
+                say(diagnostics, Diagnostic::Warning,
                     MidiReader::tr(
                         "%1 notes had no note-off event and were extended to the end of the track.")
                         .arg(unfinished));
@@ -159,11 +159,11 @@ namespace hello::kit {
                                                          DiagnosticList &diagnostics) {
         Midi::MidiFile midi;
         if (!midi.load(path)) {
-            say(diagnostics, DiagnosticSeverity::Error, tr("This is not a MIDI file."));
+            say(diagnostics, Diagnostic::Error, tr("This is not a MIDI file."));
             return std::nullopt;
         }
         if (midi.divisionType() != Midi::MidiFile::PPQ) {
-            say(diagnostics, DiagnosticSeverity::Error,
+            say(diagnostics, Diagnostic::Error,
                 tr("This MIDI file uses SMPTE time division, which cannot be converted into bars "
                    "and beats."));
             return std::nullopt;
@@ -214,7 +214,7 @@ namespace hello::kit {
         Q_UNUSED(source)
 
         if (request.entries.isEmpty()) {
-            say(diagnostics, DiagnosticSeverity::Error, tr("No track was selected."));
+            say(diagnostics, Diagnostic::Error, tr("No track was selected."));
             return std::nullopt;
         }
 
@@ -223,12 +223,12 @@ namespace hello::kit {
         // unrelated calls.
         Midi::MidiFile midi;
         if (!midi.load(path)) {
-            say(diagnostics, DiagnosticSeverity::Error, tr("This is not a MIDI file."));
+            say(diagnostics, Diagnostic::Error, tr("This is not a MIDI file."));
             return std::nullopt;
         }
         const int resolution = midi.resolution();
         if (resolution <= 0) {
-            say(diagnostics, DiagnosticSeverity::Error,
+            say(diagnostics, Diagnostic::Error,
                 tr("This MIDI file does not specify a time division."));
             return std::nullopt;
         }
@@ -241,7 +241,7 @@ namespace hello::kit {
         };
 
         if (request.entries.size() > 1) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("A project contains one track, so only the first selected track was imported."));
         }
         const int wantedTrack = request.entries.first();
@@ -250,7 +250,7 @@ namespace hello::kit {
             request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
                 .toString());
         if (!codec.isValid()) {
-            say(diagnostics, DiagnosticSeverity::Error,
+            say(diagnostics, Diagnostic::Error,
                 tr("The selected encoding is not available."));
             return std::nullopt;
         }
@@ -366,22 +366,22 @@ namespace hello::kit {
         }
 
         if (chordNotes > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 notes started at the same time as another note and were omitted, because a "
                    "track is monophonic.")
                     .arg(chordNotes));
         }
         if (shortened > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 notes were shortened because the next note started before they ended.")
                     .arg(shortened));
         }
         if (dropped > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 notes were too short and were omitted.").arg(dropped));
         }
         if (clamped > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 notes were outside the keyboard range and were moved to the nearest end of "
                    "the range.")
                     .arg(clamped));
@@ -414,7 +414,7 @@ namespace hello::kit {
             note.lyric = decode(lyric.text);
         }
         if (unplaced > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 lyrics did not coincide with any note and were omitted.").arg(unplaced));
         }
 
@@ -440,13 +440,13 @@ namespace hello::kit {
             }
         }
         if (moved > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 tempo changes did not coincide with a note and were moved to the next note.")
                     .arg(moved));
         }
 
         if (undecodable > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 text items are not valid %2 and were omitted. This usually indicates that "
                    "the selected encoding does not match the file.")
                     .arg(undecodable)
@@ -493,7 +493,7 @@ namespace hello::kit {
     bool MidiWriter::convert(const Project &project, const std::filesystem::path &path,
                              const ExportRequest &request, DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
-            say(diagnostics, DiagnosticSeverity::Error,
+            say(diagnostics, Diagnostic::Error,
                 tr("A MIDI file is exported from exactly one track, but this project contains %1.")
                     .arg(project.tracks.size()));
             return false;
@@ -503,7 +503,7 @@ namespace hello::kit {
             request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
                 .toString());
         if (!codec.isValid()) {
-            say(diagnostics, DiagnosticSeverity::Error,
+            say(diagnostics, Diagnostic::Error,
                 tr("The selected encoding is not available."));
             return false;
         }
@@ -511,7 +511,7 @@ namespace hello::kit {
         // Reported on every export, because it is a property of the format rather than an
         // error. Every rendering parameter of UTAU resides in entries that MIDI cannot
         // represent.
-        say(diagnostics, DiagnosticSeverity::Warning,
+        say(diagnostics, Diagnostic::Warning,
             tr("A MIDI file contains only notes and lyrics. The envelope, vibrato, pitch curve, "
                "flags and per-note parameters were omitted."));
 
@@ -562,20 +562,20 @@ namespace hello::kit {
         }
 
         if (unrepresentable > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 lyrics cannot be represented in %2 and were written as question marks.")
                     .arg(unrepresentable)
                     .arg(codec.name()));
         }
         if (unwritable > 0) {
-            say(diagnostics, DiagnosticSeverity::Warning,
+            say(diagnostics, Diagnostic::Warning,
                 tr("%1 notes were outside the MIDI note range and were moved to the nearest end of "
                    "the range.")
                     .arg(unwritable));
         }
 
         if (!midi.save(path)) {
-            say(diagnostics, DiagnosticSeverity::Error, tr("This file could not be written."));
+            say(diagnostics, Diagnostic::Error, tr("This file could not be written."));
             return false;
         }
         return true;

@@ -25,7 +25,7 @@ namespace hello::kit::edit {
 
         Diagnostic errorOf(const QString &message) {
             Diagnostic diagnostic;
-            diagnostic.severity = DiagnosticSeverity::Error;
+            diagnostic.severity = Diagnostic::Error;
             diagnostic.message = message;
             return diagnostic;
         }

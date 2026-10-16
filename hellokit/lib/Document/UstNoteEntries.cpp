@@ -114,7 +114,7 @@ namespace hello::kit {
         }
 
         void addError(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Error, message, std::nullopt});
         }
 
         const TextCodec &utf8() {
@@ -275,7 +275,7 @@ namespace hello::kit {
     DiagnosticList UstNoteEntries::utauChangesOf(const QMap<QString, QString> &userData) {
         DiagnosticList warnings;
         const auto warn = [&warnings](const QString &message) {
-            warnings.push_back({DiagnosticSeverity::Warning, message, std::nullopt});
+            warnings.push_back({Diagnostic::Warning, message, std::nullopt});
         };
         for (auto it = userData.cbegin(); it != userData.cend(); ++it) {
             const auto &key = it.key();

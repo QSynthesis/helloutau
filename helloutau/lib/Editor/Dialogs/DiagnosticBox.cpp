@@ -10,14 +10,14 @@ namespace hello::daw {
 
         // The icon of the most severe of diagnostics
         QMessageBox::Icon iconOf(const kit::DiagnosticList &diagnostics) {
-            auto severity = kit::DiagnosticSeverity::Note;
+            auto severity = kit::Diagnostic::Note;
             for (const auto &diagnostic : diagnostics) {
                 severity = std::max(severity, diagnostic.severity);
             }
             switch (severity) {
-                case kit::DiagnosticSeverity::Error:
+                case kit::Diagnostic::Error:
                     return QMessageBox::Critical;
-                case kit::DiagnosticSeverity::Warning:
+                case kit::Diagnostic::Warning:
                     return QMessageBox::Warning;
                 default:
                     return QMessageBox::Information;

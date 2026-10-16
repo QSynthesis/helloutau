@@ -50,13 +50,13 @@ namespace {
         for (const auto &diagnostic : diagnostics) {
             const char *level = "note";
             switch (diagnostic.severity) {
-                case DiagnosticSeverity::Warning:
+                case Diagnostic::Warning:
                     level = "warning";
                     break;
-                case DiagnosticSeverity::Error:
+                case Diagnostic::Error:
                     level = "error";
                     break;
-                case DiagnosticSeverity::Note:
+                case Diagnostic::Note:
                     break;
             }
             const auto note = diagnostic.noteIndex

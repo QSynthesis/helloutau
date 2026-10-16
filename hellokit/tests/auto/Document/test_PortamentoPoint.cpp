@@ -38,7 +38,7 @@ private Q_SLOTS:
         QCOMPARE(point.y, 5.0);
         QCOMPARE(point.type, PortamentoPoint::S);
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
     }
 
     // Each segment is drawn in the type of the point that ends it, with the shapes of

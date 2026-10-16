@@ -857,7 +857,7 @@ private Q_SLOTS:
         playback.updatePlan(*document);
         kit::DiagnosticList failed;
         QTRY_VERIFY((failed.append(playback.takePreviewDiagnostics()), !failed.isEmpty()));
-        QCOMPARE(failed.last().severity, kit::DiagnosticSeverity::Warning);
+        QCOMPARE(failed.last().severity, kit::Diagnostic::Warning);
         QVERIFY(failed.last().noteIndex == 1);
         // As the synth has them
         QCOMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Failed}));

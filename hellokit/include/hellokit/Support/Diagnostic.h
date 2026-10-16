@@ -10,19 +10,6 @@
 
 namespace hello::kit {
 
-    enum class DiagnosticSeverity {
-        /// The operation made a decision or omitted something, and the result still matches the
-        /// request. Choices made on behalf of the user are reported at this level.
-        Note,
-
-        /// The result is usable but deviates from the input. Data dropped by a lossy conversion
-        /// is reported at this level.
-        Warning,
-
-        /// The operation produced no result.
-        Error,
-    };
-
     /// A user-facing message about a completed operation.
     ///
     /// Reading a project, scanning a voice bank and converting a foreign format may each drop or
@@ -33,7 +20,20 @@ namespace hello::kit {
     /// \note Messages are displayed to the user and are phrased accordingly. A message describes
     ///       the effect on the user's data, not the function that detected it.
     struct Diagnostic {
-        DiagnosticSeverity severity = DiagnosticSeverity::Note;
+        enum Severity {
+            /// The operation made a decision or omitted something, and the result still matches the
+            /// request. Choices made on behalf of the user are reported at this level.
+            Note,
+
+            /// The result is usable but deviates from the input. Data dropped by a lossy conversion
+            /// is reported at this level.
+            Warning,
+
+            /// The operation produced no result.
+            Error,
+        };
+
+        Severity severity = Note;
         QString message;
 
         /// The index of the affected note, if any. The index refers to the track produced by the

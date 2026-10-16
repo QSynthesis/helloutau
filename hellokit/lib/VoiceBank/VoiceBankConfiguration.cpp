@@ -26,11 +26,11 @@ namespace hello::kit {
         constexpr char FormatName[] = "hello-voicebank";
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message});
+            diagnostics.push_back({Diagnostic::Error, message});
         }
 
         void complain(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Warning, message});
+            diagnostics.push_back({Diagnostic::Warning, message});
         }
 
         bool isAscii(QStringView text) {

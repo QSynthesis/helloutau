@@ -10,7 +10,7 @@ namespace hello::kit {
     namespace {
 
         bool fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Error, message, std::nullopt});
             return false;
         }
 

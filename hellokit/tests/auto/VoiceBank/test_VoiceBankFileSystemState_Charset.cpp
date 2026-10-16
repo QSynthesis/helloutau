@@ -92,7 +92,7 @@ private:
         bank.setDirectory(index, directory);
     }
 
-    static int count(const DiagnosticList &diagnostics, DiagnosticSeverity severity) {
+    static int count(const DiagnosticList &diagnostics, Diagnostic::Severity severity) {
         return int(
             std::count_if(diagnostics.begin(), diagnostics.end(),
                           [severity](const Diagnostic &d) { return d.severity == severity; }));
@@ -237,7 +237,7 @@ private Q_SLOTS:
         QCOMPARE(bank.character().name, kGePing);
         QVERIFY(bank.readme().contains(QChar::ReplacementCharacter));
         QCOMPARE(bank.directories().at(0).charset, name("UTF-8"));
-        QCOMPARE(count(diagnostics, DiagnosticSeverity::Warning), 2);
+        QCOMPARE(count(diagnostics, Diagnostic::Warning), 2);
         QCOMPARE(diagnostics.size(), 2);
 
         // A modified entry is written with the declaration, the readme is left as it is, and the
@@ -495,7 +495,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(files.reread(bank, bank.directories().at(0).path, QStringLiteral("UTF-8"),
                              diagnostics));
-        QCOMPARE(count(diagnostics, DiagnosticSeverity::Warning), 1);
+        QCOMPARE(count(diagnostics, Diagnostic::Warning), 1);
         QVERIFY(bank.samples().at(0).alias.contains(QChar::ReplacementCharacter));
         QVERIFY(files.save(bank, filesOf({}, {Source::Config}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
@@ -516,7 +516,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QVERIFY(!bank.directories().at(0).leftOut);
-        QCOMPARE(count(diagnostics, DiagnosticSeverity::Warning), 2);
+        QCOMPARE(count(diagnostics, Diagnostic::Warning), 2);
         QVERIFY(bank.find(60, QStringLiteral("b")));
         QVERIFY(bank.find(60, kA + QChar(QChar::ReplacementCharacter)));
         QCOMPARE(bank.readme(), kA + QChar(QChar::ReplacementCharacter) + QLatin1Char(' ') + kA);
@@ -566,7 +566,7 @@ private Q_SLOTS:
         diagnostics.clear();
         QVERIFY(!files.save(bank, filesOf({}, {Source::Oto, Source::Readme, Source::Character}),
                             diagnostics));
-        QCOMPARE(count(diagnostics, DiagnosticSeverity::Error), 3);
+        QCOMPARE(count(diagnostics, Diagnostic::Error), 3);
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(read(QStringLiteral("readme.txt")), readme);
         QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=b\r\n"));
@@ -585,7 +585,7 @@ private Q_SLOTS:
         bank.setDirectory(0, directory);
         DiagnosticList diagnostics;
         QVERIFY(!opened->files.save(bank, filesOf({}, {Source::Readme}), diagnostics));
-        QCOMPARE(count(diagnostics, DiagnosticSeverity::Error), 1);
+        QCOMPARE(count(diagnostics, Diagnostic::Error), 1);
         QCOMPARE(read(QStringLiteral("readme.txt")), readme);
     }
 

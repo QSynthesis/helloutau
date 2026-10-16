@@ -67,13 +67,13 @@ namespace {
         for (const auto &diagnostic : diagnostics) {
             const char *level = "note";
             switch (diagnostic.severity) {
-                case DiagnosticSeverity::Warning:
+                case Diagnostic::Warning:
                     level = "warning";
                     break;
-                case DiagnosticSeverity::Error:
+                case Diagnostic::Error:
                     level = "error";
                     break;
-                case DiagnosticSeverity::Note:
+                case Diagnostic::Note:
                     break;
             }
             const auto where = line > 0 ? "line " + std::to_string(line) + ": " : std::string();
@@ -173,14 +173,14 @@ namespace {
             count = value.isDouble() ? value.toInt(-1) : -1;
             if (count < 1 || double(count) != value.toDouble()) {
                 diagnostics.push_back(
-                    {DiagnosticSeverity::Error,
+                    {Diagnostic::Error,
                      QStringLiteral("The count of %1 must be a positive integer or all.")
                          .arg(undo ? QStringLiteral("undo") : QStringLiteral("redo")),
                      std::nullopt});
                 return false;
             }
         } else if (!arguments.isEmpty()) {
-            diagnostics.push_back({DiagnosticSeverity::Error,
+            diagnostics.push_back({Diagnostic::Error,
                                    QStringLiteral("Usage: %1 [<count>|all]")
                                        .arg(undo ? QStringLiteral("undo") : QStringLiteral("redo")),
                                    std::nullopt});

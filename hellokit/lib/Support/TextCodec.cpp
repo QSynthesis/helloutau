@@ -86,7 +86,7 @@ namespace hello::kit {
         const QString requested = name.isEmpty() ? systemName() : name;
 
         if (const auto found = QStringConverter::encodingForName(requested)) {
-            m_path = Path::Builtin;
+            m_path = Builtin;
             m_builtin = *found;
             m_name = QString::fromLatin1(QStringConverter::nameForEncoding(*found));
             return;
@@ -96,14 +96,14 @@ namespace hello::kit {
         if (const auto page = findCodePage(requested)) {
             canonical = QLatin1String(page->canonical);
             if (winacp::codePageFromNumber(page->number)) {
-                m_path = Path::AnsiCodePage;
+                m_path = AnsiCodePage;
                 m_codePage = page->number;
                 m_name = canonical;
                 return;
             }
 #ifdef _WIN32
             if (::IsValidCodePage(UINT(page->number))) {
-                m_path = Path::WindowsCodePage;
+                m_path = WindowsCodePage;
                 m_codePage = page->number;
                 m_name = canonical;
                 return;
@@ -114,14 +114,14 @@ namespace hello::kit {
         // All other encodings, if ICU is available.
         QStringDecoder byName(requested);
         if (byName.isValid()) {
-            m_path = Path::ByName;
+            m_path = ByName;
             m_converterName = requested;
             m_name = canonical.isEmpty() ? QString::fromLatin1(byName.name()) : canonical;
         }
     }
 
     bool TextCodec::isValid() const {
-        return m_path != Path::Invalid;
+        return m_path != Invalid;
     }
 
     QString TextCodec::name() const {
@@ -129,11 +129,11 @@ namespace hello::kit {
     }
 
     bool TextCodec::isUtf8() const {
-        return m_path == Path::Builtin && m_builtin == QStringConverter::Utf8;
+        return m_path == Builtin && m_builtin == QStringConverter::Utf8;
     }
 
     std::optional<QString> TextCodec::decode(QByteArrayView bytes) const {
-        if (m_path == Path::Invalid) {
+        if (m_path == Invalid) {
             return std::nullopt;
         }
         if (bytes.isEmpty()) {
@@ -143,13 +143,13 @@ namespace hello::kit {
         switch (m_path) {
             // The decoder is stateless, so that a sequence cut off at the end is an error rather
             // than state kept for a call that never comes.
-            case Path::Builtin: {
+            case Builtin: {
                 QStringDecoder decoder(m_builtin, QStringConverter::Flag::Stateless);
                 QString text = decoder.decode(bytes);
                 return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
             }
 
-            case Path::AnsiCodePage: {
+            case AnsiCodePage: {
                 // The conversion is atomic, because an invalid byte sequence indicates an
                 // incorrect encoding choice.
                 const auto text =
@@ -162,7 +162,7 @@ namespace hello::kit {
             }
 
 #ifdef _WIN32
-            case Path::WindowsCodePage: {
+            case WindowsCodePage: {
                 // MB_ERR_INVALID_CHARS makes the conversion fail instead of substituting, which is
                 // required because invalid bytes indicate an incorrect encoding choice.
                 const int length =
@@ -179,7 +179,7 @@ namespace hello::kit {
             }
 #endif
 
-            case Path::ByName: {
+            case ByName: {
                 QStringDecoder decoder(m_converterName, QStringConverter::Flag::Stateless);
                 QString text = decoder.decode(bytes);
                 return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
@@ -196,7 +196,7 @@ namespace hello::kit {
         QString text;
         if (const auto whole = decode(bytes)) {
             text = *whole;
-        } else if (m_path != Path::Invalid) {
+        } else if (m_path != Invalid) {
             // Each position is decoded as the shortest sequence that is valid by itself. Four
             // bytes is the longest character of every supported encoding, reached by UTF-8 and
             // GB18030.
@@ -232,12 +232,12 @@ namespace hello::kit {
         }
 
         switch (m_path) {
-            case Path::Builtin: {
+            case Builtin: {
                 QStringEncoder encoder(m_builtin);
                 return encoder.encode(text);
             }
 
-            case Path::AnsiCodePage: {
+            case AnsiCodePage: {
                 // A question mark for each unrepresentable code unit, as Windows writes.
                 // canEncode() detects the substitution by comparison.
                 const std::string written = winacp::encode(
@@ -249,7 +249,7 @@ namespace hello::kit {
             }
 
 #ifdef _WIN32
-            case Path::WindowsCodePage: {
+            case WindowsCodePage: {
                 const auto wide = reinterpret_cast<const wchar_t *>(text.utf16());
                 const int size = ::WideCharToMultiByte(UINT(m_codePage), 0, wide, int(text.size()),
                                                        nullptr, 0, nullptr, nullptr);
@@ -263,7 +263,7 @@ namespace hello::kit {
             }
 #endif
 
-            case Path::ByName: {
+            case ByName: {
                 QStringEncoder encoder(m_converterName);
                 return encoder.encode(text);
             }
@@ -275,7 +275,7 @@ namespace hello::kit {
     }
 
     bool TextCodec::canEncode(QStringView text) const {
-        if (m_path == Path::Invalid) {
+        if (m_path == Invalid) {
             return false;
         }
         if (text.isEmpty()) {

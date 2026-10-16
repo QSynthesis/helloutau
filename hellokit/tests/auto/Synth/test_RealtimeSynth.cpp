@@ -371,7 +371,7 @@ private Q_SLOTS:
         QVERIFY(rt->waitReady(0, rt->length(), std::chrono::seconds(10)));
         const auto diagnostics = rt->takeDiagnostics();
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.front().severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.front().severity, Diagnostic::Warning);
         QCOMPARE(diagnostics.front().noteIndex, std::optional<int>(1));
         QVERIFY(rt->takeDiagnostics().isEmpty());
         const auto failures = rt->takeFailures();

@@ -49,7 +49,7 @@ namespace {
         return options;
     }
 
-    bool has(const kit::DiagnosticList &diagnostics, kit::DiagnosticSeverity severity) {
+    bool has(const kit::DiagnosticList &diagnostics, kit::Diagnostic::Severity severity) {
         return std::any_of(diagnostics.begin(), diagnostics.end(),
                            [severity](const auto &d) { return d.severity == severity; });
     }
@@ -83,7 +83,7 @@ private Q_SLOTS:
             QCOMPARE(range->first, c.first);
             QCOMPARE(range->count, 2);
             QCOMPARE(lyricsOf(session), c.lyrics);
-            QVERIFY(!has(diagnostics, kit::DiagnosticSeverity::Warning));
+            QVERIFY(!has(diagnostics, kit::Diagnostic::Warning));
 
             session.undo();
             QCOMPARE(lyricsOf(session), QStringList({"a", "b", "c", "d"}));
@@ -116,7 +116,7 @@ private Q_SLOTS:
                                                   at(ImportMerge::AtEnd), diagnostics);
             QVERIFY(range);
             QCOMPARE(range->count, 0);
-            QVERIFY(has(diagnostics, kit::DiagnosticSeverity::Warning));
+            QVERIFY(has(diagnostics, kit::Diagnostic::Warning));
             QVERIFY(!session.canUndo());
         }
     }
@@ -188,8 +188,8 @@ private Q_SLOTS:
             kit::DiagnosticList diagnostics;
             ImportMerge::merge(imported, kit::ProjectRef(&session), at(ImportMerge::AtEnd),
                                diagnostics);
-            QVERIFY(has(diagnostics, kit::DiagnosticSeverity::Note));
-            QVERIFY(has(diagnostics, kit::DiagnosticSeverity::Warning));
+            QVERIFY(has(diagnostics, kit::Diagnostic::Note));
+            QVERIFY(has(diagnostics, kit::Diagnostic::Warning));
             QVERIFY(!notesOf(session).first().pitchBend);
             QCOMPARE(session.snapshot().settings.name, QString());
         }
@@ -200,7 +200,7 @@ private Q_SLOTS:
             kit::DiagnosticList diagnostics;
             ImportMerge::merge(imported, kit::ProjectRef(&session), at(ImportMerge::AtEnd),
                                diagnostics);
-            QVERIFY(!has(diagnostics, kit::DiagnosticSeverity::Warning));
+            QVERIFY(!has(diagnostics, kit::Diagnostic::Warning));
             QVERIFY(notesOf(session).first().pitchBend);
         }
     }

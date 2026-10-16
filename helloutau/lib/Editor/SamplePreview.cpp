@@ -29,7 +29,7 @@ namespace hello::daw {
         constexpr char lyric[] = "la";
 
         void fail(kit::DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({kit::Diagnostic::Error, message, std::nullopt});
         }
 
         // One note to synthesize: its inputs, taken on the main thread, and its results, filled

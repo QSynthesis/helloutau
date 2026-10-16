@@ -118,7 +118,7 @@ namespace hello::daw {
         }
 
         static void fail(kit::DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({kit::Diagnostic::Error, message, std::nullopt});
         }
 
         std::optional<Request> parse(const QByteArray &line, kit::DiagnosticList &diagnostics) {

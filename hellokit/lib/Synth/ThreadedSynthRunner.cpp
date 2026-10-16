@@ -24,11 +24,11 @@ namespace hello::kit {
 
         void fail(DiagnosticList &diagnostics, const QString &message,
                   std::optional<int> noteIndex = std::nullopt) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, noteIndex});
+            diagnostics.push_back({Diagnostic::Error, message, noteIndex});
         }
 
         void complain(DiagnosticList &diagnostics, const QString &message, int noteIndex) {
-            diagnostics.push_back({DiagnosticSeverity::Warning, message, noteIndex});
+            diagnostics.push_back({Diagnostic::Warning, message, noteIndex});
         }
 
         QString displayed(const fs::path &path) {

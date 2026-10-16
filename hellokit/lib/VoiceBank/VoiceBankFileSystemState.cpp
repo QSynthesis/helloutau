@@ -23,11 +23,11 @@ namespace hello::kit {
     namespace {
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message});
+            diagnostics.push_back({Diagnostic::Error, message});
         }
 
         void complain(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Warning, message});
+            diagnostics.push_back({Diagnostic::Warning, message});
         }
 
         QByteArrayView viewOf(const std::string &s) {
@@ -780,7 +780,7 @@ namespace hello::kit {
         const FileNameRecord &record, DiagnosticList *diagnostics) {
         const auto report = [&](const QString &message) {
             if (diagnostics) {
-                diagnostics->push_back({DiagnosticSeverity::Warning, message});
+                diagnostics->push_back({Diagnostic::Warning, message});
             }
         };
         const RecordedNames recorded(record);

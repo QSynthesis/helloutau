@@ -25,7 +25,7 @@ namespace hello::kit {
         }
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Error, message, std::nullopt});
         }
 
         // Reports an output file that is not a valid file name (see Project::isValidOutputFile()).
@@ -33,7 +33,7 @@ namespace hello::kit {
             const auto &file = project.settings.outputFile;
             if (!Project::isValidOutputFile(file)) {
                 diagnostics.push_back(
-                    {DiagnosticSeverity::Warning,
+                    {Diagnostic::Warning,
                      ProjectDocument::tr("The output file \"%1\" of the project is not a valid "
                                          "file name. It is kept in the project and not used.")
                          .arg(file),
@@ -57,7 +57,7 @@ namespace hello::kit {
         }
 
         void warn(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Warning, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Warning, message, std::nullopt});
         }
 
         QString displayed(const std::filesystem::path &path) {
@@ -288,8 +288,8 @@ namespace hello::kit {
                                      "will be asked again next time.")
                                       .arg(displayed(root)));
                 for (auto &diagnostic : saving) {
-                    if (diagnostic.severity == DiagnosticSeverity::Error) {
-                        diagnostic.severity = DiagnosticSeverity::Warning;
+                    if (diagnostic.severity == Diagnostic::Error) {
+                        diagnostic.severity = Diagnostic::Warning;
                     }
                     diagnostics.push_back(std::move(diagnostic));
                 }

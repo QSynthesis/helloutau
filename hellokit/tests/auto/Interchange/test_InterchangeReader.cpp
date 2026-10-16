@@ -25,7 +25,7 @@ namespace {
                                                  DiagnosticList &diagnostics) override {
             Q_UNUSED(path)
             if (!readable) {
-                diagnostics.push_back({DiagnosticSeverity::Error, QStringLiteral("no")});
+                diagnostics.push_back({Diagnostic::Error, QStringLiteral("no")});
                 return std::nullopt;
             }
             InterchangeSource source;

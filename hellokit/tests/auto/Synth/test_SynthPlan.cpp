@@ -355,7 +355,7 @@ private Q_SLOTS:
 
         QVERIFY(plan->steps().at(0).silent);
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
         QCOMPARE(diagnostics.at(0).noteIndex, 0);
     }
 

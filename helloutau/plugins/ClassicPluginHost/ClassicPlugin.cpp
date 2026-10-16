@@ -77,7 +77,7 @@ namespace hello::daw {
         QString execute;
         const auto unreadable = [&](const QString &reason) {
             diagnostics.push_back(
-                {kit::DiagnosticSeverity::Warning,
+                {kit::Diagnostic::Warning,
                  tr("The plugin in \"%1\" could not be read: %2").arg(textOf(folder), reason)});
             return std::nullopt;
         };

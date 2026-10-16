@@ -19,7 +19,7 @@ namespace hello::kit {
         }
         const auto fail = [&](const QString &reason) {
             diagnostics.push_back(
-                {DiagnosticSeverity::Error,
+                {Diagnostic::Error,
                  tr("The settings in \"%1\" could not be read (%2). The default settings apply, "
                     "and the next change of a setting replaces the file.")
                      .arg(QDir::toNativeSeparators(fileName), reason),

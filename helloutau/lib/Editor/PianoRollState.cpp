@@ -639,7 +639,7 @@ namespace hello::daw {
         auto &decl = *widget;
         QStringList messages;
         for (const auto &diagnostic : diagnostics) {
-            if (diagnostic.severity == kit::DiagnosticSeverity::Error) {
+            if (diagnostic.severity == kit::Diagnostic::Error) {
                 messages.push_back(diagnostic.message);
             }
         }

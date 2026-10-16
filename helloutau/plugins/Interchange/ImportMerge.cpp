@@ -10,7 +10,7 @@ namespace hello::daw {
 
     namespace {
 
-        void report(kit::DiagnosticList &diagnostics, kit::DiagnosticSeverity severity,
+        void report(kit::DiagnosticList &diagnostics, kit::Diagnostic::Severity severity,
                     const QString &message) {
             diagnostics.push_back({severity, message, std::nullopt});
         }
@@ -38,7 +38,7 @@ namespace hello::daw {
                                                          kit::DiagnosticList &diagnostics) {
         const auto current = project.toProject();
         if (imported.tracks.isEmpty() || current.tracks.isEmpty()) {
-            report(diagnostics, kit::DiagnosticSeverity::Error,
+            report(diagnostics, kit::Diagnostic::Error,
                    tr("The imported file has no track."));
             return std::nullopt;
         }
@@ -61,7 +61,7 @@ namespace hello::daw {
             dropped.push_back(tr("the flags \"%1\"").arg(imported.settings.flags));
         }
         if (!dropped.isEmpty()) {
-            report(diagnostics, kit::DiagnosticSeverity::Note,
+            report(diagnostics, kit::Diagnostic::Note,
                    tr("The settings of the imported project were discarded: %1.")
                        .arg(dropped.join(QStringLiteral(", "))));
         }
@@ -75,7 +75,7 @@ namespace hello::daw {
             notes.remove(0, rests);
         }
         if (notes.isEmpty()) {
-            report(diagnostics, kit::DiagnosticSeverity::Warning,
+            report(diagnostics, kit::Diagnostic::Warning,
                    tr("The imported file has no notes to insert."));
             return Range{};
         }
@@ -92,7 +92,7 @@ namespace hello::daw {
             }
         }
         if (pitchDropped) {
-            report(diagnostics, kit::DiagnosticSeverity::Warning,
+            report(diagnostics, kit::Diagnostic::Warning,
                    current.settings.mode2
                        ? tr("The Mode1 pitch of the imported notes was removed because this "
                             "project uses Mode2.")
@@ -117,7 +117,7 @@ namespace hello::daw {
                 break;
         }
         if (index < 0 || removed < 0 || index + removed > existing.size()) {
-            report(diagnostics, kit::DiagnosticSeverity::Error,
+            report(diagnostics, kit::Diagnostic::Error,
                    tr("The selection lies outside the track."));
             return std::nullopt;
         }

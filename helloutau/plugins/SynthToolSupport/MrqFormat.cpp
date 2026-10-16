@@ -74,7 +74,7 @@ namespace hello::daw {
         const auto at = find(*bytes, wav);
         if (!at) {
             diagnostics.push_back(
-                {kit::DiagnosticSeverity::Error,
+                {kit::Diagnostic::Error,
                  tr("\"%1\" has no entry for \"%2\".").arg(textOf(path), textOf(wav.filename()))});
             return std::nullopt;
         }

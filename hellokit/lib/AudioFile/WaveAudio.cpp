@@ -25,11 +25,11 @@ namespace hello::kit {
         constexpr int MaximumChannels = 32;
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Error, message, std::nullopt});
         }
 
         void warn(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Warning, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Warning, message, std::nullopt});
         }
 
         quint16 u16At(const char *data) {

@@ -34,13 +34,13 @@ namespace hello::daw {
             }
             auto item = new QListWidgetItem(text, list);
             switch (diagnostic.severity) {
-                case kit::DiagnosticSeverity::Error:
+                case kit::Diagnostic::Error:
                     item->setIcon(style->standardIcon(QStyle::SP_MessageBoxCritical));
                     break;
-                case kit::DiagnosticSeverity::Warning:
+                case kit::Diagnostic::Warning:
                     item->setIcon(style->standardIcon(QStyle::SP_MessageBoxWarning));
                     break;
-                case kit::DiagnosticSeverity::Note:
+                case kit::Diagnostic::Note:
                     item->setIcon(style->standardIcon(QStyle::SP_MessageBoxInformation));
                     break;
             }

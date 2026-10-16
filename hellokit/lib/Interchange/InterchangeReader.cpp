@@ -27,7 +27,7 @@ namespace hello::kit {
             // empty result indistinguishable from a cancellation.
             if (!hasError(result.diagnostics)) {
                 result.diagnostics.push_back({
-                    DiagnosticSeverity::Error,
+                    Diagnostic::Error,
                     tr("The file could not be read."),
                 });
             }
@@ -50,7 +50,7 @@ namespace hello::kit {
         result.project = convert(path, *source, *request, result.diagnostics);
         if (!result.project && !hasError(result.diagnostics)) {
             result.diagnostics.push_back({
-                DiagnosticSeverity::Error,
+                Diagnostic::Error,
                 tr("The file could not be converted."),
             });
         }

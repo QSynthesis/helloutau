@@ -63,7 +63,7 @@ private Q_SLOTS:
             DiagnosticList diagnostics;
             QVERIFY(!SettingsFile::read(fileName, diagnostics));
             QCOMPARE(diagnostics.size(), 1);
-            QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Error);
+            QCOMPARE(diagnostics.first().severity, Diagnostic::Error);
             QVERIFY(diagnostics.first().message.contains(QDir::toNativeSeparators(fileName)));
         }
     }

@@ -40,7 +40,7 @@ namespace hello::kit {
         using Quoting = ClassicSynthRunner::Quoting;
 
         ShellSyntax(ClassicSynthRunner::ScriptShell which, Quoting quoting)
-            : m_batch(which == ClassicSynthRunner::ScriptShell::Batch), m_quoting(quoting) {
+            : m_batch(which == ClassicSynthRunner::Batch), m_quoting(quoting) {
         }
 
         bool isBatch() const {
@@ -71,7 +71,7 @@ namespace hello::kit {
         /// \return the assignment, or \c std::nullopt if the value cannot be written
         std::optional<QString> assign(const char *name, const QString &value) const {
             const auto key = QLatin1String(name);
-            if (m_quoting == Quoting::Verbatim) {
+            if (m_quoting == ClassicSynthRunner::Verbatim) {
                 return m_batch ? QLatin1String("@set ") + key + QLatin1Char('=') + value
                                : QLatin1String("export ") + key + QLatin1Char('=') + value;
             }
@@ -108,7 +108,7 @@ namespace hello::kit {
         ///
         /// \return the assignment, or \c std::nullopt if the value cannot be written
         std::optional<QString> assignUnquoted(const char *name, const QString &value) const {
-            if (!m_batch || m_quoting == Quoting::Verbatim) {
+            if (!m_batch || m_quoting == ClassicSynthRunner::Verbatim) {
                 return assign(name, value);
             }
             if (!isWritable(value)) {

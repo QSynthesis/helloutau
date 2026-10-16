@@ -528,7 +528,7 @@ private Q_SLOTS:
         QVERIFY(invalid.has_value());
         QCOMPARE(invalid->settings.timeSignature, (TimeSignature{4, 4}));
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
     }
 };
 

@@ -134,7 +134,7 @@ private Q_SLOTS:
         QVERIFY(note.has_value());
         QVERIFY(!note->intensity.has_value());
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
     }
 
     // A name of a region must be writable to UST, which joins the names with | and drops empty

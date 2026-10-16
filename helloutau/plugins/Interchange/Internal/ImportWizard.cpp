@@ -194,7 +194,7 @@ namespace hello::daw {
                     m_step = m_state.stepPages->instantiate(stepId.toStdString()).release();
                     if (!m_step) {
                         m_state.diagnostics.push_back(
-                            {kit::DiagnosticSeverity::Note,
+                            {kit::Diagnostic::Note,
                              tr("The custom options page \"%1\" is not registered. The generated "
                                 "form was shown instead.")
                                  .arg(stepId),

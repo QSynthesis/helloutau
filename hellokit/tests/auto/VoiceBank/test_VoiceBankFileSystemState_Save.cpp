@@ -731,7 +731,7 @@ private Q_SLOTS:
         QVERIFY(saved.has_value());
         QVERIFY(QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.first().severity, Diagnostic::Warning);
     }
 
     // A directory is not created if a file of its name exists.

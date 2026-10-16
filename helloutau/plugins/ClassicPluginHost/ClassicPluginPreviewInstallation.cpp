@@ -36,7 +36,7 @@ namespace hello::daw {
         }
 
         void fail(kit::DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({kit::Diagnostic::Error, message, std::nullopt});
         }
 
         // Returns the plugin.json of folder, or std::nullopt if it does not exist or is no

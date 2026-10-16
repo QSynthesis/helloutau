@@ -230,7 +230,7 @@ namespace hello::daw {
         }
 
         static void fail(kit::DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({kit::Diagnostic::Error, message, std::nullopt});
         }
 
         // The entry of row in the tree: at its index while the tree holds it there, else the

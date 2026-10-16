@@ -121,7 +121,7 @@ private Q_SLOTS:
         QVERIFY(source.has_value());
         QVERIFY(!at(*source, std::filesystem::path("a") / "b"));
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
     }
 
     void a_directory_with_a_record_is_settled_and_one_without_is_not() {

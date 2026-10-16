@@ -16,11 +16,11 @@ namespace hello::kit {
     namespace {
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message});
+            diagnostics.push_back({Diagnostic::Error, message});
         }
 
         void complain(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Warning, message});
+            diagnostics.push_back({Diagnostic::Warning, message});
         }
 
         /// A non-owning view of \a s , for all read-only consumers.

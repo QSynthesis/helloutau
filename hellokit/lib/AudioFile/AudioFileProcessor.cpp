@@ -23,7 +23,7 @@ namespace hello::kit {
         }
 
         bool fail(DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
+            diagnostics.push_back({Diagnostic::Error, message, std::nullopt});
             return false;
         }
 
@@ -33,7 +33,7 @@ namespace hello::kit {
             DiagnosticList found;
             auto audio = WaveAudio::fromBytes(bytes, found);
             for (const auto &diagnostic : found) {
-                if (diagnostic.severity == DiagnosticSeverity::Error) {
+                if (diagnostic.severity == Diagnostic::Error) {
                     diagnostics.push_back(diagnostic);
                 }
             }
@@ -269,7 +269,7 @@ namespace hello::kit {
                                               [](float sample) { return std::abs(sample) > 1; });
             if (beyond > 0) {
                 diagnostics.push_back(
-                    {DiagnosticSeverity::Warning,
+                    {Diagnostic::Warning,
                      tr("%n sample(s) beyond full scale were limited.", nullptr, int(beyond)),
                      std::nullopt});
             }

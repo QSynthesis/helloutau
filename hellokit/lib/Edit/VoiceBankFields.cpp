@@ -127,7 +127,7 @@ namespace hello::kit {
             };
             if (!field(OtoEntrySlots::FileName).isString()) {
                 Diagnostic diagnostic;
-                diagnostic.severity = DiagnosticSeverity::Error;
+                diagnostic.severity = Diagnostic::Error;
                 diagnostic.message = VoiceBankFields::tr("An oto entry requires the field %1.")
                                          .arg(QLatin1String(OtoEntrySlots::FileName.name));
                 diagnostics.push_back(diagnostic);

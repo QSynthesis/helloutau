@@ -33,7 +33,7 @@ namespace hello::kit {
         result.written = convert(project, path, *request, result.diagnostics);
         if (!result.written && !hasError(result.diagnostics)) {
             result.diagnostics.push_back({
-                DiagnosticSeverity::Error,
+                Diagnostic::Error,
                 tr("The file could not be written."),
             });
         }

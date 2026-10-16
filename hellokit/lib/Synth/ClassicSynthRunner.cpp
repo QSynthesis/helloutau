@@ -24,7 +24,7 @@ namespace hello::kit {
 
         void fail(DiagnosticList &diagnostics, const QString &message,
                   std::optional<int> noteIndex = std::nullopt) {
-            diagnostics.push_back({DiagnosticSeverity::Error, message, noteIndex});
+            diagnostics.push_back({Diagnostic::Error, message, noteIndex});
         }
 
         QString displayed(const fs::path &path) {
@@ -132,9 +132,9 @@ namespace hello::kit {
 
     ClassicSynthRunner::ScriptShell ClassicSynthRunner::nativeShell() {
 #ifdef _WIN32
-        return ScriptShell::Batch;
+        return Batch;
 #else
-        return ScriptShell::Posix;
+        return Posix;
 #endif
     }
 
@@ -253,7 +253,7 @@ namespace hello::kit {
         // A synth tool run through Wine, such as moresampler, reads temp.bat in its working
         // directory, which is this directory.
         auto batchSelf = self;
-        batchSelf.shell = ScriptShell::Batch;
+        batchSelf.shell = Batch;
         const auto batch = batchSelf.scripts(plan, synthTools, diagnostics);
         if (!batch) {
             return std::nullopt;

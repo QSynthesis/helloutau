@@ -157,7 +157,7 @@ namespace hello::kit {
 
     private:
         // The conversion paths, in the order described in the implementation file.
-        enum class Path {
+        enum Path {
             Invalid,
             Builtin,
             AnsiCodePage,
@@ -165,7 +165,7 @@ namespace hello::kit {
             ByName,
         };
 
-        Path m_path = Path::Invalid;
+        Path m_path = Invalid;
         QString m_name;
         QStringConverter::Encoding m_builtin = QStringConverter::Utf8; // Path::Builtin
         // The code page number for Path::AnsiCodePage and Path::WindowsCodePage. For

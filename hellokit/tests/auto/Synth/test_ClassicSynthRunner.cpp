@@ -222,7 +222,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
@@ -269,7 +269,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
@@ -331,7 +331,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
@@ -372,8 +372,8 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
-        runner.quoting = ClassicSynthRunner::Quoting::Verbatim;
+        runner.shell = ClassicSynthRunner::Batch;
+        runner.quoting = ClassicSynthRunner::Verbatim;
 
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
@@ -389,7 +389,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         DiagnosticList diagnostics;
         QVERIFY(!runner.scripts(*plan, synthTools(), diagnostics).has_value());
         QVERIFY(hasError(diagnostics));
@@ -422,7 +422,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
@@ -464,7 +464,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
@@ -546,7 +546,7 @@ private Q_SLOTS:
 
         ClassicSynthRunner runner;
         runner.shell =
-            batch ? ClassicSynthRunner::ScriptShell::Batch : ClassicSynthRunner::ScriptShell::Posix;
+            batch ? ClassicSynthRunner::Batch : ClassicSynthRunner::Posix;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
@@ -599,13 +599,13 @@ private Q_SLOTS:
     // The same for a value without any other character that requires quotes, which a path on
     // Windows always has in its separators.
     void a_lone_quote_or_percent_sign_is_escaped() {
-        const ShellSyntax shell(ClassicSynthRunner::ScriptShell::Posix,
-                                ClassicSynthRunner::Quoting::Escaped);
+        const ShellSyntax shell(ClassicSynthRunner::Posix,
+                                ClassicSynthRunner::Escaped);
         QCOMPARE(shell.argument(QStringLiteral("it's")), QStringLiteral("'it'\\''s'"));
         QCOMPARE(shell.argument(QStringLiteral("100%")), QStringLiteral("100%"));
 
-        const ShellSyntax batch(ClassicSynthRunner::ScriptShell::Batch,
-                                ClassicSynthRunner::Quoting::Escaped);
+        const ShellSyntax batch(ClassicSynthRunner::Batch,
+                                ClassicSynthRunner::Escaped);
         QCOMPARE(batch.argument(QStringLiteral("100%")), QStringLiteral("100%%"));
         QCOMPARE(batch.argument(QStringLiteral("it's")), QStringLiteral("it's"));
     }
@@ -618,7 +618,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Posix;
+        runner.shell = ClassicSynthRunner::Posix;
 
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
@@ -665,7 +665,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Posix;
+        runner.shell = ClassicSynthRunner::Posix;
 
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
@@ -717,7 +717,7 @@ private Q_SLOTS:
         // Nonexistent synth tools still produce a script, because writing a script executes
         // nothing.
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         diagnostics.clear();
         QVERIFY(runner.scripts(*plan, synthTools(), diagnostics).has_value());
         QVERIFY(diagnostics.isEmpty());
@@ -932,7 +932,7 @@ private Q_SLOTS:
         QVERIFY(plan->steps().at(0).direct);
 
         ClassicSynthRunner runner;
-        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        runner.shell = ClassicSynthRunner::Batch;
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
         QVERIFY(written->first.contains(QLatin1String("@\"%tool%\" ")));

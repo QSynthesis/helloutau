@@ -23,7 +23,7 @@ namespace hello::kit {
         for (const auto &option : schema) {
             request.driverOptions.insert(option.key, option.defaultValue);
             diagnostics.push_back({
-                DiagnosticSeverity::Note,
+                Diagnostic::Note,
                 AutomaticSelector::tr("%1 was set to its default value, %2.")
                     .arg(option.name, option.defaultValue.toString()),
             });
@@ -43,7 +43,7 @@ namespace hello::kit {
 
         if (request.entries.size() < limits.minEntries) {
             diagnostics.push_back({
-                DiagnosticSeverity::Error,
+                Diagnostic::Error,
                 tr("The file contains nothing that can be imported."),
             });
             return std::nullopt;
@@ -51,7 +51,7 @@ namespace hello::kit {
 
         if (source.entries.size() > wanted) {
             diagnostics.push_back({
-                DiagnosticSeverity::Warning,
+                Diagnostic::Warning,
                 tr("The file contains %1 parts, and the first %2 were imported.")
                     .arg(source.entries.size())
                     .arg(wanted),

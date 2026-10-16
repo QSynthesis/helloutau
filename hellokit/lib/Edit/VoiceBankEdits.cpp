@@ -13,7 +13,7 @@ namespace hello::kit {
 
         bool fail(DiagnosticList &diagnostics, const QString &message) {
             Diagnostic diagnostic;
-            diagnostic.severity = DiagnosticSeverity::Error;
+            diagnostic.severity = Diagnostic::Error;
             diagnostic.message = message;
             diagnostics.push_back(diagnostic);
             return false;

@@ -194,7 +194,7 @@ private Q_SLOTS:
         const auto outcome = generator.generate(format, "resampler.exe", wavs, diagnostics);
         QCOMPARE(outcome.generated, 1);
         QCOMPARE(diagnostics.size(), 2);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
         QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("silent.wav")));
         QVERIFY(!diagnostics.at(0).message.contains(QStringLiteral("rendered")));
 
@@ -238,7 +238,7 @@ private Q_SLOTS:
         const auto outcome = generator.generate(format, "resampler.exe", wavs, diagnostics);
         QCOMPARE(outcome.generated, 0);
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Error);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Error);
         QCOMPARE(standIn->calls.size(), 1);
         QCOMPARE(outcome.failures.size(), 1);
         QVERIFY(!outcome.failures.at(0).run->started);

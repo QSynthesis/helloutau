@@ -18,7 +18,7 @@ namespace hello::kit {
         const auto root = opened.bank.indexOf({});
         if (root < 0 || !isEditable(opened.bank.directories().at(root))) {
             Diagnostic diagnostic;
-            diagnostic.severity = DiagnosticSeverity::Error;
+            diagnostic.severity = Diagnostic::Error;
             diagnostic.message = tr("The voice bank cannot be edited, because no encoding was "
                                     "specified for its folder.");
             diagnostics.push_back(diagnostic);
@@ -264,7 +264,7 @@ namespace hello::kit {
                 const auto restored = record.restore(name);
                 if (!restored) {
                     diagnostics.push_back(
-                        {DiagnosticSeverity::Error,
+                        {Diagnostic::Error,
                          tr("The name \"%1\" does not restore, so it cannot be renamed.")
                              .arg(name)});
                     valid = false;
@@ -534,7 +534,7 @@ namespace hello::kit {
             }
             if (path.empty()) {
                 Diagnostic diagnostic;
-                diagnostic.severity = DiagnosticSeverity::Warning;
+                diagnostic.severity = Diagnostic::Warning;
                 diagnostic.message = tr("The folder of the voice bank was not read again, because "
                                         "no encoding was selected for a text file in it, so the "
                                         "voice bank on disk is incomplete. The contents read "

@@ -68,7 +68,7 @@ namespace hello::kit {
         // folder at the end
         QTemporaryDir output(TemporaryStorage::templatePath(QStringLiteral("frequency")));
         if (!output.isValid()) {
-            diagnostics.push_back({DiagnosticSeverity::Error,
+            diagnostics.push_back({Diagnostic::Error,
                                    tr("A temporary folder for the resampler cannot be created.")});
             return outcome;
         }
@@ -141,7 +141,7 @@ namespace hello::kit {
                             // Every other call would fail alike.
                             stopped = true;
                             if (!unstarted.exchange(true)) {
-                                found.push_back({DiagnosticSeverity::Error,
+                                found.push_back({Diagnostic::Error,
                                                  tr("The resampler \"%1\" could not be started.")
                                                      .arg(displayed(resampler))});
                                 failure = failureOf(SynthFailure::Resampler, resampler,
@@ -179,7 +179,7 @@ namespace hello::kit {
                 continue;
             }
             // The output of the resampler is in its output log.
-            diagnostics.push_back({DiagnosticSeverity::Warning,
+            diagnostics.push_back({Diagnostic::Warning,
                                    tr("The resampler wrote no frequency map of \"%1\" "
                                       "(exit code %2).")
                                        .arg(displayed(wavs.at(call.index)))

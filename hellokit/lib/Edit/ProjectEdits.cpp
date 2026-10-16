@@ -16,7 +16,7 @@ namespace hello::kit {
         bool fail(DiagnosticList &diagnostics, const QString &message,
                   std::optional<int> noteIndex = std::nullopt) {
             Diagnostic diagnostic;
-            diagnostic.severity = DiagnosticSeverity::Error;
+            diagnostic.severity = Diagnostic::Error;
             diagnostic.message = message;
             diagnostic.noteIndex = noteIndex;
             diagnostics.push_back(diagnostic);
@@ -389,7 +389,7 @@ namespace hello::kit {
         if (changes.timeSignature && !TimeSignature::isValid(changes.timeSignature->numerator,
                                                              changes.timeSignature->denominator)) {
             diagnostics.push_back(
-                {DiagnosticSeverity::Error, tr("The time signature is not valid.")});
+                {Diagnostic::Error, tr("The time signature is not valid.")});
             return false;
         }
         // A transaction that changes nothing makes no step.

@@ -189,7 +189,7 @@ namespace hello::kit {
                 } else {
                     fragment.state = Failed;
                     diagnostics.append(synthToolDiagnostics);
-                    diagnostics.push_back({DiagnosticSeverity::Warning,
+                    diagnostics.push_back({Diagnostic::Warning,
                                            tr("This note could not be rendered, and is silent."),
                                            step.noteIndex});
                     if (step.resamples()) {
@@ -239,7 +239,7 @@ namespace hello::kit {
             auto call = WavtoolCall::parse(step.wavtoolArguments);
             if (!call) {
                 // Silent rather than misplaced: a call without an envelope contributes nothing.
-                unreadable.push_back({DiagnosticSeverity::Warning,
+                unreadable.push_back({Diagnostic::Warning,
                                       tr("The wavtool arguments of this note cannot be read, so it "
                                          "is silent."),
                                       step.noteIndex});

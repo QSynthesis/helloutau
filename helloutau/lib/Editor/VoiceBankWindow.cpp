@@ -1214,7 +1214,7 @@ namespace hello::daw {
                 for (const auto &change : list) {
                     if (!change.problem.isEmpty()) {
                         kit::Diagnostic diagnostic;
-                        diagnostic.severity = kit::DiagnosticSeverity::Error;
+                        diagnostic.severity = kit::Diagnostic::Error;
                         diagnostic.message =
                             tr("\"%1\" to \"%2\": %3").arg(change.from, change.to, change.problem);
                         problems.push_back(diagnostic);
@@ -1818,7 +1818,7 @@ namespace hello::daw {
             }
             const auto missing = std::count_if(
                 diagnostics.cbegin(), diagnostics.cend(), [](const kit::Diagnostic &diagnostic) {
-                    return diagnostic.severity == kit::DiagnosticSeverity::Warning;
+                    return diagnostic.severity == kit::Diagnostic::Warning;
                 });
             const auto summary =
                 missing > 0 ? tr("%n audio file(s) have no frequency map.", nullptr, int(missing))
@@ -3177,7 +3177,7 @@ namespace hello::daw {
                 std::error_code error;
                 std::filesystem::create_directories(target.parent_path(), error);
                 if (error || !QFile::copy(textOf(file), textOf(target))) {
-                    diagnostics.push_back({kit::DiagnosticSeverity::Error,
+                    diagnostics.push_back({kit::Diagnostic::Error,
                                            tr("\"%1\" could not be backed up to \"%2\", and is "
                                               "not processed.")
                                                .arg(QDir::toNativeSeparators(textOf(file)),

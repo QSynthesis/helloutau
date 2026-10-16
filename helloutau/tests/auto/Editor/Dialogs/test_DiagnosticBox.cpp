@@ -9,7 +9,7 @@ using namespace hello::daw;
 
 namespace {
 
-    kit::Diagnostic diagnosticOf(kit::DiagnosticSeverity severity, const char *message,
+    kit::Diagnostic diagnosticOf(kit::Diagnostic::Severity severity, const char *message,
                                  std::optional<int> note = std::nullopt) {
         return {severity, QString::fromLatin1(message), note};
     }
@@ -37,7 +37,7 @@ class test_DiagnosticBox : public QObject {
 private Q_SLOTS:
     // The icon is that of the most severe diagnostic.
     void the_icon_follows_the_most_severe_diagnostic() {
-        using S = kit::DiagnosticSeverity;
+        using S = kit::Diagnostic::Severity;
         const auto iconOf = [](const kit::DiagnosticList &diagnostics) {
             return DiagnosticBox(QStringLiteral("Title"), diagnostics).icon();
         };
@@ -52,15 +52,15 @@ private Q_SLOTS:
     // counted from 1.
     void each_diagnostic_is_a_line() {
         const DiagnosticBox box(QStringLiteral("Title"),
-                                {diagnosticOf(kit::DiagnosticSeverity::Warning, "first", 3),
-                                 diagnosticOf(kit::DiagnosticSeverity::Warning, "second")});
+                                {diagnosticOf(kit::Diagnostic::Warning, "first", 3),
+                                 diagnosticOf(kit::Diagnostic::Warning, "second")});
         QCOMPARE(box.text(), QStringLiteral("Note 4: first\nsecond"));
         QCOMPARE(box.windowTitle(), QStringLiteral("Title"));
     }
 
     void an_empty_list_shows_nothing() {
         QVERIFY(!reportShows({}));
-        QVERIFY(reportShows({diagnosticOf(kit::DiagnosticSeverity::Note, "n")}));
+        QVERIFY(reportShows({diagnosticOf(kit::Diagnostic::Note, "n")}));
     }
 
     // The summary and the probable causes come first, with their remedies, and the diagnostics
@@ -73,7 +73,7 @@ private Q_SLOTS:
             {0}
         };
         const DiagnosticBox box(QStringLiteral("Title"), QStringLiteral("summary <b>"),
-                                {diagnosticOf(kit::DiagnosticSeverity::Note, "detail", 1)},
+                                {diagnosticOf(kit::Diagnostic::Note, "detail", 1)},
                                 {diagnosis});
         QCOMPARE(box.textFormat(), Qt::RichText);
         QVERIFY(box.text().startsWith(QStringLiteral("<p>summary &lt;b&gt;</p>")));
@@ -93,7 +93,7 @@ private Q_SLOTS:
 
     void without_causes_the_box_is_unchanged() {
         const DiagnosticBox box(QStringLiteral("Title"), QStringLiteral("summary"),
-                                {diagnosticOf(kit::DiagnosticSeverity::Note, "n")}, {});
+                                {diagnosticOf(kit::Diagnostic::Note, "n")}, {});
         QCOMPARE(box.text(), QStringLiteral("n"));
         QVERIFY(box.detailedText().isEmpty());
         QCOMPARE(box.icon(), QMessageBox::Information);

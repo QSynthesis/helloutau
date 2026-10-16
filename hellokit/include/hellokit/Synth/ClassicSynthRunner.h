@@ -41,7 +41,7 @@ namespace hello::kit {
         ~ClassicSynthRunner() override;
 
         /// The method of writing project values into the script.
-        enum class Quoting {
+        enum Quoting {
             /// Escaped, so that a value cannot become code.
             ///
             /// A batch file is a shell script: a lyric, an alias or a flags string containing
@@ -59,10 +59,10 @@ namespace hello::kit {
             Verbatim,
         };
 
-        Quoting quoting = Quoting::Escaped;
+        Quoting quoting = Escaped;
 
         /// The shell for which the script is written.
-        enum class ScriptShell {
+        enum ScriptShell {
             /// \c temp.bat , executed by the Windows command processor.
             Batch,
 

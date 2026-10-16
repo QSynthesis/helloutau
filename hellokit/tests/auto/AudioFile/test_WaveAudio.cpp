@@ -128,7 +128,7 @@ private Q_SLOTS:
         QVERIFY(audio);
         QCOMPARE(audio->frameCount(), 2);
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.front().severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.front().severity, Diagnostic::Warning);
     }
 
     void malformed_files_are_refused() {

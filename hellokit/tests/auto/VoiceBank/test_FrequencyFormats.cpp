@@ -298,7 +298,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(!Fixed(QStringLiteral("x")).changesRenaming(pathOf("r"), renames, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
     }
 
     // The caches are declared with the names of their files. frq has none.
@@ -408,7 +408,7 @@ private Q_SLOTS:
         QVERIFY(!FrequencyFormats::removeMaps(Fixed(QStringLiteral("x")), directory, {"a.wav"},
                                               diagnostics));
         QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QCOMPARE(diagnostics.at(0).severity, Diagnostic::Warning);
     }
 
     // A frq read and written again is unchanged, its reserved bytes included. A new frq has zeros
