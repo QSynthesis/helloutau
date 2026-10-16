@@ -1,6 +1,7 @@
 #include "AppLoader.h"
 
 #include <cassert>
+#include <cstdio>
 #include <filesystem>
 #include <optional>
 #include <vector>
@@ -13,10 +14,13 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
 
+#include <stdcorelib/console.h>
 #include <stdcorelib/pimpl.h>
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 #include <stdcorelib/system.h>
 
+#include <hellokit/NativeSystem/NativeMessageBox.h>
+#include <hellokit/NativeSystem/NativeProcess.h>
 #include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/TemporaryStorage.h>
@@ -83,6 +87,8 @@ namespace hello::daw {
         // the pending changes
         std::optional<kit::SettingsFile> pluginFile;
         bool loaded = false;
+        bool allowsRoot = false;
+        bool showsHelp = false;
         QPointer<Editor> editor;
 
         // Settings rejected by the library are reported and ignored. Every plugin then follows
@@ -143,6 +149,15 @@ namespace hello::daw {
                 }
                 continue;
             }
+            if (arguments[i] == QLatin1String(allowRootOption)) {
+                impl.allowsRoot = true;
+                impl.options += arguments[i];
+                continue;
+            }
+            if (arguments[i] == QLatin1String(helpOption)) {
+                impl.showsHelp = true;
+                continue;
+            }
             impl.files.push_back(arguments[i]);
         }
         // A restart starts the program again with the options and without the files.
@@ -173,6 +188,55 @@ namespace hello::daw {
     AppLoader::~AppLoader() {
         shutdown();
         currentAppLoader = nullptr;
+    }
+
+    bool AppLoader::showStartMessages() const {
+        stdc_impl_t;
+        const auto title = QCoreApplication::applicationName();
+        // A message box of the system, or the stream if none can be shown
+        const auto show = [&title](const QString &text, kit::NativeMessageBox::Icon icon,
+                                   FILE *stream) {
+            if (!kit::NativeMessageBox::show(title.toStdString(), text.toStdString(), icon)) {
+                stdc::console::u8fprintf(stream, "%s\n", text.toStdString().c_str());
+            }
+        };
+        if (impl.showsHelp) {
+            show(tr("Usage: %1 [options] [files]\n\n"
+                    "Starts %2 and opens the files.\n\n"
+                    "Options:\n"
+                    "  --settings <directory>\n"
+                    "      The directory of the settings, which also holds the voice banks and "
+                    "the plugins of the user.\n"
+                    "  --plugin-path <directory>\n"
+                    "      A further directory of native plugins.\n"
+                    "  --allow-root\n"
+                    "      Starts without the warning about the privileges of the "
+                    "administrator.\n"
+                    "  --help\n"
+                    "      Shows this text.")
+                     .arg(QFileInfo(QCoreApplication::applicationFilePath()).fileName(), title),
+                 kit::NativeMessageBox::Information, stdout);
+            return false;
+        }
+        if (!impl.allowsRoot && kit::NativeProcess::isElevated()) {
+#ifdef Q_OS_WINDOWS
+            const auto text =
+                tr("%1 runs as the administrator. The synth tools and the plugins that a project "
+                   "runs then have the privileges of the administrator as well, and File "
+                   "Explorer cannot drop files into its windows.\n\n"
+                   "Start %1 without Run as administrator. The option --allow-root suppresses "
+                   "this warning.");
+#else
+            const auto text =
+                tr("%1 runs as the user root. The synth tools and the plugins that a project "
+                   "runs then have the privileges of root as well, and the files that it writes "
+                   "into the home directory belong to root.\n\n"
+                   "Start %1 as a normal user. The option --allow-root suppresses this "
+                   "warning.");
+#endif
+            show(text.arg(title), kit::NativeMessageBox::Warning, stderr);
+        }
+        return true;
     }
 
     AppLoader *AppLoader::instance() {

@@ -41,9 +41,17 @@ namespace hello::daw {
         /// of the settings (AppSettings::userDirectory()).
         static constexpr char settingsOption[] = "--settings";
 
+        /// Command-line option that suppresses the warning about the privileges of the
+        /// administrator, see showStartMessages(). A restart passes it again.
+        static constexpr char allowRootOption[] = "--allow-root";
+
+        /// Command-line option that shows the usage of the command line instead of starting.
+        static constexpr char helpOption[] = "--help";
+
         /// Creates a loader for the command-line \a arguments, whose first element is the
         /// program. Each \c --plugin-path adds the following directory to the plugin paths.
-        /// \c --settings specifies the settings directory. The remaining arguments are files.
+        /// \c --settings specifies the settings directory. \c --allow-root and \c --help are
+        /// read by showStartMessages(). The remaining arguments are files.
         ///
         /// The constructor prepares the application in this order:
         /// 1. Creates the temporary storage of the application (kit::TemporaryStorage).
@@ -52,6 +60,20 @@ namespace hello::daw {
         ///    settings and installs the translations of Qt and of the libraries. The plugins add
         ///    theirs when they initialize.
         explicit AppLoader(const QStringList &arguments);
+
+        /// Shows the messages that precede the windows, in message boxes of the system, which
+        /// appear without the widgets of Qt, or on the standard output or error if no message
+        /// box can be shown:
+        /// - with \c --help, the usage of the command line;
+        /// - without \c --allow-root, a warning if the process has the privileges of the
+        ///   administrator (kit::NativeProcess::isElevated()), because the synth tools and the
+        ///   plugins that a project runs would have them as well.
+        ///
+        /// The texts are in the language of the settings. The program calls the function after
+        /// the constructor and before run().
+        ///
+        /// \return whether the program continues, which it does not after the usage
+        bool showStartMessages() const;
 
         /// Shuts the plugins down if they are still loaded.
         ~AppLoader();

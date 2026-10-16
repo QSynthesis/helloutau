@@ -805,6 +805,50 @@
 <context>
     <name>hello::daw::AppLoader</name>
     <message>
+        <source>Usage: %1 [options] [files]
+
+Starts %2 and opens the files.
+
+Options:
+  --settings &lt;directory&gt;
+      The directory of the settings, which also holds the voice banks and the plugins of the user.
+  --plugin-path &lt;directory&gt;
+      A further directory of native plugins.
+  --allow-root
+      Starts without the warning about the privileges of the administrator.
+  --help
+      Shows this text.</source>
+        <translation>用法：%1 [选项] [文件]
+
+启动 %2 并打开这些文件。
+
+选项：
+  --settings &lt;目录&gt;
+      设置目录，用户的音源与插件也放在其中。
+  --plugin-path &lt;目录&gt;
+      另一个原生插件目录。
+  --allow-root
+      启动时不显示关于管理员权限的警告。
+  --help
+      显示本说明。</translation>
+    </message>
+    <message>
+        <source>%1 runs as the administrator. The synth tools and the plugins that a project runs then have the privileges of the administrator as well, and File Explorer cannot drop files into its windows.
+
+Start %1 without Run as administrator. The option --allow-root suppresses this warning.</source>
+        <translation>%1 正以管理员身份运行。工程运行的合成工具与插件也会因此拥有管理员权限，并且无法从文件资源管理器把文件拖入其窗口。
+
+请不要以「以管理员身份运行」启动 %1。以 --allow-root 启动可不显示此警告。</translation>
+    </message>
+    <message>
+        <source>%1 runs as the user root. The synth tools and the plugins that a project runs then have the privileges of root as well, and the files that it writes into the home directory belong to root.
+
+Start %1 as a normal user. The option --allow-root suppresses this warning.</source>
+        <translation>%1 正以 root 用户运行。工程运行的合成工具与插件也会因此拥有 root 权限，写入主目录的文件也将属于 root。
+
+请以普通用户启动 %1。以 --allow-root 启动可不显示此警告。</translation>
+    </message>
+    <message>
         <source>The core plugin was not found.</source>
         <translation>未找到核心插件。</translation>
     </message>

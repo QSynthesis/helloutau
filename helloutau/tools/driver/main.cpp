@@ -16,7 +16,12 @@ int main(int argc, char *argv[]) {
     QApplication::setApplicationName(QStringLiteral(HELLOUTAU_APPLICATION_NAME));
     QApplication::setApplicationVersion(QStringLiteral(HELLOKIT_VERSION));
 
-    // The core plugin creates the editor and opens the windows.
+    // The core plugin creates the editor and opens the windows, after the messages that precede
+    // them, the usage of --help, after which the program ends, and the warning about the
+    // privileges of the administrator.
     hello::daw::AppLoader loader(QApplication::arguments());
+    if (!loader.showStartMessages()) {
+        return 0;
+    }
     return loader.run();
 }

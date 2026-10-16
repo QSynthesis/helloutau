@@ -153,10 +153,13 @@ private Q_SLOTS:
         QCOMPARE(AppLoader::instance(), nullptr);
         QTemporaryDir directory;
         {
+            // --allow-root and --help are options rather than files.
             const AppLoader loader({QStringLiteral("helloutau"), QStringLiteral("a.ust"),
                                     QStringLiteral("--plugin-path"), QStringLiteral("extra"),
+                                    QLatin1String(AppLoader::allowRootOption),
                                     QStringLiteral("--settings"), directory.path(),
-                                    QStringLiteral("b.ust"), QStringLiteral("--plugin-path")});
+                                    QLatin1String(AppLoader::helpOption), QStringLiteral("b.ust"),
+                                    QStringLiteral("--plugin-path")});
             QCOMPARE(AppLoader::instance(), &loader);
             const auto extensions = directory.filePath(QStringLiteral("Extensions"));
             QCOMPARE(QDir::cleanPath(loader.extensionPath()), QDir::cleanPath(extensions));
