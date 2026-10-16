@@ -1,0 +1,143 @@
+name: deploy
+run-name: deploy (${{ github.ref_name }})
+
+# Compiles, tests and packages HelloUtau, on a push to main, on a tag v* and on manual dispatch,
+# once for each system of the matrix. Development happens on dev, and git promote moves main, so a
+# push to main is the integration checkpoint. A tag v<HELLO_VERSION> builds the channel release
+# and publishes the release, and every other run builds the channel ci, whose assets carry the
+# commit in their names. Both channels run the same steps. See the build channels and the workflow
+# in docs/Distribution.md.
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer run of the same branch replaces the older one. The run of a tag is never cancelled.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  CHANNEL: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || 'ci' }}
+
+jobs:
+  package:
+    name: ${{ matrix.triplet }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - triplet: x64-windows-msvc
+            os: windows-latest
+            vcpkg-triplet: x64-windows
+            qt-arch: win64_msvc2022_64
+    env:
+      INNO_SETUP_URL: https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe
+    steps:
+      # The whole history, because BuildInfo.h records the number of commits as the revision.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/build-and-test
+        with:
+          channel: ${{ env.CHANNEL }}
+          triplet: ${{ matrix.triplet }}
+          vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
+          qt-arch: ${{ matrix.qt-arch }}
+
+      # A release whose tag names another version than the build would be found by no update.
+      - name: Check the tag against the version
+        if: env.CHANNEL == 'release'
+        shell: bash
+        run: |
+          version="$(sed -n 's/^CMAKE_PROJECT_VERSION:[A-Z]*=//p' build/Release/CMakeCache.txt)"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "The tag $GITHUB_REF_NAME does not name the version $version of the build."
+            exit 1
+          fi
+
+      - name: Inno Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = "$env:RUNNER_TEMP\innosetup.exe"
+          $directory = "$env:RUNNER_TEMP\innosetup"
+          Invoke-WebRequest $env:INNO_SETUP_URL -OutFile $installer
+          Start-Process $installer -Wait -ArgumentList `
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/CURRENTUSER", "/DIR=$directory"
+          "ISCC=$directory\ISCC.exe" >> $env:GITHUB_ENV
+
+      - name: Package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./dist/installer/windows/package.ps1 -BuildDir build/Release -OutputDir build/package -Iscc $env:ISCC
+
+      # The assets without the staging folder HelloUtau of the packaging script. The name of the
+      # artifact stays the same for every run, so that gh run download -n helloutau-<triplet> keeps
+      # working. The file names carry the channel and the commit.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helloutau-${{ matrix.triplet }}
+          path: |
+            build/package/*.zip
+            build/package/*-setup.exe
+            build/package/SHA256SUMS
+          if-no-files-found: error
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo
+            echo "### Assets"
+            echo
+            sed 's/^[0-9a-f]*  /- `/; s/$/`/' build/package/SHA256SUMS
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # The release of a tag, with the assets of every system and the notes of
+  # docs/changelog/<version>.md, which Unreleased.md becomes on the release. The digests of the
+  # systems are joined into one SHA256SUMS, which the update reads.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: helloutau-*
+          path: artifacts
+
+      - name: Create the release
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          notes="docs/changelog/${version}.md"
+          if [ ! -f "$notes" ]; then
+            echo "The notes $notes are missing from the commit of the tag."
+            exit 1
+          fi
+          mkdir assets
+          find artifacts -type f ! -name SHA256SUMS -exec cp {} assets/ \;
+          cat artifacts/*/SHA256SUMS > assets/SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" assets/* --verify-tag \
+            --title "HelloUtau ${version}" --notes-file "$notes"
+
+      # A release created with the token of the workflow triggers no other workflow, so the
+      # synchronization is started explicitly.
+      - name: Synchronize the release to Gitee
+        run: gh workflow run sync-gitee-release.yml -f tag_name="$GITHUB_REF_NAME"

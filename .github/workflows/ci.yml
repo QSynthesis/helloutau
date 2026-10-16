@@ -1,0 +1,45 @@
+name: ci
+run-name: ci (${{ github.head_ref || github.ref_name }})
+
+# Compiles and runs every test, on a pull request to main and on manual dispatch, once for each
+# system of the matrix. A push to main runs deploy.yml instead, which runs the same tests before
+# packaging, so that a push is not built twice. Development happens on dev, and git promote moves
+# main. See the workflow in docs/Distribution.md.
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer run of the same pull request or branch replaces the older one.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.triplet }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - triplet: x64-windows-msvc
+            os: windows-latest
+            vcpkg-triplet: x64-windows
+            qt-arch: win64_msvc2022_64
+    steps:
+      # The whole history, because BuildInfo.h records the number of commits as the revision.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/build-and-test
+        with:
+          channel: ci
+          triplet: ${{ matrix.triplet }}
+          vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
+          qt-arch: ${{ matrix.qt-arch }}

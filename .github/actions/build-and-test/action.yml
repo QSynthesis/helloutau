@@ -1,0 +1,167 @@
+name: Build and test
+description: >-
+  Install the dependencies of HelloUtau, configure, build and run every test, and publish a
+  summary of the run.
+
+# The steps that ci.yml and deploy.yml share, for every system. The system enters through the
+# inputs and through runner.os, so that a further system is one more entry of the matrices of the
+# workflows. The build is in build/Release, where the packaging scripts expect it. See the workflow
+# in docs/Distribution.md.
+
+inputs:
+  channel:
+    description: The value of HELLO_BUILD_CHANNEL, release for the tag of a version and ci otherwise.
+    required: true
+  triplet:
+    description: The triplet of HelloUtau, such as x64-windows-msvc, which names the summary.
+    required: true
+  vcpkg-triplet:
+    description: The triplet of vcpkg in the overlay, such as x64-windows.
+    required: true
+  qt-arch:
+    description: The architecture of Qt for aqt, such as win64_msvc2022_64.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The protocol tests of the programs are Python scripts, see CLAUDE.md.
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Ninja
+      shell: bash
+      run: |
+        case "$RUNNER_OS" in
+          Windows) choco install ninja -y --no-progress ;;
+          macOS) brew install ninja ;;
+          *) python -m pip install ninja ;;
+        esac
+
+    - if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    # The official binaries of Qt, as for a local build. Multimedia is an add-on of aqt, and Svg
+    # and the Linguist tools come with the base installation.
+    - uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.11.1'
+        arch: ${{ inputs.qt-arch }}
+        modules: qtmultimedia
+        cache: true
+
+    # The latest commits of vcpkg and of the overlay, which provides the libraries of stdware and
+    # QSynthesis. The commits name the binary cache.
+    - name: Clone vcpkg and the overlay
+      shell: bash
+      run: |
+        set -euo pipefail
+        vcpkg="$GITHUB_WORKSPACE/build/vcpkg"
+        overlay="$GITHUB_WORKSPACE/build/vcpkg-overlay"
+        cache="$GITHUB_WORKSPACE/build/vcpkg-cache"
+        git clone --depth 1 https://github.com/microsoft/vcpkg.git "$vcpkg"
+        git clone --depth 1 https://github.com/stdware/vcpkg-overlay.git "$overlay"
+        mkdir -p "$cache"
+        {
+          echo "VCPKG_ROOT=$vcpkg"
+          echo "VCPKG_OVERLAY=$overlay"
+          echo "VCPKG_DEFAULT_BINARY_CACHE=$cache"
+          echo "VCPKG_COMMIT=$(git -C "$vcpkg" rev-parse HEAD)"
+          echo "OVERLAY_COMMIT=$(git -C "$overlay" rev-parse HEAD)"
+        } >> "$GITHUB_ENV"
+
+    # The binary cache of vcpkg, which names each package by the hash of its inputs. A cache of
+    # older commits is restored as well, and the packages whose inputs did not change are reused.
+    - uses: actions/cache@v4
+      with:
+        path: build/vcpkg-cache
+        key: vcpkg-${{ inputs.vcpkg-triplet }}-${{ env.VCPKG_COMMIT }}-${{ env.OVERLAY_COMMIT }}
+        restore-keys: vcpkg-${{ inputs.vcpkg-triplet }}-
+
+    # Classic mode with the triplets of the overlay, as the local installation. qactionkit and
+    # substate build against the Qt above, which reaches the builds of vcpkg through QT_DIR.
+    - name: Dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          cmd //c "$(cygpath -w "$VCPKG_ROOT/bootstrap-vcpkg.bat")" -disableMetrics
+        else
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+        fi
+        export QT_DIR="$QT_ROOT_DIR/lib/cmake/Qt6"
+        export Qt6_DIR="$QT_DIR"
+        export VCPKG_KEEP_ENV_VARS="QT_DIR;Qt6_DIR"
+        "$VCPKG_ROOT/vcpkg" install --triplet "${{ inputs.vcpkg-triplet }}" \
+          "--overlay-ports=$VCPKG_OVERLAY/ports" "--overlay-triplets=$VCPKG_OVERLAY/triplets" \
+          qmsetup stdcorelib stdcorelib-plugin stdutau substate "qactionkit[core,widgets]" \
+          winacp wolf-midi r8brain-free-src libzip zlib
+
+    # ZLIB_DIR on Windows, so that the DLL of zlib is copied beside the programs, see CLAUDE.md.
+    - name: Configure
+      shell: bash
+      run: |
+        set -euo pipefail
+        installed="$VCPKG_ROOT/installed/${{ inputs.vcpkg-triplet }}"
+        options=()
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          python="$pythonLocation/python.exe"
+          options+=("-DZLIB_DIR=$installed/share/zlib")
+        else
+          python="$pythonLocation/bin/python3"
+        fi
+        cmake -G Ninja -S . -B build/Release \
+          -DCMAKE_BUILD_TYPE=Release \
+          "-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          "-DVCPKG_TARGET_TRIPLET=${{ inputs.vcpkg-triplet }}" \
+          "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR" \
+          "-DPython3_EXECUTABLE=$python" \
+          -DHELLO_BUILD_TESTS=ON \
+          "-DHELLO_BUILD_CHANNEL=${{ inputs.channel }}" \
+          "${options[@]}"
+
+    - name: Build
+      shell: bash
+      run: cmake --build build/Release
+
+    # --no-tests=error, because ctest succeeds if it finds no test. The widget tests need no
+    # display with the offscreen platform. The exit status is recorded in a file for the summary,
+    # which runs after a failure as well.
+    - name: Test
+      shell: bash
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        set +e
+        ctest --test-dir build/Release --output-on-failure --no-tests=error 2>&1 | tee build/ctest.log
+        status=${PIPESTATUS[0]}
+        printf '%s' "$status" > build/ctest.status
+        exit "$status"
+
+    - name: Summary
+      if: always()
+      shell: bash
+      run: |
+        status="$(cat build/ctest.status 2>/dev/null || true)"
+        case "$status" in
+          0) result="Passed" ;;
+          "") result="Not run, because an earlier step failed" ;;
+          *) result="Failed, see the step Test" ;;
+        esac
+        totals="$(grep -m1 'tests passed' build/ctest.log 2>/dev/null || true)"
+        {
+          echo "## ${{ inputs.triplet }}"
+          echo
+          echo "| | |"
+          echo "|---|---|"
+          echo "| Channel | \`${{ inputs.channel }}\` |"
+          echo "| Commit | \`$GITHUB_SHA\` |"
+          echo "| vcpkg | \`${VCPKG_COMMIT:-}\` |"
+          echo "| vcpkg-overlay | \`${OVERLAY_COMMIT:-}\` |"
+          echo "| Tests | $result |"
+          echo
+          echo "$totals"
+        } >> "$GITHUB_STEP_SUMMARY"

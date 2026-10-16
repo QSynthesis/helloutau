@@ -47,6 +47,24 @@ CMake 缓存项 `HELLO_BUILD_CHANNEL` 区分三种构建，正式版与 CI 的�
 - 渠道写入 `hellokit/Config.h` 的 `HELLOKIT_BUILD_CHANNEL`，提交取 `hellokit/BuildInfo.h` 的 `HELLOKIT_GIT_LAST_COMMIT_HASH` 的前七位。程序由 `SoftwareBuildChannel` 读取，工程窗口与音源窗口的标题以它结尾，关于对话框在版本号后注明。`package.ps1` 以它命名附件，并作为安装包的 `AppVerName` 传入，安装向导与「已安装的应用」中的名称因此同样不会被当成正式版。
 - 渠道只影响名称，不影响行为。非正式的构建同样检查更新（作者 2026-10-16 决定）：CI 的构建来自最新的提交，版本号不低于最新的正式版，因此不会被提示更新到旧版本。
 
+## 持续集成
+
+CI 构建、运行全部测试并打包，作者 2026-10-16 提出要求，结构参照 lorelei：
+
+| 文件 | 触发 | 内容 |
+|---|---|---|
+| `.github/actions/build-and-test/action.yml` | 由下面两个工作流调用 | 安装依赖、配置、编译、运行全部测试，写入运行的摘要 |
+| `.github/workflows/ci.yml` | 向 `main` 发起的 pull request、手动 | 编译与测试 |
+| `.github/workflows/deploy.yml` | 推送 `main`、推送 `v` 开头的 tag、手动 | 编译、测试与打包，tag 时发布 |
+| `.github/workflows/sync-gitee-release.yml` | release 发布后由 `deploy.yml` 启动、手动 | 同步到 Gitee |
+
+- **系统**：两个工作流以 matrix 列出各系统，目前只有 `x64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（triplet、vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分，因此增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
+- **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
+- **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
+- **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
+- **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包与 `SHA256SUMS`。artifact 按系统命名为 `helloutau-<triplet>`，每次运行相同，渠道与提交只写在文件名中，同 lorelei。
+- **发布**：推送 `v` 开头的 tag 时渠道为 `release`。tag 须与 `HELLO_VERSION` 一致，否则构建失败。各系统都通过后创建 GitHub 的 release，附上各系统的附件与合并后的一份 `SHA256SUMS`，标题为 `HelloUtau <version>`，说明取自 tag 所在提交的 `docs/changelog/<version>.md`，该文件不存在时不创建 release。以工作流的令牌创建的 release 不触发其他工作流，因此随后以 `gh workflow run` 启动 `sync-gitee-release.yml`。
+
 ## 目录
 
 ### 安装目录
