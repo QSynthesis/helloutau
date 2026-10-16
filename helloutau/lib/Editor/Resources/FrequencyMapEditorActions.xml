@@ -189,6 +189,9 @@
             </menu>
         </menu>
         <menu id="helloutau.frequencyMap.toolBar">
+            <action id="helloutau.edit.undo" />
+            <action id="helloutau.edit.redo" />
+            <separator />
             <action id="helloutau.select.selectTool" />
             <action id="helloutau.select.penTool" />
             <separator />
