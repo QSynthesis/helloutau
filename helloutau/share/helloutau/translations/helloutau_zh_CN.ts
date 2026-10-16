@@ -833,18 +833,18 @@ Options:
       显示本说明。</translation>
     </message>
     <message>
-        <source>%1 runs as the administrator. The synth tools and the plugins that a project runs then have the privileges of the administrator as well, and File Explorer cannot drop files into its windows.
+        <source>You are running %1 as the administrator. The synth tools and the plugins that a project runs then have the privileges of the administrator as well, and File Explorer cannot drop files into the windows of %1.
 
 Start %1 without Run as administrator. The option --allow-root suppresses this warning.</source>
-        <translation>%1 正以管理员身份运行。工程运行的合成工具与插件也会因此拥有管理员权限，并且无法从文件资源管理器把文件拖入其窗口。
+        <translation>您正在以管理员身份运行 %1。工程运行的合成工具与插件也会因此拥有管理员权限，并且无法从文件资源管理器把文件拖入 %1 的窗口。
 
-请不要以「以管理员身份运行」启动 %1。以 --allow-root 启动可不显示此警告。</translation>
+请不要使用「以管理员身份运行」启动 %1。以 --allow-root 启动可不显示此警告。</translation>
     </message>
     <message>
-        <source>%1 runs as the user root. The synth tools and the plugins that a project runs then have the privileges of root as well, and the files that it writes into the home directory belong to root.
+        <source>You are running %1 as the user root. The synth tools and the plugins that a project runs then have the privileges of root as well, and the files that %1 writes into the home directory belong to root.
 
 Start %1 as a normal user. The option --allow-root suppresses this warning.</source>
-        <translation>%1 正以 root 用户运行。工程运行的合成工具与插件也会因此拥有 root 权限，写入主目录的文件也将属于 root。
+        <translation>您正在以 root 用户身份运行 %1。工程运行的合成工具与插件也会因此拥有 root 权限，写入主目录的文件也将属于 root。
 
 请以普通用户启动 %1。以 --allow-root 启动可不显示此警告。</translation>
     </message>

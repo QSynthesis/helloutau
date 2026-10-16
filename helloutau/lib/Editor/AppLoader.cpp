@@ -221,16 +221,16 @@ namespace hello::daw {
         if (!impl.allowsRoot && kit::NativeProcess::isElevated()) {
 #ifdef Q_OS_WINDOWS
             const auto text =
-                tr("%1 runs as the administrator. The synth tools and the plugins that a project "
-                   "runs then have the privileges of the administrator as well, and File "
-                   "Explorer cannot drop files into its windows.\n\n"
+                tr("You are running %1 as the administrator. The synth tools and the plugins that "
+                   "a project runs then have the privileges of the administrator as well, and "
+                   "File Explorer cannot drop files into the windows of %1.\n\n"
                    "Start %1 without Run as administrator. The option --allow-root suppresses "
                    "this warning.");
 #else
             const auto text =
-                tr("%1 runs as the user root. The synth tools and the plugins that a project "
-                   "runs then have the privileges of root as well, and the files that it writes "
-                   "into the home directory belong to root.\n\n"
+                tr("You are running %1 as the user root. The synth tools and the plugins that a "
+                   "project runs then have the privileges of root as well, and the files that %1 "
+                   "writes into the home directory belong to root.\n\n"
                    "Start %1 as a normal user. The option --allow-root suppresses this "
                    "warning.");
 #endif
