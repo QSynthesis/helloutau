@@ -65,6 +65,9 @@ namespace hello::daw {
     ///
     /// The dialog opens wide enough to show the whole file list, unless the screen is narrower.
     ///
+    /// The title of the window is that of the voice bank window: the name of the voice bank that
+    /// setVoiceBankName() sets, an asterisk while a map is modified, and the name of the dialog.
+    ///
     /// The menus and the shortcuts are those of Editor::FrequencyMapEditorKind. The actions of
     /// contributions are added when the dialog is created.
     class HELLOUTAU_EDITOR_EXPORT EditFrequencyMapsDialog : public QDialog {
@@ -131,6 +134,9 @@ namespace hello::daw {
         /// Returns the corrections of the map of the file \a index from the last check, empty if
         /// none is left.
         std::vector<kit::FrequencyMapCheck::Correction> correctionsOf(int index) const;
+
+        /// Sets the name of the voice bank in the title of the window, empty for none.
+        void setVoiceBankName(const QString &name);
 
         QTreeWidget *fileList() const;
         /// Returns the item of the file \a index in fileList().

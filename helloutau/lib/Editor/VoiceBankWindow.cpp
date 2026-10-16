@@ -2784,6 +2784,7 @@ namespace hello::daw {
         }
         EditFrequencyMapsDialog dialog(impl.editor, *format, std::move(files),
                                        impl.document->rootPath(), this);
+        dialog.setVoiceBankName(impl.document->displayName());
         dialog.exec();
         impl.model->refreshFrequencyMaps();
         impl.frequencyShown = {};

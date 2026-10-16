@@ -3308,6 +3308,11 @@ private Q_SLOTS:
             QCOMPARE(dialog->bufferOf(0)->map().frames.at(5).frequency, 300.0);
             trigger("helloutau.edit.undo");
             QVERIFY(!dialog->isModified(0));
+            // The title has the name of the voice bank and its modified mark, as the window has.
+            QVERIFY(dialog->windowTitle().startsWith(
+                window->windowTitle().section(QStringLiteral("[*]"), 0, 0) +
+                QStringLiteral("[*]")));
+            QVERIFY(!dialog->isWindowModified());
 
             // The preview synthesizes a copy of the audio file beside the map as edited, at the
             // key.
@@ -3366,6 +3371,7 @@ private Q_SLOTS:
             dialog->view()->selectAll();
             trigger("helloutau.frequencyMap.multiplyBy2");
             QVERIFY(dialog->isModified(0));
+            QVERIFY(dialog->isWindowModified());
             QCOMPARE(dialog->bufferOf(0)->map().frames.at(0).frequency, 440.0);
 
             // The map file changes on disk after it was read.
@@ -3378,6 +3384,7 @@ private Q_SLOTS:
             answerMessageBox(QMessageBox::Yes);
             QVERIFY(dialog->save());
             QVERIFY(!dialog->isModified(0));
+            QVERIFY(!dialog->isWindowModified());
 
             // Closing discards an edit after the user is asked.
             trigger("helloutau.frequencyMap.unvoice");

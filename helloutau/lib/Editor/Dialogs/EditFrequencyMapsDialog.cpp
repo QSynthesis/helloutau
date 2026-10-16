@@ -379,7 +379,7 @@ namespace hello::daw {
                              const std::function<void(const std::function<bool()> &)> &work) {
             stdc_decl_t;
             QProgressDialog progress(label, tr("Cancel"), 0, 0, &decl);
-            progress.setWindowTitle(decl.windowTitle());
+            progress.setWindowTitle(dialogTitle());
             progress.setWindowModality(Qt::WindowModal);
             // Shown by the delay below only
             progress.setMinimumDuration(std::numeric_limits<int>::max());
@@ -449,7 +449,7 @@ namespace hello::daw {
                     const QSignalBlocker blocker(list);
                     list->setCurrentItem(current >= 0 ? fileItems.at(current) : nullptr);
                 }
-                QMessageBox::warning(&decl, decl.windowTitle(),
+                QMessageBox::warning(&decl, dialogTitle(),
                                      tr("The reading of %1 was canceled. The file in the editing "
                                         "area does not change.")
                                          .arg(shownNameOf(file)));
@@ -513,6 +513,24 @@ namespace hello::daw {
             return true;
         }
 
+        // The name of the dialog, the title of its message boxes
+        static QString dialogTitle() {
+            return EditFrequencyMapsDialog::tr("Edit Frequency Maps");
+        }
+
+        // The name of the voice bank in the title of the window, empty for none
+        QString voiceBankName;
+
+        // Shows the name of the voice bank, the mark of modified maps and the name of the dialog
+        // in the title of the window, as the voice bank window shows its name and its mark.
+        void updateTitle() {
+            stdc_decl_t;
+            decl.setWindowTitle(
+                voiceBankName.isEmpty()
+                    ? dialogTitle() + QStringLiteral("[*]")
+                    : QStringLiteral("%1[*] - %2").arg(voiceBankName, dialogTitle()));
+        }
+
         // The audio of the current file, if it can be read, kept to compute its spectrogram when
         // the spectrogram is shown again
         std::shared_ptr<const kit::WaveAudio> audio;
@@ -542,7 +560,7 @@ namespace hello::daw {
                         }
                     })) {
                 view->setViewMode(FrequencyMapView::KeyRowsView);
-                QMessageBox::warning(&decl, decl.windowTitle(),
+                QMessageBox::warning(&decl, dialogTitle(),
                                      tr("The computation of the spectrogram was canceled."));
                 return;
             }
@@ -676,6 +694,8 @@ namespace hello::daw {
                 anyModified = anyModified || entry.buffer->isModified();
             }
             enable("helloutau.frequencyMap.saveAll", anyModified);
+            stdc_decl_t;
+            decl.setWindowModified(anyModified);
             enable("helloutau.edit.undo", buffer && buffer->canUndo());
             enable("helloutau.edit.redo", buffer && buffer->canRedo());
             enable("helloutau.frequencyMap.revert", modified);
@@ -804,7 +824,7 @@ namespace hello::daw {
                     }
                 });
             if (!completed) {
-                QMessageBox::warning(&decl, decl.windowTitle(),
+                QMessageBox::warning(&decl, dialogTitle(),
                                      tr("The check was canceled. The corrections do not change."));
                 return false;
             }
@@ -836,7 +856,7 @@ namespace hello::daw {
                 view->setCorrections(entry->corrections);
             }
             if (!goToCorrection(true, true)) {
-                QMessageBox::information(&decl, decl.windowTitle(),
+                QMessageBox::information(&decl, dialogTitle(),
                                          tr("The check found nothing to correct."));
             }
             updateActions();
@@ -1197,7 +1217,7 @@ namespace hello::daw {
                                                      QWidget *parent)
         : QDialog(parent), _impl(std::make_unique<Impl>(this, editor, format, std::move(files))) {
         stdc_impl_t;
-        setWindowTitle(tr("Edit Frequency Maps"));
+        impl.updateTitle();
 
         const auto caches = format.analysisCaches();
         QStringList headers{tr("File"), tr("Frequency Map")};
@@ -1591,6 +1611,12 @@ namespace hello::daw {
         }
         impl.updateActions();
         return saved;
+    }
+
+    void EditFrequencyMapsDialog::setVoiceBankName(const QString &name) {
+        stdc_impl_t;
+        impl.voiceBankName = name;
+        impl.updateTitle();
     }
 
     QTreeWidget *EditFrequencyMapsDialog::fileList() const {
