@@ -1,4 +1,5 @@
-# The external packages this repository builds against, each pointed at by its own <name>_DIR.
+# The external packages this repository builds against. Each is found through CMAKE_PREFIX_PATH or
+# the toolchain of vcpkg, or at the directory that its own <name>_DIR names:
 #
 #     -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib
 #     -Dstdcorelib-plugin_DIR=<prefix>/lib/cmake/stdcorelib-plugin
@@ -12,7 +13,8 @@
 #     -DZLIB_DIR=<prefix>/share/zlib (Windows only)
 #
 # stdcorelib, stdcorelib.plugin, stdutau, substate and QActionKit are developed alongside this
-# repository, so none is taken from a vcpkg release. Each must be built and installed separately.
+# repository, so none is taken from a vcpkg release. Each is built and installed separately, or
+# installed with the ports of https://github.com/stdware/vcpkg-overlay, as the workflow does.
 #
 # Included from the root rather than added as a subdirectory, so that the imported targets are in
 # scope for every module.
@@ -27,11 +29,12 @@
 # variables are removed at the end.
 macro(_hello_find_external _package _hint)
     cmake_parse_arguments(_HELLO_FIND "" "" "COMPONENTS" ${ARGN})
-    if(NOT ${_package}_DIR)
-        message(FATAL_ERROR "${_package}_DIR is not set. ${_hint}")
-    endif()
 
-    find_package(${_package} CONFIG REQUIRED COMPONENTS ${_HELLO_FIND_COMPONENTS})
+    # Not REQUIRED, so that a package that is not found is reported with the way to obtain it
+    find_package(${_package} CONFIG COMPONENTS ${_HELLO_FIND_COMPONENTS})
+    if(NOT ${_package}_FOUND)
+        message(FATAL_ERROR "${_package} was not found. ${_hint}")
+    endif()
 
     set(_hello_find_files)
     foreach(_hello_find_target IN LISTS _HELLO_FIND_UNPARSED_ARGUMENTS)

@@ -103,30 +103,21 @@ runs:
           qmsetup stdcorelib stdcorelib-plugin stdutau substate "qactionkit[core,widgets]" \
           winacp wolf-midi r8brain-free-src libzip zlib
 
-    # Each package by its directory, as third-party/Dependencies.cmake requires and as a local
-    # configuration passes it, see CLAUDE.md. vcpkg installs the configuration of a package into
-    # share/<port>. ZLIB_DIR on Windows, so that the DLL of zlib is copied beside the programs.
+    # Saved as soon as the dependencies are installed. A cache of the same key cannot be saved
+    # again, so the save is skipped after an exact hit.
+    - if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: build/vcpkg-cache
+        key: vcpkg-${{ inputs.vcpkg-triplet }}-${{ env.VCPKG_COMMIT }}-${{ env.OVERLAY_COMMIT }}
+
+    # The packages are found through the toolchain of vcpkg, see third-party/Dependencies.cmake.
     - name: Configure
       shell: bash
       run: |
         set -euo pipefail
-        installed="$VCPKG_ROOT/installed/${{ inputs.vcpkg-triplet }}"
-        share="$installed/share"
-        options=(
-          "-Dstdcorelib_DIR=$share/stdcorelib"
-          "-Dstdcorelib-plugin_DIR=$share/stdcorelib-plugin"
-          "-Dstdutau_DIR=$share/stdutau"
-          "-Dsubstate_DIR=$share/substate"
-          "-DQActionKit_DIR=$share/qactionkit"
-          "-Dwinacp_DIR=$share/winacp"
-          "-Dwolf-midi_DIR=$share/wolf-midi"
-          "-Dunofficial-r8brain-free-src_DIR=$share/unofficial-r8brain-free-src"
-          "-Dlibzip_DIR=$share/libzip"
-          "-Dqmsetup_DIR=$share/qmsetup"
-        )
         if [ "$RUNNER_OS" = "Windows" ]; then
           python="$pythonLocation/python.exe"
-          options+=("-DZLIB_DIR=$installed/share/zlib")
         else
           python="$pythonLocation/bin/python3"
         fi
