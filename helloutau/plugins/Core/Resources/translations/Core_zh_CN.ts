@@ -92,8 +92,8 @@
         <translation>移除快捷键(&amp;M)</translation>
     </message>
     <message>
-        <source>Re&amp;set</source>
-        <translation>重置(&amp;S)</translation>
+        <source>Reset M&amp;odifiers</source>
+        <translation>重置修饰键(&amp;O)</translation>
     </message>
     <message>
         <source>Restore &amp;Defaults</source>

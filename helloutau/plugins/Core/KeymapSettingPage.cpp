@@ -6,6 +6,7 @@
 #include <QtCore/QSet>
 #include <QtCore/QSignalBlocker>
 #include <QtGui/QAction>
+#include <QtGui/QWheelEvent>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
@@ -80,6 +81,18 @@ namespace hello::daw {
 
         // The data of the option that turns a role off, which no combination of modifiers has
         constexpr int offData = -1;
+
+        // A box of modifiers that ignores the wheel, which then scrolls the area of the boxes, so
+        // that a scroll over the area does not change a binding
+        class WheelIgnoringComboBox : public QComboBox {
+        public:
+            using QComboBox::QComboBox;
+
+        protected:
+            void wheelEvent(QWheelEvent *event) override {
+                event->ignore();
+            }
+        };
 
         // Returns the name of an option of modifiers as the platform writes it, such as Ctrl+Alt,
         // or the symbols of the keys on macOS, where Qt::ControlModifier is the Command key.
@@ -157,6 +170,16 @@ namespace hello::daw {
     void KeymapSettingPage::resetShortcuts(const Command &command) {
         m_shortcuts[command.kind][command.id] = defaultsOf(command);
         updateItems();
+        Q_EMIT modifiedChanged();
+    }
+
+    void KeymapSettingPage::resetKeyboardModifiers() {
+        for (auto &list : m_modifiers) {
+            for (auto &bindings : list) {
+                bindings = KeyboardModifierBindings(bindings.scheme());
+            }
+        }
+        updateKeyboardModifierWidgets();
         Q_EMIT modifiedChanged();
     }
 
@@ -272,6 +295,15 @@ namespace hello::daw {
             const QSignalBlocker blocker(item.box);
             item.box->setCurrentIndex(item.box->findData(modifiers ? modifiers->toInt() : offData));
         }
+        if (m_resetModifiers) {
+            bool changed = false;
+            for (const auto &list : m_modifiers) {
+                for (const auto &bindings : list) {
+                    changed = changed || bindings != KeyboardModifierBindings(bindings.scheme());
+                }
+            }
+            m_resetModifiers->setEnabled(changed);
+        }
     }
 
     QWidget *KeymapSettingPage::createKeyboardModifierPanel(Editor::WindowKind kind) {
@@ -284,7 +316,7 @@ namespace hello::daw {
             auto group = new QGroupBox(bindings.scheme().name());
             auto form = new QFormLayout(group);
             for (const auto &role : bindings.scheme().roles()) {
-                auto box = new QComboBox();
+                auto box = new WheelIgnoringComboBox();
                 box->setObjectName(QStringLiteral("%1/%2/%3")
                                        .arg(Editor::nameOf(kind), bindings.scheme().key(),
                                             QLatin1String(role.key)));
@@ -307,6 +339,7 @@ namespace hello::daw {
                                 id, data == offData
                                         ? std::nullopt
                                         : std::optional(Qt::KeyboardModifiers::fromInt(data)));
+                            updateKeyboardModifierWidgets();
                             Q_EMIT modifiedChanged();
                         });
                 m_modifierBoxes.push_back({kind, scheme, role.id, box});
@@ -553,14 +586,19 @@ namespace hello::daw {
         m_add->setObjectName(QStringLiteral("add"));
         m_remove = new QPushButton(tr("Re&move Shortcut"));
         m_remove->setObjectName(QStringLiteral("remove"));
-        m_reset = new QPushButton(tr("Re&set"));
+        m_reset = new QPushButton(tr("Re&set Shortcuts"));
         m_reset->setObjectName(QStringLiteral("reset"));
+        m_resetModifiers = new QPushButton(tr("Reset M&odifiers"));
+        m_resetModifiers->setObjectName(QStringLiteral("resetModifiers"));
+        connect(m_resetModifiers, &QPushButton::clicked, this,
+                [this] { resetKeyboardModifiers(); });
         auto resetAllButton = new QPushButton(tr("Restore &Defaults"));
         resetAllButton->setObjectName(QStringLiteral("resetAll"));
         auto buttonColumn = new QVBoxLayout();
         buttonColumn->addWidget(m_add);
         buttonColumn->addWidget(m_remove);
         buttonColumn->addWidget(m_reset);
+        buttonColumn->addWidget(m_resetModifiers);
         buttonColumn->addStretch();
         buttonColumn->addWidget(resetAllButton);
 

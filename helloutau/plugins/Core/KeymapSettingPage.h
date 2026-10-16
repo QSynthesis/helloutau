@@ -34,7 +34,7 @@ namespace hello::daw {
     /// The shortcuts of the commands, as the keymap of the settings of JetBrains IDEs. See the
     /// keymap in the settings dialog in docs/Widgets.md.
     ///
-    /// Each kind of window has an action registry of its own, see Editor::actionRegistry(). The
+    /// Each kind of window has an action registry of its own, see Editor::actionRegistry().
     /// The page has one tab for each kind of window. Each tab lists the commands of its registry
     /// in the menus of its menu bar, and its commands in no menu under Other. The page edits a
     /// copy of the shortcuts. apply() gives them to the registries, updates every window and
@@ -43,6 +43,11 @@ namespace hello::daw {
     /// A command is identified by the kind of window and its id, so that a command that two kinds
     /// of window have, such as Undo, has shortcuts in each apart from the other. A shortcut
     /// conflicts with the shortcut of another command of the same kind of window alone.
+    ///
+    /// Below the commands, each scheme of keyboard modifiers of the kind of window has a group
+    /// of boxes, one for each role. The boxes ignore the wheel, which scrolls the area of the
+    /// groups instead, so that a scroll does not change a binding. Reset Modifiers restores
+    /// every modifier binding and keeps the shortcuts.
     class COREPLUGIN_EXPORT KeymapSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -79,7 +84,12 @@ namespace hello::daw {
         /// Restores the shortcuts of \a command from its manifest.
         void resetShortcuts(const Command &command);
 
-        /// Restores the shortcuts of every command from their manifests.
+        /// Restores every modifier binding of every kind of window to its default, and keeps
+        /// the shortcuts.
+        void resetKeyboardModifiers();
+
+        /// Restores the shortcuts of every command from their manifests, and every modifier
+        /// binding to its default.
         void resetAll();
 
         /// The tree of commands in the current window-kind tab, while the widget exists.
@@ -124,6 +134,7 @@ namespace hello::daw {
             QPointer<QComboBox> box;
         };
         QList<KeyboardModifierBox> m_modifierBoxes;
+        QPointer<QPushButton> m_resetModifiers;
 
         void load();
         void fillTree();

@@ -7,6 +7,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
+#include <QtGui/QWheelEvent>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
@@ -135,11 +136,22 @@ private Q_SLOTS:
 
         // Restoring the defaults gives Insert Note its key again.
         KeymapSettingPage keymap(again.get());
+        const auto box = keymap.widget()->findChild<QComboBox *>(
+            QStringLiteral("projectWindow/noteView/horizontalScroll"));
+        QCOMPARE(box->currentData().toInt(), int(Qt::AltModifier));
         keymap.widget()->findChild<QPushButton *>(QStringLiteral("resetAll"))->click();
+        QVERIFY(box->currentData().toInt() != int(Qt::AltModifier));
         QVERIFY(keymap.apply(&error));
         QCOMPARE(declaredActionOf(*again, other, QStringLiteral("helloutau.edit.insertNote"))
                      ->shortcuts(),
                  QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
+        // The modifiers return to their defaults as well.
+        QCOMPARE(again
+                     ->keyboardModifierBindings(Editor::ProjectWindowKind,
+                                                NoteViewKeyboardModifiers::scheme())
+                     .modifiers(NoteViewKeyboardModifiers::HorizontalScroll),
+                 KeyboardModifierBindings(NoteViewKeyboardModifiers::scheme())
+                     .modifiers(NoteViewKeyboardModifiers::HorizontalScroll));
     }
 
     // Each window kind has its own tab, and the windows have an Other group for commands in no
@@ -251,6 +263,59 @@ private Q_SLOTS:
             }
         }
         QVERIFY(named > 0);
+    }
+
+    // Reset Modifiers restores every modifier binding and keeps the shortcuts. It is enabled
+    // only while a binding differs from its default. The boxes of modifiers ignore the wheel.
+    void the_modifiers_are_reset_apart_from_the_shortcuts() {
+        QTemporaryDir dir;
+        const auto e = std::make_unique<Editor>(
+            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
+        new BuiltinActions(e.get());
+        e->setWatchesDisk(false);
+        KeymapSettingPage page(e.get());
+        const auto reset =
+            page.widget()->findChild<QPushButton *>(QStringLiteral("resetModifiers"));
+        QVERIFY(reset);
+        QVERIFY(!reset->isEnabled());
+        const auto box = page.widget()->findChild<QComboBox *>(
+            QStringLiteral("projectWindow/noteView/horizontalScroll"));
+        QVERIFY(box);
+        const auto original = box->currentIndex();
+
+        // The wheel does not change the binding.
+        QWheelEvent wheel(QPointF(5, 5), box->mapToGlobal(QPointF(5, 5)), QPoint(), QPoint(0, -120),
+                          Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(box, &wheel);
+        QCOMPARE(box->currentIndex(), original);
+
+        const KeymapSettingPage::Command insert{Editor::ProjectWindowKind,
+                                                QStringLiteral("helloutau.edit.insertNote")};
+        page.removeShortcut(insert, QKeySequence(Qt::Key_Insert));
+        box->setCurrentIndex(box->findData(int(Qt::AltModifier)));
+        QVERIFY(reset->isEnabled());
+        reset->click();
+        QCOMPARE(box->currentIndex(), original);
+        QVERIFY(!reset->isEnabled());
+        QVERIFY(page.shortcuts(insert).isEmpty());
+        QVERIFY(page.isModified());
+
+        // Resetting the shortcuts of the command as well leaves nothing modified.
+        const auto tree = page.tree();
+        for (QTreeWidgetItemIterator it(tree); *it; ++it) {
+            if ((*it)->data(0, Qt::UserRole).toString() == insert.id) {
+                tree->setCurrentItem(*it);
+            }
+        }
+        page.widget()->findChild<QPushButton *>(QStringLiteral("reset"))->click();
+        QVERIFY(!page.shortcuts(insert).isEmpty());
+        QVERIFY(!page.isModified());
+
+        // A modifier changed and reset alone leaves nothing modified either.
+        box->setCurrentIndex(box->findData(int(Qt::AltModifier)));
+        QVERIFY(page.isModified());
+        reset->click();
+        QVERIFY(!page.isModified());
     }
 };
 
