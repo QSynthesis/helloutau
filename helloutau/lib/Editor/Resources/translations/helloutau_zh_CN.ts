@@ -214,12 +214,20 @@
         <translation>收录音频文件(&amp;C)</translation>
     </message>
     <message>
+        <source>&amp;Open in Finder</source>
+        <translation>在 Finder 中打开(&amp;O)</translation>
+    </message>
+    <message>
         <source>&amp;Open in File Manager</source>
         <translation>在文件管理器中打开(&amp;O)</translation>
     </message>
     <message>
         <source>&amp;Offset</source>
         <translation>左空白(&amp;O)</translation>
+    </message>
+    <message>
+        <source>&amp;Open in File Explorer</source>
+        <translation>在文件资源管理器中打开(&amp;O)</translation>
     </message>
     <message>
         <source>O&amp;verlap</source>
@@ -4085,10 +4093,6 @@ Lyrics:
         <translation>在文件管理器中打开</translation>
     </message>
     <message>
-        <source>The file manager cannot show %1.</source>
-        <translation>文件管理器无法显示 %1。</translation>
-    </message>
-    <message>
         <source>Frequency Map Log</source>
         <translation>频率表日志</translation>
     </message>
@@ -4187,6 +4191,18 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>
             <numerusform>已替换 %n 个别名。</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>%1 cannot be shown.</source>
+        <translation>无法显示 %1。</translation>
+    </message>
+    <message>
+        <source>Open in File Explorer</source>
+        <translation>在文件资源管理器中打开</translation>
+    </message>
+    <message>
+        <source>Open in Finder</source>
+        <translation>在 Finder 中打开</translation>
     </message>
     <message>
         <source>Edit Entry</source>

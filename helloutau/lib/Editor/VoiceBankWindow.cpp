@@ -1379,11 +1379,23 @@ namespace hello::daw {
             }
             const auto path = audioPathOf(row);
             if (!kit::FileManager::reveal(path)) {
-                QMessageBox::warning(&decl, tr("Open in File Manager"),
-                                     tr("The file manager cannot show %1.")
+                QMessageBox::warning(&decl, openInFileManagerTitle(),
+                                     tr("%1 cannot be shown.")
                                          .arg(QDir::toNativeSeparators(
                                              QString::fromStdU16String(path.u16string()))));
             }
+        }
+
+        // Returns the text of the command openInFileManager without its mnemonic, which names the
+        // file manager of the platform as VoiceBankActions.xml does.
+        static QString openInFileManagerTitle() {
+#if defined(Q_OS_WINDOWS)
+            return tr("Open in File Explorer");
+#elif defined(Q_OS_MACOS)
+            return tr("Open in Finder");
+#else
+            return tr("Open in File Manager");
+#endif
         }
 
         // The current row across a rebuild of the rows, by its folder, file and alias
