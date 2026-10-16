@@ -120,7 +120,7 @@ private Q_SLOTS:
         m_view->setBuffer(m_buffer.get());
     }
 
-    // The button s switches the view, and the brightness and the color scheme are limited.
+    // The \c s button switches the view, and the brightness and the color scheme are limited.
     void the_controls_switch_the_view() {
         QSignalSpy modes(m_view.get(), &FrequencyMapView::viewModeChanged);
         QSignalSpy spectrum(m_view.get(), &FrequencyMapView::spectrumChanged);

@@ -84,7 +84,7 @@ private Q_SLOTS:
     }
 
     // The rows lie under the expanded items of their folders, which are not rows. The item of a
-    // folder follows its rows and checks or unchecks every row under it.
+    // folder follows the check state of its rows and checks or unchecks every row under it.
     void the_rows_lie_under_their_folders() {
         FileCheckList list({QStringLiteral("File"), QStringLiteral("State")});
         list.addRow("a.wav", {QStringLiteral("present")});

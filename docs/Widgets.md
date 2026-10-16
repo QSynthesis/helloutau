@@ -15,7 +15,7 @@
 - **菜单、工具栏与快捷键来自 QActionKit**，由清单声明、AEC 生成，另提供基于其目录的命令面板。
 - **不做自定义标题栏**，可用的编辑器优先。
 - **界面代码不涉及文件的编码。** 编码只出现在打开与保存的对话框中。
-- **列出多个可勾选文件或文件夹的列表须有全选与全不选**（作者 2026-10-14 要求）：每个列表上方一个三状态的复选框 `CheckAllBox`（HelloUtauWidgets），全部勾选时为勾选，全未勾选时为未勾选，其余为部分勾选，点击时勾选全部可勾选项，已全部勾选时则全部取消。不可勾选的项不受影响，列表禁用或没有可勾选项时复选框禁用。现用于：
+- **列出多个可勾选文件或文件夹的列表须有全选与全不选**（作者 2026-10-14 要求）：每个列表上方一个三状态的复选框 `CheckAllBox`（HelloUtauWidgets），全部勾选时为勾选，全未勾选时为未勾选，其余为部分勾选。部分勾选的项（例如只勾选了部分文件的文件夹）同样使复选框为部分勾选。点击时勾选全部可勾选项，已全部勾选时则全部取消。不可勾选的项不受影响，列表禁用或没有可勾选项时复选框禁用。现用于：
   - 选择编码对话框的文件夹与文件名列表、转换编码对话框的文件名列表；
   - 修复频率表对话框的各列；
   - 文件的勾选列表 `FileCheckList`，即生成、转换、删除频率表与处理音频文件四个对话框的文件列表。
@@ -133,7 +133,7 @@
 
 ### 第 2 步：命令面板
 
-- 列出 `isCommand()` 为真且当前可用的动作，显示为「类别: 文字」，文字去掉助记符（`ActionText::withoutMnemonic()`），并显示快捷键。文字取清单的 `text`，即命令的完整名称；菜单中显示的是 `shortText`，未指定时同 `text`，二者对应 VS Code 的 `title` 与 `shortTitle`。例如「导出」菜单中的「UST...」在面板中为「File: Export UST...」。与 VS Code 相同，不可用的命令不列出（[VS Code 的扩展文档](https://code.visualstudio.com/api/references/contribution-points)：「the Command Palette doesn't show icons nor disabled commands」）。
+- 列出 `isCommand()` 为真且当前可用的动作，显示为「类别: 文字」，文字去掉助记符（mnemonic，即面向用户的文档所称的访问键，`ActionText::withoutMnemonic()`），并显示快捷键。文字取清单的 `text`，即命令的完整名称；菜单中显示的是 `shortText`，未指定时同 `text`，二者对应 VS Code 的 `title` 与 `shortTitle`。例如「导出」菜单中的「UST...」在面板中为「File: Export UST...」。与 VS Code 相同，不可用的命令不列出（[VS Code 的扩展文档](https://code.visualstudio.com/api/references/contribution-points)：「the Command Palette doesn't show icons nor disabled commands」）。
 - 按输入即时模糊匹配并排序：字符按顺序出现即匹配，词首与相连的字符得分高，已输入的字符以强调色显示。翻译后的文字与清单中的原文都参与匹配，界面不是英文时原文显示在第二行。
 - 回车执行；Esc、点击面板以外、触发任何快捷键或失去焦点时关闭。最近执行的命令在未输入时排在最前，记在 `AppSettings` 中，各窗口共用。
 - 外观与显示逻辑参照 QSynthesis Revenge（[`SineStriker/qsynthesis-revenge`](https://github.com/SineStriker/qsynthesis-revenge)，`refactor` 分支 `6c20777`）的命令面板：位于窗口顶部居中，宽高各为窗口的一半并有上下限，快捷键画成键帽，键之间的分隔同 VS Code（其 keybindingLabels.ts 中的 UILabelProvider）：Windows 与 Linux 上以不带键帽的「+」相连，macOS 上修饰键为符号，之间不加分隔，多段组合键之间只留空隙。面板的阴影由主题系统以样式表提供，不自行绘制。

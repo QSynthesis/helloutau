@@ -20,15 +20,16 @@ namespace hello::daw {
     /// the constructor.
     class HELLOUTAU_WIDGETS_EXPORT FolderTree {
     public:
-        /// Places the items of \a tree. The items of the folders have \a folderFlags. If these
-        /// include Qt::ItemIsUserCheckable, the items of the folders are created unchecked.
+        /// Places the items of the files and the folders in \a tree. The items of the folders have
+        /// \a folderFlags. If these include Qt::ItemIsUserCheckable, the items of the folders are
+        /// created unchecked.
         explicit FolderTree(QTreeWidget *tree, Qt::ItemFlags folderFlags = Qt::ItemIsEnabled);
         ~FolderTree();
 
         /// Creates the item of the file at \a path, which is relative to the folder that the tree
         /// lists, under the items of its folders, with the file name in the first column. If
-        /// \a path has a root or begins with \c .., the item lies at the top level with the whole
-        /// path in native separators.
+        /// \a path is empty, has a root or begins with \c .., the item lies at the top level with
+        /// the whole path in native separators.
         QTreeWidgetItem *addFile(const std::filesystem::path &path);
 
     private:

@@ -34,8 +34,8 @@ private Q_SLOTS:
         QCOMPARE(sub->child(1), deep);
     }
 
-    // The items of the folders are expanded and have the flags of the constructor, and checkable
-    // items of folders are unchecked.
+    // The items of the folders are expanded and have the flags of the constructor, and the items
+    // of the folders are unchecked if they are checkable.
     void the_folders_have_the_flags_given() {
         QTreeWidget tree;
         FolderTree plain(&tree);

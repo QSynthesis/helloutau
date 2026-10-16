@@ -99,7 +99,8 @@ private Q_SLOTS:
         QVERIFY(box.isEnabled());
     }
 
-    // A partially checked item makes the box partially checked, although no item is checked.
+    // A partially checked item makes the box partially checked, although no top-level item is
+    // checked.
     void a_partially_checked_item_makes_the_box_partial() {
         QTreeWidget tree;
         auto folder = new QTreeWidgetItem(&tree);

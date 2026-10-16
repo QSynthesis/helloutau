@@ -86,7 +86,7 @@
         <!-- Both axes by one of the seven zoom levels, as in frqeditor -->
         <action id="helloutau.frequencyMap.zoomIn" text="Zoom &amp;In" category="View" />
         <action id="helloutau.frequencyMap.zoomOut" text="Zoom &amp;Out" category="View" />
-        <!-- The spectrogram in place of the rows of the keys, as the button s of frqeditor -->
+        <!-- The spectrogram in place of the rows of the keys, as the s button of frqeditor -->
         <action id="helloutau.frequencyMap.showSpectrogram" text="Show &amp;Spectrogram"
                 category="View" />
         <!-- The color schemes and the brightness of the spectrogram, as in frqeditor -->

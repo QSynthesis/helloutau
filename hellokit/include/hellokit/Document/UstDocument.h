@@ -32,7 +32,9 @@ namespace hello::kit {
     /// \code
     ///   auto ust = UstDocument::open(path, diagnostics);
     ///   if (!ust) return;
-    ///   const auto charset = ust->settledCharset().value_or(promptForCharset(*ust));
+    ///   // chosenCharset is the encoding that the user chose, such as the result of
+    ///   // kit::UstCharsetSelector::selectCharset() in kit::ProjectDocument::open().
+    ///   const auto charset = ust->settledCharset().value_or(chosenCharset);
     ///   auto project = ust->toProject(charset, diagnostics);
     ///
     ///   auto out = UstDocument::fromProject(project, options, diagnostics);
