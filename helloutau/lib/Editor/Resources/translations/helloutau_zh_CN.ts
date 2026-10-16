@@ -1601,6 +1601,10 @@
         <translation>歌词(&amp;L)：</translation>
     </message>
     <message>
+        <source>&amp;Key:</source>
+        <translation>音高(&amp;K)：</translation>
+    </message>
+    <message>
         <source>Len&amp;gth (ticks):</source>
         <translation>长度（tick）(&amp;G)：</translation>
     </message>

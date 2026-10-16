@@ -5,6 +5,7 @@
 #include <QtCore/QRegularExpression>
 #include <QtGui/QRegularExpressionValidator>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFormLayout>
@@ -14,9 +15,15 @@
 
 #include <stdutau/utaconst.h>
 
+#include <helloutau/Widgets/PianoKeyboard.h>
+
 namespace hello::daw {
 
     namespace {
+
+        // The keys of the box of the key, C1 and B8 as in UTAU
+        constexpr int LowestKey = 24;
+        constexpr int HighestKey = 119;
 
         QString numberText(double value) {
             return QString::number(value, 'g', 12);
@@ -137,6 +144,22 @@ namespace hello::daw {
         const auto voiceBankDefault = tr("(default: voice bank)");
         text(tr("&Lyric:"), [](const kit::Note &note) { return note.lyric; });
         {
+            // The keys of UTAU, and a key of the notes outside them so that it is shown
+            const auto key = shared<int>(notes, [](const kit::Note &note) { return note.noteNum; });
+            m_key = new QComboBox();
+            for (int noteNum = LowestKey; noteNum <= HighestKey; ++noteNum) {
+                m_key->addItem(PianoKeyboard::keyName(noteNum), noteNum);
+            }
+            if (key && (*key < LowestKey || *key > HighestKey)) {
+                m_key->insertItem(*key < LowestKey ? 0 : m_key->count(),
+                                  PianoKeyboard::keyName(*key), *key);
+            }
+            m_key->setPlaceholderText(various);
+            m_key->setCurrentIndex(key ? m_key->findData(*key) : -1);
+            connect(m_key, &QComboBox::activated, this, [this] { m_keyEdited = true; });
+            form->addRow(tr("&Key:"), m_key);
+        }
+        {
             const auto length =
                 shared<int>(notes, [](const kit::Note &note) { return note.length; });
             auto edit = new QLineEdit(length ? QString::number(*length) : QString());
@@ -211,6 +234,9 @@ namespace hello::daw {
         if (edited(Lyric)) {
             changes.lyric = textOf(Lyric);
         }
+        if (m_keyEdited && m_key->currentIndex() >= 0) {
+            changes.noteNum = m_key->currentData().toInt();
+        }
         if (edited(Length)) {
             bool ok = false;
             const int length = textOf(Length).toInt(&ok);
@@ -233,6 +259,10 @@ namespace hello::daw {
 
     QLineEdit *NotePropertiesDialog::field(Field field) const {
         return m_fields.value(field);
+    }
+
+    QComboBox *NotePropertiesDialog::keyBox() const {
+        return m_key;
     }
 
     TempoDialog::TempoDialog(std::optional<double> tempo, double current, QWidget *parent)

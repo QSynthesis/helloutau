@@ -391,6 +391,9 @@ namespace hello::kit {
             if (changes.lyric) {
                 note.setLyric(*changes.lyric);
             }
+            if (changes.noteNum) {
+                note.setNoteNum(*changes.noteNum);
+            }
             if (changes.length) {
                 note.setLength(*changes.length);
             }

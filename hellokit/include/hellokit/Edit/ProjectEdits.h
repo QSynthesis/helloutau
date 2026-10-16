@@ -59,6 +59,7 @@ namespace hello::kit {
     /// may leave to the default, such as the tempo, is cleared by setting it to \c std::nullopt.
     struct NotePropertyChanges {
         std::optional<QString> lyric;
+        std::optional<int> noteNum;
         std::optional<int> length;
         std::optional<std::optional<double>> tempo;
         std::optional<std::optional<double>> intensity;
@@ -70,8 +71,8 @@ namespace hello::kit {
         std::optional<QString> flags;
 
         inline bool isEmpty() const {
-            return !lyric && !length && !tempo && !intensity && !modulation && !velocity &&
-                   !preUtterance && !voiceOverlap && !startPoint && !flags;
+            return !lyric && !noteNum && !length && !tempo && !intensity && !modulation &&
+                   !velocity && !preUtterance && !voiceOverlap && !startPoint && !flags;
         }
     };
 

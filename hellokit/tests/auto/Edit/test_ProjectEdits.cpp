@@ -673,6 +673,7 @@ private Q_SLOTS:
         const QList<NoteRef> both{notes.at(0), notes.at(1)};
 
         NotePropertyChanges changes;
+        changes.noteNum = 67;
         changes.tempo = std::optional(150.0);
         changes.intensity = std::optional<double>();
         changes.flags = QStringLiteral("B0");
@@ -681,6 +682,7 @@ private Q_SLOTS:
         const auto edited = session.snapshot();
         for (int i : {0, 1}) {
             const auto &note = edited.tracks[0].notes[i];
+            QCOMPARE(note.noteNum, 67);
             QCOMPARE(note.tempo, std::optional(150.0));
             QVERIFY(!note.intensity);
             QCOMPARE(note.flags, QStringLiteral("B0"));

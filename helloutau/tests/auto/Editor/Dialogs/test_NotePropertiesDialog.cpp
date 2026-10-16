@@ -3,6 +3,7 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QLineEdit>
 
@@ -62,6 +63,37 @@ private Q_SLOTS:
         tempo.followBox()->setChecked(false);
         tempo.tempoBox()->setValue(96);
         QCOMPARE(tempo.tempo(), std::optional(96.0));
+    }
+
+    // The box of the key shows the key that the notes share, chosen from C1 to B8 or from a key
+    // of the notes outside them, and no key if the notes differ. Only a chosen key is given.
+    void the_key_is_chosen_from_the_keys_of_utau() {
+        kit::Note a;
+        a.lyric = QStringLiteral("a");
+        a.length = 480;
+        a.noteNum = 60;
+        auto b = a;
+        b.noteNum = 62;
+        NotePropertiesDialog differing({a, b});
+        const auto box = differing.keyBox();
+        QCOMPARE(box->currentIndex(), -1);
+        QCOMPARE(box->count(), 96);
+        QCOMPARE(box->itemData(0).toInt(), 24);
+        QCOMPARE(box->itemData(95).toInt(), 119);
+        QVERIFY(!differing.changes().noteNum);
+        box->setCurrentIndex(box->findData(64));
+        Q_EMIT box->activated(box->currentIndex());
+        QCOMPARE(differing.changes().noteNum, std::optional(64));
+
+        NotePropertiesDialog same({a, a});
+        QCOMPARE(same.keyBox()->currentData().toInt(), 60);
+        QVERIFY(!same.changes().noteNum);
+
+        auto low = a;
+        low.noteNum = 12;
+        NotePropertiesDialog outside({low});
+        QCOMPARE(outside.keyBox()->currentData().toInt(), 12);
+        QCOMPARE(outside.keyBox()->count(), 97);
     }
 
     // A default is shown as a number if every note has it and all are equal, and as (various)

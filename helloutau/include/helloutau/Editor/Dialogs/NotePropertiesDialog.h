@@ -12,14 +12,15 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 class QCheckBox;
+class QComboBox;
 class QDoubleSpinBox;
 class QLineEdit;
 
 namespace hello::daw {
 
     /// Edits the properties of the selected notes, as the note property dialog of UTAU does: the
-    /// lyric, the length, the tempo, the intensity, the modulation, the consonant velocity, the
-    /// pre-utterance, the overlap, the start point and the flags.
+    /// lyric, the key, the length, the tempo, the intensity, the modulation, the consonant
+    /// velocity, the pre-utterance, the overlap, the start point and the flags.
     ///
     /// A field shows the value the notes share, or stays empty with "(various)" if they
     /// differ, and "(default)" if they leave it to the default. Only the fields edited
@@ -63,9 +64,15 @@ namespace hello::daw {
 
         QLineEdit *field(Field field) const;
 
+        /// Returns the box of the key, from C1 to B8 as in UTAU, with no key chosen if the notes
+        /// differ.
+        QComboBox *keyBox() const;
+
     private:
         QList<QLineEdit *> m_fields;
         QList<bool> m_edited;
+        QComboBox *m_key;
+        bool m_keyEdited = false;
     };
 
     /// A dialog in which the user enters the tempo of a note: a value in BPM, or none to follow
