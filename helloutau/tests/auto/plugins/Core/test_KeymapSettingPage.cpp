@@ -7,14 +7,11 @@
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
-#include <QtGui/QWheelEvent>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QKeySequenceEdit>
 #include <QtWidgets/QLabel>
-#include <QtWidgets/QLayout>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTabWidget>
@@ -26,7 +23,6 @@
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/NoteViewKeyboardModifiers.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
 #include <Core/KeymapSettingPage.h>
@@ -101,16 +97,6 @@ private Q_SLOTS:
         QString error;
         QVERIFY(page.apply(&error));
         QVERIFY(!page.isModified());
-        const auto horizontalScroll = page.widget()->findChild<QComboBox *>(
-            QStringLiteral("projectWindow/noteView/horizontalScroll"));
-        QVERIFY(horizontalScroll);
-        horizontalScroll->setCurrentIndex(horizontalScroll->findData(int(Qt::AltModifier)));
-        QVERIFY(page.isModified());
-        QVERIFY(page.apply(&error));
-        QCOMPARE(e->keyboardModifierBindings(Editor::ProjectWindowKind,
-                                             NoteViewKeyboardModifiers::scheme())
-                     .modifiers(NoteViewKeyboardModifiers::HorizontalScroll),
-                 Qt::AltModifier);
         QCOMPARE(declaredActionOf(*e, window, QStringLiteral("helloutau.edit.combineNotes"))
                      ->shortcuts(),
                  (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
@@ -129,30 +115,14 @@ private Q_SLOTS:
         QVERIFY(declaredActionOf(*again, other, QStringLiteral("helloutau.edit.insertNote"))
                     ->shortcuts()
                     .isEmpty());
-        QCOMPARE(again
-                     ->keyboardModifierBindings(Editor::ProjectWindowKind,
-                                                NoteViewKeyboardModifiers::scheme())
-                     .modifiers(NoteViewKeyboardModifiers::HorizontalScroll),
-                 Qt::AltModifier);
 
         // Restoring the defaults gives Insert Note its key again.
         KeymapSettingPage keymap(again.get());
-        const auto box = keymap.widget()->findChild<QComboBox *>(
-            QStringLiteral("projectWindow/noteView/horizontalScroll"));
-        QCOMPARE(box->currentData().toInt(), int(Qt::AltModifier));
         keymap.widget()->findChild<QPushButton *>(QStringLiteral("resetAll"))->click();
-        QVERIFY(box->currentData().toInt() != int(Qt::AltModifier));
         QVERIFY(keymap.apply(&error));
         QCOMPARE(declaredActionOf(*again, other, QStringLiteral("helloutau.edit.insertNote"))
                      ->shortcuts(),
                  QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
-        // The modifiers return to their defaults as well.
-        QCOMPARE(again
-                     ->keyboardModifierBindings(Editor::ProjectWindowKind,
-                                                NoteViewKeyboardModifiers::scheme())
-                     .modifiers(NoteViewKeyboardModifiers::HorizontalScroll),
-                 KeyboardModifierBindings(NoteViewKeyboardModifiers::scheme())
-                     .modifiers(NoteViewKeyboardModifiers::HorizontalScroll));
     }
 
     // Each window kind has its own tab, and the windows have an Other group for commands in no
@@ -236,133 +206,6 @@ private Q_SLOTS:
                     .toObject()
                     .value(QStringLiteral("shortcuts"))
                     .isArray());
-    }
-
-    // An option of modifiers is named as the platform writes the modifiers of a shortcut.
-    void the_modifier_options_are_named_as_shortcuts_are() {
-        QTemporaryDir dir;
-        const auto e = std::make_unique<Editor>(
-            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
-        new BuiltinActions(e.get());
-        e->setWatchesDisk(false);
-        KeymapSettingPage page(e.get());
-        int named = 0;
-        for (const auto box : page.widget()->findChildren<QComboBox *>()) {
-            for (int i = 0; i < box->count(); ++i) {
-                const int data = box->itemData(i).toInt();
-                if (data <= 0) {
-                    continue;
-                }
-                const auto text = box->itemText(i);
-                const auto shortcut =
-                    QKeySequence(QKeyCombination(Qt::KeyboardModifiers(data), Qt::Key_A))
-                        .toString(QKeySequence::NativeText);
-                QVERIFY2(!text.isEmpty() && !text.endsWith(QLatin1Char('+')), qPrintable(text));
-                QVERIFY2(shortcut.startsWith(text),
-                         qPrintable(text + QStringLiteral(" ") + shortcut));
-                ++named;
-            }
-        }
-        QVERIFY(named > 0);
-    }
-
-    // At its preferred size the page shows every box of modifiers of the current tab, without an
-    // area of its own that scrolls them. No blank lies below the commands or the modifiers.
-    void the_page_shows_the_modifiers_at_their_full_height() {
-        QTemporaryDir dir;
-        const auto e = std::make_unique<Editor>(
-            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
-        new BuiltinActions(e.get());
-        e->setWatchesDisk(false);
-        KeymapSettingPage page(e.get());
-        const auto widget = page.widget();
-        widget->resize(widget->sizeHint());
-        widget->show();
-        QVERIFY(QTest::qWaitForWindowExposed(widget));
-        int shown = 0;
-        for (const auto box : widget->findChildren<QComboBox *>()) {
-            if (box->objectName().startsWith(QStringLiteral("projectWindow/"))) {
-                QVERIFY2(!box->visibleRegion().isEmpty(), qPrintable(box->objectName()));
-                ++shown;
-            }
-        }
-        QVERIFY(shown > 0);
-        // Reset Modifiers and Restore Defaults lie beside the modifiers.
-        const auto top = [widget](QWidget *child) { return child->mapTo(widget, QPoint()).y(); };
-        const auto bottom = [top](QWidget *child) { return top(child) + child->height(); };
-        const auto resetModifiers =
-            widget->findChild<QPushButton *>(QStringLiteral("resetModifiers"));
-        const auto resetAll = widget->findChild<QPushButton *>(QStringLiteral("resetAll"));
-        const auto modifiers = widget->findChild<QWidget *>(QStringLiteral("modifierArea"));
-        const auto tabs = widget->findChild<QTabWidget *>(QStringLiteral("windows"));
-        QVERIFY(resetModifiers && resetAll && modifiers && tabs);
-        QCOMPARE(top(resetModifiers), top(modifiers));
-        QVERIFY(bottom(resetAll) <= bottom(modifiers));
-        // The commands of a kind of window without modifiers reach the bottom of the buttons.
-        int without = 0;
-        for (int i = 0; i < tabs->count(); ++i) {
-            tabs->setCurrentIndex(i);
-            widget->layout()->activate();
-            if (!modifiers->isHidden()) {
-                continue;
-            }
-            QVERIFY(bottom(tabs) >= bottom(resetAll));
-            ++without;
-        }
-        QVERIFY(without > 0);
-    }
-
-    // Reset Modifiers restores every modifier binding and keeps the shortcuts. It is enabled
-    // only while a binding differs from its default. The boxes of modifiers ignore the wheel.
-    void the_modifiers_are_reset_apart_from_the_shortcuts() {
-        QTemporaryDir dir;
-        const auto e = std::make_unique<Editor>(
-            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
-        new BuiltinActions(e.get());
-        e->setWatchesDisk(false);
-        KeymapSettingPage page(e.get());
-        const auto reset =
-            page.widget()->findChild<QPushButton *>(QStringLiteral("resetModifiers"));
-        QVERIFY(reset);
-        QVERIFY(!reset->isEnabled());
-        const auto box = page.widget()->findChild<QComboBox *>(
-            QStringLiteral("projectWindow/noteView/horizontalScroll"));
-        QVERIFY(box);
-        const auto original = box->currentIndex();
-
-        // The wheel does not change the binding.
-        QWheelEvent wheel(QPointF(5, 5), box->mapToGlobal(QPointF(5, 5)), QPoint(), QPoint(0, -120),
-                          Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
-        QApplication::sendEvent(box, &wheel);
-        QCOMPARE(box->currentIndex(), original);
-
-        const KeymapSettingPage::Command insert{Editor::ProjectWindowKind,
-                                                QStringLiteral("helloutau.edit.insertNote")};
-        page.removeShortcut(insert, QKeySequence(Qt::Key_Insert));
-        box->setCurrentIndex(box->findData(int(Qt::AltModifier)));
-        QVERIFY(reset->isEnabled());
-        reset->click();
-        QCOMPARE(box->currentIndex(), original);
-        QVERIFY(!reset->isEnabled());
-        QVERIFY(page.shortcuts(insert).isEmpty());
-        QVERIFY(page.isModified());
-
-        // Resetting the shortcuts of the command as well leaves nothing modified.
-        const auto tree = page.tree();
-        for (QTreeWidgetItemIterator it(tree); *it; ++it) {
-            if ((*it)->data(0, Qt::UserRole).toString() == insert.id) {
-                tree->setCurrentItem(*it);
-            }
-        }
-        page.widget()->findChild<QPushButton *>(QStringLiteral("reset"))->click();
-        QVERIFY(!page.shortcuts(insert).isEmpty());
-        QVERIFY(!page.isModified());
-
-        // A modifier changed and reset alone leaves nothing modified either.
-        box->setCurrentIndex(box->findData(int(Qt::AltModifier)));
-        QVERIFY(page.isModified());
-        reset->click();
-        QVERIFY(!page.isModified());
     }
 };
 

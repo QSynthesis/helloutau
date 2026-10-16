@@ -40,6 +40,8 @@ private Q_SLOTS:
                               "editor.FrequencyMaps"}));
         QCOMPARE(idsOf(catalog->page(QStringLiteral("editor.AppearanceAndBehavior"))->pages()),
                  (QStringList{"core.MenusAndToolbars", "editor.SystemSettings"}));
+        QCOMPARE(idsOf(catalog->page(QStringLiteral("core.Keymap"))->pages()),
+                 QStringList{"core.KeyboardModifiers"});
 
         // With a loader, Plugins precedes Rendering.
         AppLoader loader(

@@ -7,6 +7,7 @@
 #include <helloutau/Editor/SettingPages/SystemSettingsPage.h>
 #include <helloutau/Widgets/SettingPage.h>
 
+#include "KeyboardModifierSettingPage.h"
 #include "KeymapSettingPage.h"
 #include "MenusSettingPage.h"
 #include "PluginSettingPage.h"
@@ -20,7 +21,9 @@ namespace hello::daw {
             appearance->addPage(new MenusSettingPage(editor),
                                 QLatin1String(SystemSettingsPage::pageId));
         }
-        catalog->addPage(new KeymapSettingPage(editor), QLatin1String(EditorSettingPage::pageId));
+        const auto keymap = new KeymapSettingPage(editor);
+        catalog->addPage(keymap, QLatin1String(EditorSettingPage::pageId));
+        keymap->addPage(new KeyboardModifierSettingPage(editor));
         // Plugins precedes Rendering as Plugins precedes the build settings in JetBrains IDEs.
         if (loader) {
             catalog->addPage(new PluginSettingPage(*loader),

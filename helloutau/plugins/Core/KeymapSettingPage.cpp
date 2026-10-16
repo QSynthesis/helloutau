@@ -4,15 +4,10 @@
 #include <iterator>
 
 #include <QtCore/QSet>
-#include <QtCore/QSignalBlocker>
 #include <QtGui/QAction>
-#include <QtGui/QWheelEvent>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
-#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QKeySequenceEdit>
@@ -21,7 +16,6 @@
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QGroupBox>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
@@ -62,54 +56,6 @@ namespace hello::daw {
                 texts.push_back(key.toString(QKeySequence::NativeText));
             }
             return texts.join(QStringLiteral(", "));
-        }
-
-        const Qt::KeyboardModifiers modifierOptions[] = {
-            Qt::NoModifier,
-            Qt::ControlModifier,
-            Qt::AltModifier,
-            Qt::ShiftModifier,
-#ifndef Q_OS_WIN
-            Qt::MetaModifier,
-#endif
-            Qt::ControlModifier | Qt::AltModifier,
-            Qt::ControlModifier | Qt::ShiftModifier,
-            Qt::AltModifier | Qt::ShiftModifier,
-            Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier,
-        };
-
-        // The data of the option that turns a role off, which no combination of modifiers has
-        constexpr int offData = -1;
-
-        // The least height of the tabs of the commands, which keeps the tree tall above the
-        // modifiers
-        constexpr int commandListHeight = 400;
-
-        // A box of modifiers that ignores the wheel, which then scrolls the page, so that a
-        // scroll over the boxes does not change a binding
-        class WheelIgnoringComboBox : public QComboBox {
-        public:
-            using QComboBox::QComboBox;
-
-        protected:
-            void wheelEvent(QWheelEvent *event) override {
-                event->ignore();
-            }
-        };
-
-        // Returns the name of an option of modifiers as the platform writes it, such as Ctrl+Alt,
-        // or the symbols of the keys on macOS, where Qt::ControlModifier is the Command key.
-        QString keyboardModifierText(Qt::KeyboardModifiers modifiers) {
-            if (modifiers == Qt::NoModifier) {
-                return KeymapSettingPage::tr("None");
-            }
-            // Without a key, the text ends with the separator on the platforms that write one.
-            auto text = QKeySequence(QKeyCombination(modifiers, Qt::Key(0)))
-                            .toString(QKeySequence::NativeText);
-            if (text.endsWith(QLatin1Char('+'))) {
-                text.chop(1);
-            }
-            return text;
         }
 
         // Returns the command of item, or std::nullopt for a window or a menu.
@@ -176,29 +122,13 @@ namespace hello::daw {
         Q_EMIT modifiedChanged();
     }
 
-    void KeymapSettingPage::resetKeyboardModifiers() {
-        for (auto &list : m_modifiers) {
-            for (auto &bindings : list) {
-                bindings = KeyboardModifierBindings(bindings.scheme());
-            }
-        }
-        updateKeyboardModifierWidgets();
-        Q_EMIT modifiedChanged();
-    }
-
     void KeymapSettingPage::resetAll() {
         for (const auto kind : Editor::windowKinds) {
             for (const auto &id : std::as_const(m_commands[kind])) {
                 m_shortcuts[kind][id] = defaultsOf({kind, id});
             }
         }
-        for (auto &list : m_modifiers) {
-            for (auto &bindings : list) {
-                bindings = KeyboardModifierBindings(bindings.scheme());
-            }
-        }
         updateItems();
-        updateKeyboardModifierWidgets();
         Q_EMIT modifiedChanged();
     }
 
@@ -220,24 +150,11 @@ namespace hello::daw {
                     return true;
                 }
             }
-            if (m_modifiers[kind] != m_editor->keyboardModifierBindings(kind)) {
-                return true;
-            }
         }
         return false;
     }
 
     bool KeymapSettingPage::apply(QString *error) {
-        for (const auto &list : m_modifiers) {
-            for (const auto &bindings : list) {
-                if (!bindings.isValid()) {
-                    if (error) {
-                        *error = tr("Modifier bindings conflict with each other.");
-                    }
-                    return false;
-                }
-            }
-        }
         for (const auto kind : Editor::windowKinds) {
             // The overrides of commands that are not registered now, such as those of a plugin
             // turned off, stay.
@@ -253,7 +170,6 @@ namespace hello::daw {
             }
             actions->setShortcutsFamily(family);
             actions->updateContext(QAK::AE_Keymap);
-            m_editor->setKeyboardModifierBindings(kind, m_modifiers[kind]);
         }
         if (!m_editor->saveKeymap(error)) {
             return false;
@@ -275,7 +191,6 @@ namespace hello::daw {
 
     void KeymapSettingPage::load() {
         for (const auto kind : Editor::windowKinds) {
-            m_modifiers[kind] = m_editor->keyboardModifierBindings(kind);
             m_commands[kind].clear();
             m_shortcuts[kind].clear();
             const auto actions = registry(kind);
@@ -287,71 +202,6 @@ namespace hello::daw {
                 }
             }
         }
-    }
-
-    void KeymapSettingPage::updateKeyboardModifierWidgets() {
-        for (const auto &item : std::as_const(m_modifierBoxes)) {
-            if (!item.box) {
-                continue;
-            }
-            const auto modifiers = m_modifiers[item.kind].at(item.scheme).modifiers(item.role);
-            const QSignalBlocker blocker(item.box);
-            item.box->setCurrentIndex(item.box->findData(modifiers ? modifiers->toInt() : offData));
-        }
-        if (m_resetModifiers) {
-            bool changed = false;
-            for (const auto &list : m_modifiers) {
-                for (const auto &bindings : list) {
-                    changed = changed || bindings != KeyboardModifierBindings(bindings.scheme());
-                }
-            }
-            m_resetModifiers->setEnabled(changed);
-        }
-    }
-
-    QWidget *KeymapSettingPage::createKeyboardModifierPanel(Editor::WindowKind kind) {
-        auto panel = new QWidget();
-        auto layout = new QVBoxLayout(panel);
-        layout->setContentsMargins(0, 0, 0, 0);
-        const auto &list = m_modifiers[kind];
-        for (int scheme = 0; scheme < list.size(); ++scheme) {
-            const auto &bindings = list.at(scheme);
-            auto group = new QGroupBox(bindings.scheme().name());
-            auto form = new QFormLayout(group);
-            for (const auto &role : bindings.scheme().roles()) {
-                auto box = new WheelIgnoringComboBox();
-                box->setObjectName(QStringLiteral("%1/%2/%3")
-                                       .arg(Editor::nameOf(kind), bindings.scheme().key(),
-                                            QLatin1String(role.key)));
-                box->addItem(tr("Off"), offData);
-                // Only a role that starts an operation acts without modifiers.
-                const bool none = bindings.scheme().isStart(role.id);
-                for (int i = 0; i < int(std::size(modifierOptions)); ++i) {
-                    if (modifierOptions[i] != Qt::NoModifier || none) {
-                        box->addItem(keyboardModifierText(modifierOptions[i]),
-                                     modifierOptions[i].toInt());
-                    }
-                }
-                connect(box, qOverload<int>(&QComboBox::currentIndexChanged), this,
-                        [this, kind, scheme, id = role.id, box](int option) {
-                            if (option < 0) {
-                                return;
-                            }
-                            const int data = box->itemData(option).toInt();
-                            m_modifiers[kind][scheme].setModifiers(
-                                id, data == offData
-                                        ? std::nullopt
-                                        : std::optional(Qt::KeyboardModifiers::fromInt(data)));
-                            updateKeyboardModifierWidgets();
-                            Q_EMIT modifiedChanged();
-                        });
-                m_modifierBoxes.push_back({kind, scheme, role.id, box});
-                form->addRow(bindings.scheme().roleName(role.id), box);
-            }
-            layout->addWidget(group);
-        }
-        layout->addStretch();
-        return panel;
     }
 
     void KeymapSettingPage::fillTree() {
@@ -589,75 +439,32 @@ namespace hello::daw {
         m_add->setObjectName(QStringLiteral("add"));
         m_remove = new QPushButton(tr("Re&move Shortcut"));
         m_remove->setObjectName(QStringLiteral("remove"));
-        m_reset = new QPushButton(tr("Re&set Shortcuts"));
+        m_reset = new QPushButton(tr("Re&set"));
         m_reset->setObjectName(QStringLiteral("reset"));
-        m_resetModifiers = new QPushButton(tr("Reset M&odifiers"));
-        m_resetModifiers->setObjectName(QStringLiteral("resetModifiers"));
-        connect(m_resetModifiers, &QPushButton::clicked, this,
-                [this] { resetKeyboardModifiers(); });
         auto resetAllButton = new QPushButton(tr("Restore &Defaults"));
         resetAllButton->setObjectName(QStringLiteral("resetAll"));
-        // The buttons of the shortcuts beside the commands, and Reset Modifiers beside the
-        // modifiers, level with their top. Restore Defaults is at the bottom.
-        auto shortcutButtons = new QVBoxLayout();
-        shortcutButtons->addWidget(m_add);
-        shortcutButtons->addWidget(m_remove);
-        shortcutButtons->addWidget(m_reset);
-        shortcutButtons->addStretch();
-        auto modifierButtons = new QVBoxLayout();
-        modifierButtons->addWidget(m_resetModifiers);
-        modifierButtons->addStretch();
-        modifierButtons->addWidget(resetAllButton);
+        auto buttonColumn = new QVBoxLayout();
+        buttonColumn->addWidget(m_add);
+        buttonColumn->addWidget(m_remove);
+        buttonColumn->addWidget(m_reset);
+        buttonColumn->addStretch();
+        buttonColumn->addWidget(resetAllButton);
+
+        auto content = new QHBoxLayout();
+        content->addWidget(m_tabs, 1);
+        content->addLayout(buttonColumn);
 
         auto layout = new QVBoxLayout(widget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addLayout(searchRow);
-
-        // The modifier panel of each kind of window, shown with its tab
-        auto modifiers = new QWidget();
-        auto modifierLayout = new QVBoxLayout(modifiers);
-        modifierLayout->setContentsMargins(0, 0, 0, 0);
-        m_modifierBoxes.clear();
-        for (const auto kind : Editor::windowKinds) {
-            m_modifierPanels[kind] = createKeyboardModifierPanel(kind);
-            modifierLayout->addWidget(m_modifierPanels[kind]);
-        }
-        m_modifierArea = modifiers;
-        m_modifierArea->setObjectName(QStringLiteral("modifierArea"));
-
-        // The commands and the modifiers at their full heights, which the settings dialog
-        // scrolls if it is lower, rather than an area of the modifiers that scrolls apart. The
-        // commands take the rest of the height.
-        m_tabs->setMinimumHeight(commandListHeight);
-        auto content = new QGridLayout();
-        content->addLayout(shortcutButtons, 0, 1);
-        content->addWidget(m_modifierArea, 1, 0);
-        content->addLayout(modifierButtons, 1, 1);
-        content->setRowStretch(0, 1);
-        content->setColumnStretch(0, 1);
         layout->addLayout(content, 1);
 
-        // The commands span the row of the modifiers if the kind of window has none, so that no
-        // blank lies beside the buttons below them.
-        const auto showModifiers = [this, content](int index) {
-            for (const auto kind : Editor::windowKinds) {
-                m_modifierPanels[kind]->setVisible(kind == index);
-            }
-            const bool shown = !m_modifiers[index].isEmpty();
-            m_modifierArea->setVisible(shown);
-            content->removeWidget(m_tabs);
-            content->addWidget(m_tabs, 0, 0, shown ? 1 : 2, 1);
-        };
-        showModifiers(m_tabs->currentIndex());
-
         fillTree();
-        updateKeyboardModifierWidgets();
 
         connect(m_search, &QLineEdit::textChanged, this, [this] { filter(); });
         connect(m_keySearch, &QKeySequenceEdit::keySequenceChanged, this, [this] { filter(); });
-        connect(m_tabs, &QTabWidget::currentChanged, this, [this, showModifiers](int index) {
+        connect(m_tabs, &QTabWidget::currentChanged, this, [this](int index) {
             m_tree = m_trees[index];
-            showModifiers(index);
             updateItems();
         });
         for (QTreeWidget *tree : m_trees) {

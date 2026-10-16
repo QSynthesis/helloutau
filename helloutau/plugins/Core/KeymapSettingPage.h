@@ -8,7 +8,6 @@
 #include <QtCore/QPointer>
 #include <QtGui/QKeySequence>
 
-#include <helloutau/Widgets/KeyboardModifierBindings.h>
 #include <helloutau/Widgets/SettingPage.h>
 
 #include <helloutau/Editor/Editor.h>
@@ -16,8 +15,6 @@
 #include <Core/CorePluginGlobal.h>
 
 class QKeySequenceEdit;
-class QComboBox;
-class QGroupBox;
 class QLineEdit;
 class QPushButton;
 class QTreeWidget;
@@ -43,11 +40,8 @@ namespace hello::daw {
     /// of window have, such as Undo, has shortcuts in each apart from the other. A shortcut
     /// conflicts with the shortcut of another command of the same kind of window alone.
     ///
-    /// Below the commands, each scheme of keyboard modifiers of the kind of window has a group
-    /// of boxes, one for each role. The commands and the groups keep their full heights, so
-    /// that the settings dialog scrolls the page if it is lower. The boxes ignore the wheel,
-    /// which scrolls the page instead, so that a scroll does not change a binding. Reset
-    /// Modifiers restores every modifier binding and keeps the shortcuts.
+    /// The modifier keys of the mouse and wheel operations are on KeyboardModifierSettingPage,
+    /// a page under this page.
     class COREPLUGIN_EXPORT KeymapSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -84,12 +78,7 @@ namespace hello::daw {
         /// Restores the shortcuts of \a command from its manifest.
         void resetShortcuts(const Command &command);
 
-        /// Restores every modifier binding of every kind of window to its default, and keeps
-        /// the shortcuts.
-        void resetKeyboardModifiers();
-
-        /// Restores the shortcuts of every command from their manifests, and every modifier
-        /// binding to its default.
+        /// Restores the shortcuts of every command from their manifests.
         void resetAll();
 
         /// The tree of commands in the current window-kind tab, while the widget exists.
@@ -112,7 +101,6 @@ namespace hello::daw {
 
         QPointer<QTreeWidget> m_tree;
         QPointer<QTabWidget> m_tabs;
-        QPointer<QWidget> m_modifierArea;
         // The tree of each kind of window, deleted with the widget
         QPointer<QTreeWidget> m_trees[std::size(Editor::windowKinds)];
         QPointer<QLineEdit> m_search;
@@ -120,21 +108,6 @@ namespace hello::daw {
         QPointer<QPushButton> m_add;
         QPointer<QPushButton> m_remove;
         QPointer<QPushButton> m_reset;
-        // For each kind of window: its modifier bindings as the page has them, and the panel of
-        // their boxes
-        QList<KeyboardModifierBindings> m_modifiers[std::size(Editor::windowKinds)];
-        QPointer<QWidget> m_modifierPanels[std::size(Editor::windowKinds)];
-
-        // The box of one role, by the kind of window, the index of the scheme in
-        // Editor::keyboardModifierSchemes() and the role
-        struct KeyboardModifierBox {
-            Editor::WindowKind kind;
-            int scheme;
-            int role;
-            QPointer<QComboBox> box;
-        };
-        QList<KeyboardModifierBox> m_modifierBoxes;
-        QPointer<QPushButton> m_resetModifiers;
 
         void load();
         void fillTree();
@@ -145,8 +118,6 @@ namespace hello::daw {
         QAK::ActionRegistry *registry(Editor::WindowKind kind) const;
         QString nameOf(const Command &command) const;
         QList<QKeySequence> defaultsOf(const Command &command) const;
-        void updateKeyboardModifierWidgets();
-        QWidget *createKeyboardModifierPanel(Editor::WindowKind kind);
     };
 
 }

@@ -2,7 +2,7 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
-    <name>hello::daw::KeymapSettingPage</name>
+    <name>hello::daw::KeyboardModifierSettingPage</name>
     <message>
         <source>Project Window</source>
         <translation>工程窗口</translation>
@@ -20,12 +20,12 @@
         <translation>无</translation>
     </message>
     <message>
-        <source>Keymap</source>
-        <translation>键位映射</translation>
+        <source>Modifier Keys</source>
+        <translation>修饰键</translation>
     </message>
     <message>
-        <source>The shortcuts of the commands.</source>
-        <translation>命令的快捷键。</translation>
+        <source>The modifier keys of the mouse and wheel operations.</source>
+        <translation>鼠标与滚轮操作的修饰键。</translation>
     </message>
     <message>
         <source>Modifier bindings conflict with each other.</source>
@@ -34,6 +34,33 @@
     <message>
         <source>Off</source>
         <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Restore &amp;Defaults</source>
+        <translation>恢复默认值(&amp;D)</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::KeymapSettingPage</name>
+    <message>
+        <source>Project Window</source>
+        <translation>工程窗口</translation>
+    </message>
+    <message>
+        <source>Voice Bank Window</source>
+        <translation>音源窗口</translation>
+    </message>
+    <message>
+        <source>Frequency Map Editor</source>
+        <translation>频率表编辑器</translation>
+    </message>
+    <message>
+        <source>Keymap</source>
+        <translation>键位映射</translation>
+    </message>
+    <message>
+        <source>The shortcuts of the commands.</source>
+        <translation>命令的快捷键。</translation>
     </message>
     <message>
         <source>Other</source>
@@ -92,8 +119,8 @@
         <translation>移除快捷键(&amp;M)</translation>
     </message>
     <message>
-        <source>Reset M&amp;odifiers</source>
-        <translation>重置修饰键(&amp;O)</translation>
+        <source>Re&amp;set</source>
+        <translation>重置(&amp;S)</translation>
     </message>
     <message>
         <source>Restore &amp;Defaults</source>
