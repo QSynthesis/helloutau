@@ -1,6 +1,6 @@
 # 发布、安装、更新与卸载
 
-本文档规定 HelloUtau 的发布物、安装包、用户目录、临时目录、自动更新与卸载。作者 2026-10-11 提出要求，本文为方案，已实现的部分见「实现状态」。macOS 与 Linux 的打包以后另行补充，本文只规定与平台无关的部分和 Windows 的做法。
+本文档规定 HelloUtau 的发布物、安装包、用户目录、临时目录、自动更新与卸载。作者 2026-10-11 提出要求，本文为方案，已实现的部分见「实现状态」。本文规定与平台无关的部分和 Windows 的做法，macOS 与 Linux 的打包只有计划，见「macOS 与 Linux 的发布（计划）」。
 
 ## 实现状态
 
@@ -56,6 +56,7 @@
 - 音源目录名为 `Singers`，不使用 `voice`。
 - 文档目录下的第一层目录名采用首字母大写的单词（`Singers`、`ClassicPlugins`），面向用户。原生插件的目录沿用安装目录的小写写法（`plugins`，对应安装目录的 `lib/helloutau/plugins`），因此以 `Extensions` 一层与第一层隔开（作者 2026-10-11 决定）。以后用户安装的其他扩展内容，例如主题与翻译，同样放在 `Extensions` 下，按安装目录的写法命名。
 - 文档目录取 `QStandardPaths::DocumentsLocation`。用户把「文档」重定向到其他位置时，路径随之改变。
+- 其他平台的应用数据目录：macOS 为 `~/Library/Application Support/OpenVPI/HelloUtau`，Linux 为 `~/.local/share/OpenVPI/HelloUtau`，与 ds-editor-lite（`fd38fb09`，`SingleInstanceIdentity::defaultDataDirectory()`）相同（作者 2026-10-16 决定）。DiffScope 在 macOS 与 Linux 上用 `~/.config`，未采用。音源与插件在这些平台上同样放在文稿目录。
 
 ### 临时目录管理器
 
@@ -91,6 +92,22 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 ### 签名
 
 现阶段不签名，首次运行时 Windows SmartScreen 会提示。以后取得证书时以 `SignTool` 签名安装包，并设 `SignedUninstaller=yes` 签名卸载程序。
+
+## macOS 与 Linux 的发布（计划）
+
+作者 2026-10-16 决定，有 macOS 与 Linux 的环境后实施，先完成 Windows 的正式部署。
+
+- **macOS 的发布物**：只出 arm64，最低系统版本为 13.0，同 DiffScope。以 DMG 发布，不另出 zip。
+- **macOS 的签名**：ad-hoc 签名（`codesign --sign -`），不申请 Apple 的 Developer ID，不公证，同 DiffScope。Apple Silicon 只运行带签名的代码，ad-hoc 签名满足这一条件，但 Gatekeeper 不信任它。用户第一次打开下载的应用时须在「系统设置 > 隐私与安全性」中选择「仍要打开」。
+- **bundle 与部署**：参照 DiffScope（`diffscope/diffscope-project`，`eb92abd4`）。bundle 由 qmsetup 的 `qm_add_mac_bundle()` 与 Info.plist 模板生成，模板声明 `.usth` 与 `.ust` 的文档类型。icns 在配置时以 `iconutil` 生成。Qt 与依赖以 `qm_deploy_directory()` 部署到 `Contents/Frameworks`，Qt 的插件放在 `Contents/Frameworks/Qt/plugins`，不用 macdeployqt。HelloUtau 另须处理以下几处：
+  - Qt 的插件目录由 `AppLoader::addQtPluginPaths()` 按 bundle 求出，不用 `qt.conf`（作者 2026-10-01 决定）。
+  - 以 `applicationDirPath()/..` 为基准的路径（更新配置、`qtbase_*.qm`、hellokit 的辅助程序）在 bundle 中须改为 `Contents/Resources` 或 `Contents/MacOS`。
+  - 须设置 `HELLOUTAU_MACOSX_BUNDLE_NAME`。
+  - 从 Finder 打开文件经 `QFileOpenEvent` 传入，须处理该事件。
+- **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：
+  - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
+  - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。
+- **Linux**：只出 zip，即 `helloutau-<version>-x64-linux-gcc.zip`，不出 AppImage 与发行版的包。
 
 ## 应用图标
 
