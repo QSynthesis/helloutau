@@ -96,6 +96,7 @@
 #include <helloutau/Editor/Dialogs/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
 #include <helloutau/Editor/SamplePreview.h>
+#include <helloutau/Editor/SoftwareBuildChannel.h>
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/Dialogs/PasteParametersDialog.h>
 #include <helloutau/Editor/Dialogs/ScalePitchDialog.h>
@@ -442,12 +443,17 @@ private:
         return e;
     }
 
+    // The window title of the document named name, which ends with the name of the build
+    static QString titleOf(const QString &name) {
+        return name + QStringLiteral("[*] - ") + SoftwareBuildChannel::applicationTitle();
+    }
+
 private Q_SLOTS:
     void a_new_window_has_the_menus_of_the_manifest() {
         const auto e = editor();
         const auto window = e->newWindow();
         QCOMPARE(e->windows().size(), 1);
-        QCOMPARE(window->windowTitle(), QStringLiteral("Untitled[*] - HelloUtau"));
+        QCOMPARE(window->windowTitle(), titleOf(QStringLiteral("Untitled")));
 
         QStringList menus;
         for (const auto action : window->menuBar()->actions()) {
@@ -492,17 +498,17 @@ private Q_SLOTS:
         const auto e = editor();
         const auto first = e->newWindow();
         const auto second = e->newWindow();
-        QCOMPARE(first->windowTitle(), QStringLiteral("Untitled[*] - HelloUtau"));
-        QCOMPARE(second->windowTitle(), QStringLiteral("Untitled-2[*] - HelloUtau"));
+        QCOMPARE(first->windowTitle(), titleOf(QStringLiteral("Untitled")));
+        QCOMPARE(second->windowTitle(), titleOf(QStringLiteral("Untitled-2")));
 
         first->close();
         QCoreApplication::processEvents();
-        QCOMPARE(second->windowTitle(), QStringLiteral("Untitled-2[*] - HelloUtau"));
+        QCOMPARE(second->windowTitle(), titleOf(QStringLiteral("Untitled-2")));
 
         const auto third = e->newWindow();
         const auto fourth = e->newWindow();
-        QCOMPARE(third->windowTitle(), QStringLiteral("Untitled[*] - HelloUtau"));
-        QCOMPARE(fourth->windowTitle(), QStringLiteral("Untitled-3[*] - HelloUtau"));
+        QCOMPARE(third->windowTitle(), titleOf(QStringLiteral("Untitled")));
+        QCOMPARE(fourth->windowTitle(), titleOf(QStringLiteral("Untitled-3")));
     }
 
     void undo_and_the_modified_mark_follow_the_project() {
@@ -530,7 +536,7 @@ private Q_SLOTS:
         const auto c = savedProject(m_dir, "c.usth");
 
         QCOMPARE(e->openFile(a, first), first);
-        QCOMPARE(first->windowTitle(), QStringLiteral("a.usth[*] - HelloUtau"));
+        QCOMPARE(first->windowTitle(), titleOf(QStringLiteral("a.usth")));
         QVERIFY(!first->isUnused());
 
         const auto second = e->openFile(b, first);
@@ -1974,7 +1980,7 @@ private Q_SLOTS:
         QVERIFY(window);
         QCOMPARE(e->voiceBankWindows(), QList<VoiceBankWindow *>{window});
         QCOMPARE(e->settings().files().recentVoiceBanks().value(0), bank);
-        QCOMPARE(window->windowTitle(), QStringLiteral("bank[*] - HelloUtau"));
+        QCOMPARE(window->windowTitle(), titleOf(QStringLiteral("bank")));
         QVERIFY(!window->isWindowModified());
         // A menu bar of its own, whose contents the manifest specifies
         QVERIFY(!window->menuBar()->actions().isEmpty());
