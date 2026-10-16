@@ -78,7 +78,10 @@ runs:
 
     # The binary cache of vcpkg, which names each package by the hash of its inputs. A cache of
     # older commits is restored as well, and the packages whose inputs did not change are reused.
-    - uses: actions/cache@v4
+    # Restore and save are separate steps, because actions/cache saves only after the whole job
+    # succeeded, and a failure of a later step would discard the packages built here.
+    - id: vcpkg-cache
+      uses: actions/cache/restore@v4
       with:
         path: build/vcpkg-cache
         key: vcpkg-${{ inputs.vcpkg-triplet }}-${{ env.VCPKG_COMMIT }}-${{ env.OVERLAY_COMMIT }}
@@ -128,8 +131,7 @@ runs:
           "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR" \
           "-DPython3_EXECUTABLE=$python" \
           -DHELLO_BUILD_TESTS=ON \
-          "-DHELLO_BUILD_CHANNEL=${{ inputs.channel }}" \
-          "${options[@]}"
+          "-DHELLO_BUILD_CHANNEL=${{ inputs.channel }}"
 
     - name: Build
       shell: bash
@@ -148,6 +150,28 @@ runs:
         status=${PIPESTATUS[0]}
         printf '%s' "$status" > build/ctest.status
         exit "$status"
+
+    # Each failed test once more, through ctest with its environment and then as the program
+    # itself with its exit status. A test that ends without flushing its output, such as on an
+    # uncaught exception, shows nothing in the step Test, and the exit status tells the cause.
+    - name: Failed tests
+      if: failure() && hashFiles('build/Release/Testing/Temporary/LastTestsFailed.log') != ''
+      shell: bash
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        set +e
+        for name in $(cut -d: -f2 build/Release/Testing/Temporary/LastTestsFailed.log); do
+          echo "::group::$name"
+          ctest --test-dir build/Release -R "^${name}\$" -V --timeout 120
+          program="$(find build/Release/out -type f \( -name "${name}.exe" -o -name "$name" \) |
+            head -1)"
+          if [ -n "$program" ]; then
+            timeout 120 "$program" -v1
+            echo "$name exited with status $?"
+          fi
+          echo "::endgroup::"
+        done
 
     - name: Summary
       if: always()
