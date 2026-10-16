@@ -365,14 +365,20 @@ namespace hello::daw {
         std::optional<double> playheadPosition() const;
         void setPlayheadPosition(std::optional<double> tick);
 
-        /// The ways in which the view follows the playhead across
+        /// The ways in which the view follows the playhead across. Both move the playhead in the
+        /// view with an easing, so that the view does not jump.
         enum PlayheadFollow {
-            PageFollow,   ///< Turns a page with an easing once the playhead leaves the view
+            PageFollow,   ///< Turns a page once the playhead leaves the view
             SmoothFollow, ///< Keeps the playhead at the horizontal center of the view
         };
 
         /// Returns the way in which the view follows the playhead. The default is PageFollow.
         PlayheadFollow playheadFollow() const;
+
+        /// Sets the way in which the view follows the playhead, and moves the view to it at once
+        /// while the playhead is shown. With SmoothFollow the playhead moves to the center with
+        /// an easing after a change of the way, a jump of the playhead back, or a scroll or a
+        /// zoom of the user.
         void setPlayheadFollow(PlayheadFollow follow);
 
         /// Returns the milliseconds of a movement of the view that follows the playhead, across or

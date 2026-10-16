@@ -2769,18 +2769,43 @@ private Q_SLOTS:
         QCOMPARE(roll.intensityBorderColor(), QColor(10, 11, 12));
     }
 
-    // In the smooth way the playhead stays at the horizontal center of the view.
+    // In the smooth way the playhead stays at the horizontal center of the view. It moves there
+    // with an easing instead of a jump at the start, after a jump back as on a replay, after a
+    // change to the smooth way and after a scroll of the user.
     void the_view_keeps_the_playhead_at_its_center() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
         show(roll);
-        roll.setPlayheadFollow(PianoRoll::SmoothFollow);
+        roll.setFollowDuration(50);
         const auto view = roll.view();
-        const double width = view->viewport()->width();
-        for (const double tick : {10000.0, 10050.0}) {
-            roll.setPlayheadPosition(tick);
-            QCOMPARE(view->timeAxis().toX(tick), width / 2);
-        }
+        const double middle = view->viewport()->width() / 2;
+        const auto xOf = [view](double tick) { return view->timeAxis().toX(tick); };
+        // Verifies that the playhead at tick is off the center at first and eases to it.
+        const auto verifyEased = [&](double tick) {
+            QVERIFY(qAbs(xOf(tick) - middle) > 1);
+            QTRY_VERIFY(qAbs(xOf(tick) - middle) < 0.01);
+        };
+
+        roll.setPlayheadFollow(PianoRoll::SmoothFollow);
+        roll.setPlayheadPosition(10000);
+        verifyEased(10000);
+        roll.setPlayheadPosition(10050);
+        QCOMPARE(xOf(10050), middle);
+
+        roll.setPlayheadPosition(7000);
+        verifyEased(7000);
+
+        auto scrolled = view->timeAxis();
+        scrolled.left += 500;
+        view->setTimeAxis(scrolled);
+        roll.setPlayheadPosition(7010);
+        verifyEased(7010);
+
+        // A change of the way moves the view at once.
+        roll.setPlayheadFollow(PianoRoll::PageFollow);
+        roll.setPlayheadPosition(7000 + middle / view->timeAxis().pixelsPerTick / 2);
+        roll.setPlayheadFollow(PianoRoll::SmoothFollow);
+        verifyEased(*roll.playheadPosition());
     }
 
     // The view scrolls up or down to the keys of the notes from the playhead to the right edge,

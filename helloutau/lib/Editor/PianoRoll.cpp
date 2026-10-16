@@ -363,6 +363,7 @@ namespace hello::daw {
             stdc_impl_t;
             if (!impl.following) {
                 impl.timeFollow->stop();
+                impl.centered = false;
             }
         });
         connect(impl.view, &SceneView::keyAxisChanged, this, [this] {
@@ -1132,6 +1133,13 @@ namespace hello::daw {
         if (tick == impl.playhead) {
             return;
         }
+        // QUESTION: A jump of the playhead forward keeps the playhead at the center without an
+        // easing, because a step of playback moves it forward as well. No command makes such a
+        // jump now, since a move of the playhead during playback stops playback and starts it
+        // again. A command that does would require a distance that tells a jump from a step.
+        if (!tick || (impl.playhead && *tick < *impl.playhead)) {
+            impl.centered = false;
+        }
         impl.playhead = tick;
         if (tick) {
             impl.followPlayhead(*tick);
@@ -1148,7 +1156,16 @@ namespace hello::daw {
 
     void PianoRoll::setPlayheadFollow(PlayheadFollow follow) {
         stdc_impl_t;
+        if (follow == impl.playheadFollow) {
+            return;
+        }
         impl.playheadFollow = follow;
+        // The view moves to the new way at once, with an easing, while the playhead is shown.
+        impl.timeFollow->stop();
+        impl.centered = false;
+        if (impl.playhead) {
+            impl.followPlayhead(*impl.playhead);
+        }
     }
 
     int PianoRoll::followDuration() const {

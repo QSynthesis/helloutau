@@ -346,18 +346,21 @@ namespace hello::daw {
     void PianoRollState::followPlayhead(double tick) {
         const double width = view->viewport()->width();
         auto time = view->timeAxis();
-        if (playheadFollow == PianoRoll::SmoothFollow) {
-            timeFollow->stop();
-            time.left = tick - width / time.pixelsPerTick / 2;
-            following = true;
-            view->setTimeAxis(time);
-            following = false;
-            time = view->timeAxis();
-        } else if (timeFollow->state() == QAbstractAnimation::Running) {
-            // A step of the playhead during a page turn keeps the playhead at the x that the
+        if (timeFollow->state() == QAbstractAnimation::Running) {
+            // A step of the playhead during a movement keeps the playhead at the x that the
             // movement has reached.
             placePlayhead(timeFollow->currentValue().toDouble());
             time.left = tick - timeFollow->endValue().toDouble() / time.pixelsPerTick;
+        } else if (playheadFollow == PianoRoll::SmoothFollow) {
+            const double middle = width / 2;
+            if (centered) {
+                placePlayhead(middle);
+                time = view->timeAxis();
+            } else {
+                moveTo(timeFollow, time.toX(tick), middle);
+                centered = true;
+                time.left = tick - middle / time.pixelsPerTick;
+            }
         } else if (const double x = time.toX(tick); x < 0 || x > width) {
             const double margin = followMargin();
             moveTo(timeFollow, x, margin);

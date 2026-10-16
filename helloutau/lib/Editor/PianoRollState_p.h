@@ -273,6 +273,10 @@ namespace hello::daw {
         QVariantAnimation *keyFollow = nullptr;
         /// Set while a movement sets an axis, so that only other changes stop the movements
         bool following = false;
+        /// Whether the smooth following holds the playhead at the middle of the view. A jump of
+        /// the playhead back, the end of playback, a change of playheadFollow and a scroll or a
+        /// zoom of the user clear it, and the playhead then moves to the middle with an easing.
+        bool centered = false;
         /// The playhead at rest, and whether it is drawn and moved
         double cursor = 0;
         bool cursorEnabled = true;
