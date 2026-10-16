@@ -98,7 +98,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 - **设计理由**：只用一个隐喻，形状粗壮，细节以挖空表现，不用细线，因为细线在小尺寸下会失去质感，这是此前几稿被否定的原因。Microsoft 的[应用图标设计指南](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-design)推荐透明背景，作者选择在 Windows 上同样使用底板。底板在深色任务栏上醒目，在浅色任务栏上靠一像素极淡的边勾出轮廓。
 - **源稿**：48 格的主稿为 `helloutau/lib/Editor/Resources/icons/brand/app.svg`。16、20、24 与 32 像素各有一张对齐像素网格的小稿，因为 Microsoft 要求小尺寸单独绘制，而不由大图缩小。小稿不纳入仓库，仓库只提交由主稿与小稿生成的 `helloutau/tools/driver/helloutau.ico`（作者 2026-10-16 决定）。32 像素以下底板铺满画布，缎带为纯色，16 像素的控制点各为一个像素。缎带的曲线在两端放缓，以免粗线内侧的半径小于线宽的一半，在衔接处出现折角。
-- **`helloutau.ico`** 共 14 帧：16、20、24、30、32、36、40、48、60、64、72、80、96 与 256，即[应用图标构造](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction)一页中标题栏、任务栏与开始菜单在各缩放比例下所用尺寸的并集。30 像素用 24 像素的小稿，36 像素起用主稿。各帧由 QtSvg 渲染，256 像素帧以 PNG 压缩，其余帧为 32 位 BGRA 位图。driver 把图标列为配置依赖，换了图标后任何生成器都会重新配置并重新编译资源。
+- **`helloutau.ico`** 共 14 帧：16、20、24、30、32、36、40、48、60、64、72、80、96 与 256，即[应用图标构造](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction)一页中标题栏、任务栏与开始菜单在各缩放比例下所用尺寸的并集。30 像素用 24 像素的小稿，36 像素起用主稿。各帧由 QtSvg 渲染，256 像素帧以 PNG 压缩，其余帧为 32 位 BGRA 位图。qmsetup 的 `qm_add_win_rc()` 把图标列为资源脚本的依赖与配置依赖，换了图标后 Ninja、Makefile 与 Visual Studio 都会重新编译资源。
 - macOS 需要另做一个满幅方形、由系统加圆角的版本，Linux 安装 `helloutau.svg` 到 `hicolor/scalable/apps`，两者在补充相应平台的打包时再做。
 
 ## 卸载

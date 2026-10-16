@@ -17,11 +17,6 @@ helloutau_add_application(${PROJECT_NAME}
     QT_LINKS Core Widgets
 )
 
-# A changed icon configures the tree again, which recompiles the resource under every generator
-set_property(DIRECTORY APPEND PROPERTY
-    CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/helloutau.ico"
-)
-
 # The resource with the icon and the product name, which conf.cmake leaves to an application
 qm_add_win_rc(${PROJECT_NAME}
     NAME "HelloUtau"
