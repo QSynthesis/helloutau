@@ -25,6 +25,8 @@ extern char **environ;
 #endif
 
 #include <hellokit/Config.h>
+#include <hellokit/NativeSystem/NativeMessageBox.h>
+#include <hellokit/NativeSystem/NativeString.h>
 
 // hello-updater: replaces the installation directory of a portable application with the directory
 // of the new version.
@@ -35,25 +37,21 @@ extern char **environ;
 // into its place, and removes the old directory. If a step fails, the installation directory is
 // restored. Both renames are on one volume, so that each replaces a whole directory at once.
 //
-// The program depends only on the standard library and the system, and links the C++ runtime
-// statically, because the copy runs where no library of the application is available. It has no
-// console on Windows. Its messages go to the log file, which the application reads at its next
-// start. A failed restoration leaves no application to start, and is therefore also shown in a
-// message box on Windows if --show-errors is given, as is the usage for invalid arguments. The
-// texts of --help and --version are written to the standard output, on Windows only if it is
-// redirected to a file or a pipe, and appear in a message box otherwise.
+// The program depends only on the standard library, the system and static libraries of this
+// repository, and links the C++ runtime statically, because the copy runs where no library of the
+// application is available. It has no console on Windows. Its messages go to the log file, which
+// the application reads at its next start. A failed restoration leaves no application to start,
+// and is therefore also shown in a message box of HelloKitNativeSystem if --show-errors is given,
+// as is the usage for invalid arguments. The texts of --help and --version are written to the
+// standard output, on Windows only if it is redirected to a file or a pipe, and appear in a
+// message box otherwise.
 
 namespace fs = std::filesystem;
+namespace kit = hello::kit;
 
 namespace {
 
-#ifdef _WIN32
-    using NativeString = std::wstring;
-#  define NATIVE(text) L##text
-#else
-    using NativeString = std::string;
-#  define NATIVE(text) text
-#endif
+    using kit::NativeString;
 
     enum ExitCode {
         Success = 0,
@@ -88,8 +86,7 @@ namespace {
         "--log <file>\n"
         "    The file to which the messages are appended in UTF-8.\n"
         "--show-errors\n"
-        "    Shows a message box on Windows if the restoration fails or the arguments are "
-        "invalid.\n"
+        "    Shows a message box if the restoration fails or the arguments are invalid.\n"
         "--help\n"
         "    Shows this text and exits.\n"
         "--version\n"
@@ -151,10 +148,10 @@ namespace {
         }
         long long result = 0;
         for (const auto c : value) {
-            if (c < NATIVE('0') || c > NATIVE('9')) {
+            if (c < HELLOKIT_NATIVE('0') || c > HELLOKIT_NATIVE('9')) {
                 return std::nullopt;
             }
-            result = result * 10 + (c - NATIVE('0'));
+            result = result * 10 + (c - HELLOKIT_NATIVE('0'));
         }
         return result;
     }
@@ -166,19 +163,19 @@ namespace {
         Options options;
         for (size_t i = 0; i < arguments.size(); ++i) {
             const auto &name = arguments[i];
-            if (name == NATIVE("--help")) {
+            if (name == HELLOKIT_NATIVE("--help")) {
                 *information = Information::Help;
                 return std::nullopt;
             }
-            if (name == NATIVE("--version")) {
+            if (name == HELLOKIT_NATIVE("--version")) {
                 *information = Information::Version;
                 return std::nullopt;
             }
-            if (name == NATIVE("--show-errors")) {
+            if (name == HELLOKIT_NATIVE("--show-errors")) {
                 options.showErrors = true;
                 continue;
             }
-            if (name == NATIVE("--")) {
+            if (name == HELLOKIT_NATIVE("--")) {
                 options.launchArguments.assign(arguments.begin() + i + 1, arguments.end());
                 break;
             }
@@ -186,21 +183,21 @@ namespace {
                 return std::nullopt;
             }
             const auto &value = arguments[++i];
-            if (name == NATIVE("--target")) {
+            if (name == HELLOKIT_NATIVE("--target")) {
                 options.target = value;
-            } else if (name == NATIVE("--source")) {
+            } else if (name == HELLOKIT_NATIVE("--source")) {
                 options.source = value;
-            } else if (name == NATIVE("--launch")) {
+            } else if (name == HELLOKIT_NATIVE("--launch")) {
                 options.launch = value;
-            } else if (name == NATIVE("--log")) {
+            } else if (name == HELLOKIT_NATIVE("--log")) {
                 options.log = value;
-            } else if (name == NATIVE("--pid")) {
+            } else if (name == HELLOKIT_NATIVE("--pid")) {
                 const auto pid = number(value);
                 if (!pid || *pid > UINT32_MAX) {
                     return std::nullopt;
                 }
                 options.pid = std::uint32_t(*pid);
-            } else if (name == NATIVE("--timeout")) {
+            } else if (name == HELLOKIT_NATIVE("--timeout")) {
                 const auto timeout = number(value);
                 if (!timeout || *timeout > 3600) {
                     return std::nullopt;
@@ -325,13 +322,6 @@ namespace {
         const auto type = GetFileType(output);
         return type == FILE_TYPE_DISK || type == FILE_TYPE_PIPE;
     }
-
-    void showMessage(const char *text, UINT icon) {
-        // The texts are ASCII.
-        const std::string bytes(text);
-        const std::wstring message(bytes.begin(), bytes.end());
-        MessageBoxW(nullptr, message.c_str(), L"hello-updater", MB_OK | icon);
-    }
 #endif
 
     // Shows the text that information requests, on the standard output if it is redirected, and
@@ -339,8 +329,8 @@ namespace {
     void showInformation(Information information) {
         const auto text = information == Information::Help ? usage : version;
 #ifdef _WIN32
-        if (!outputRedirected()) {
-            showMessage(text, MB_ICONINFORMATION);
+        if (!outputRedirected() && kit::NativeMessageBox::show(
+                                       "hello-updater", text, kit::NativeMessageBox::Information)) {
             return;
         }
 #endif
@@ -348,18 +338,14 @@ namespace {
         std::fflush(stdout);
     }
 
-    // Shows the usage for invalid arguments: in a message box on Windows only with
-    // --show-errors, and on the standard error otherwise, so that a caller that waits for the
-    // exit is not blocked.
+    // Shows the usage for invalid arguments: in a message box only with --show-errors, and on
+    // the standard error otherwise or if no message box can be shown, so that a caller that waits
+    // for the exit is not blocked.
     void showUsageError(bool showErrors) {
-#ifdef _WIN32
-        if (showErrors) {
-            showMessage(usage, MB_ICONERROR);
+        if (showErrors &&
+            kit::NativeMessageBox::show("hello-updater", usage, kit::NativeMessageBox::Critical)) {
             return;
         }
-#else
-        static_cast<void>(showErrors);
-#endif
         std::fputs(usage, stderr);
     }
 
@@ -374,7 +360,7 @@ namespace {
             // The arguments are searched without the parser, because the parser has rejected
             // them.
             const auto showErrors = std::find(arguments.begin(), arguments.end(),
-                                              NATIVE("--show-errors")) != arguments.end();
+                                              HELLOKIT_NATIVE("--show-errors")) != arguments.end();
             showUsageError(showErrors);
             return UsageError;
         }
@@ -389,7 +375,7 @@ namespace {
         const auto target = fs::absolute(options.target);
         const auto source = fs::absolute(options.source);
         auto old = target;
-        old += NATIVE(".old");
+        old += HELLOKIT_NATIVE(".old");
 
         // A working directory inside the installation directory prevents its rename on Windows.
         std::error_code ec;
@@ -419,15 +405,13 @@ namespace {
         if (!renameWithRetries(source, target, log)) {
             if (!renameWithRetries(old, target, log)) {
                 log.write("the installation is left at " + text(old));
-#ifdef _WIN32
                 if (options.showErrors) {
-                    const auto message = L"The update failed, and the application could not be "
-                                         L"restored. It is left in the folder\n\n" +
-                                         old.native() + L"\n\nRename the folder to\n\n" +
-                                         target.native();
-                    MessageBoxW(nullptr, message.c_str(), L"Update", MB_OK | MB_ICONERROR);
+                    const auto message = "The update failed, and the application could not be "
+                                         "restored. It is left in the folder\n\n" +
+                                         text(old) + "\n\nRename the folder to\n\n" + text(target);
+                    kit::NativeMessageBox::show("Update", message.c_str(),
+                                                kit::NativeMessageBox::Critical);
                 }
-#endif
                 return RestorationFailed;
             }
             return finish(ReplacementFailed);
@@ -449,7 +433,7 @@ namespace {
 int main(int argc, char *argv[]) {
     std::vector<NativeString> arguments;
     for (int i = 1; i < argc; ++i) {
-        arguments.push_back(fs::u8path(argv[i]).native());
+        arguments.push_back(kit::nativeOf(argv[i]));
     }
     return run(arguments);
 }
