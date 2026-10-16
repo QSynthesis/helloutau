@@ -69,7 +69,7 @@ CI 构建、运行全部测试并打包，作者 2026-10-16 提出要求，结�
 
 ### 安装目录
 
-安装目录的布局与现在的免安装版相同：`bin` 存放程序与各库，`lib/helloutau/plugins` 存放本程序的插件，`lib/Qt/plugins` 存放 Qt 的插件，`share/Qt/translations` 存放 Qt 的翻译（`Plugins.md`「Qt 的插件」）。安装目录中不写入任何运行时产生的文件，因此更新时可以整体替换。
+安装目录的布局与现在的免安装版相同：`bin` 存放程序与各库，`lib/helloutau/plugins` 存放本程序的插件，`lib/Qt/plugins` 存放 Qt 的插件，`share/helloutau/translations` 存放库的翻译，`share/Qt/translations` 存放 Qt 的翻译（`Plugins.md`「Qt 的插件」）。翻译不嵌入程序，`AppLoader` 在运行时按程序所在位置推算这些目录（作者 2026-10-17 决定）：库的翻译依次在用户目录的 `Extensions/translations` 与程序的 `share/helloutau/translations` 中查找，Qt 的翻译依次在 `share/Qt/translations` 与 Qt 自身的翻译目录中查找。安装目录中不写入任何运行时产生的文件，因此更新时可以整体替换。
 
 ### 用户目录
 
@@ -81,6 +81,7 @@ CI 构建、运行全部测试并打包，作者 2026-10-16 提出要求，结�
 | HelloUtau 自己的音源 | 文档目录下的 `OpenVPI/HelloUtau/Singers` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\Singers` |
 | 用户安装的 UTAU 插件 | 文档目录下的 `OpenVPI/HelloUtau/ClassicPlugins` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\ClassicPlugins` |
 | 用户安装的原生插件 | 文档目录下的 `OpenVPI/HelloUtau/Extensions/plugins` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\Extensions\plugins` |
+| 用户安装的翻译 | 文档目录下的 `OpenVPI/HelloUtau/Extensions/translations`，先于程序自带的翻译 | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\Extensions\translations` |
 | 临时文件 | 临时目录下的 `OpenVPI/HelloUtau` | `%TEMP%\OpenVPI\HelloUtau` |
 
 - 音源与插件放在文档目录而不是应用数据目录，同 Synthesizer V。这两类文件由用户自行复制、整理和备份，应用数据目录默认隐藏，不便于用户访问。
@@ -131,8 +132,9 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 - **macOS 的发布物**：只出 arm64，最低系统版本为 13.0，同 DiffScope。以 DMG 发布，不另出 zip。
 - **macOS 的签名**：ad-hoc 签名（`codesign --sign -`），不申请 Apple 的 Developer ID，不公证，同 DiffScope。Apple Silicon 只运行带签名的代码，ad-hoc 签名满足这一条件，但 Gatekeeper 不信任它。用户第一次打开下载的应用时须在「系统设置 > 隐私与安全性」中选择「仍要打开」。
 - **bundle 与部署**：参照 DiffScope（`diffscope/diffscope-project`，`eb92abd4`）。bundle 由 qmsetup 的 `qm_add_mac_bundle()` 与 Info.plist 模板生成，模板声明 `.usth` 与 `.ust` 的文档类型。icns 在配置时以 `iconutil` 生成。Qt 与依赖以 `qm_deploy_directory()` 部署到 `Contents/Frameworks`，Qt 的插件放在 `Contents/Frameworks/Qt/plugins`，不用 macdeployqt。HelloUtau 另须处理以下几处：
-  - Qt 的插件目录由 `AppLoader::addQtPluginPaths()` 按 bundle 求出，不用 `qt.conf`（作者 2026-10-01 决定）。
-  - 以 `applicationDirPath()/..` 为基准的路径（更新配置、`qtbase_*.qm`、hellokit 的辅助程序）在 bundle 中须改为 `Contents/Resources` 或 `Contents/MacOS`。
+  - Qt 的插件目录由 `AppLoader::addQtPluginPaths()` 按 bundle 求出，不用 `qt.conf`（作者 2026-10-01 决定）。bundle 中为 `Contents/Frameworks/Qt/plugins`，而不是 Qt 自己会查找的 `Contents/PlugIns`，因为 qmsetup 的布局以 `Contents/Plugins` 存放应用的插件，两者在不区分大小写的文件系统上是同一个目录（作者 2026-10-17 决定）。`AppLoader` 已按此求出，尚未在 macOS 上构建验证。
+  - 翻译已按 bundle 求出（作者 2026-10-17 决定）：库的翻译在 `Contents/Resources/translations`（qmsetup 的 data 目录），Qt 的翻译在 `Contents/Resources/Qt/translations`，分别对应其他系统的 `share/helloutau/translations` 与 `share/Qt/translations`。
+  - 其余以 `applicationDirPath()/..` 为基准的路径（更新配置、hellokit 的辅助程序）在 bundle 中须改为 `Contents/Resources` 或 `Contents/MacOS`。
   - 须设置 `HELLOUTAU_MACOSX_BUNDLE_NAME`。
   - 从 Finder 打开文件经 `QFileOpenEvent` 传入，须处理该事件。
 - **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：

@@ -128,7 +128,7 @@
 - `.llsm` 版本不兼容的诊断器暂缓，需要先取得 moresampler 报错的原文。
 - 经典模式下整轨存在而部分音符失败时的诊断（优先级极低，作者 2026-10-11 认为现状已经足够）：现在只在没有写出整轨时诊断，办法与实测见 [`SynthDiagnostics.md`](SynthDiagnostics.md)「三种渲染器的记录」中经典模式的局限。
 - 音符属性对话框中 UTAU 的 Others 栏（手写 `$patch`、`$direct` 等条目）日后以官方插件提供，现在不做（作者 2026-10-09 决定）。
-- 库的翻译 `helloutau_<语言>.ts` 覆盖两个模块的全部子库，因嵌入 HelloUtauEditor 而暂放 `helloutau/lib/Editor/Resources/translations/`（作者 2026-10-10 决定）。它不属于 Editor 一个库，以后另行迁移。可参考的做法：Qt 框架的各模块翻译集中在 `qttranslations` 仓库的 `translations/`，Qt Creator 的翻译放在仓库根目录的 `share/qtcreator/translations/`，与安装布局一致。`Plugins.md` 已规定改为外部文件时库的译文放 `share/helloutau`。
+- ~~库的翻译的位置~~：已迁移到 `helloutau/share/helloutau/translations/`，与安装布局一致，同 Qt Creator 的 `share/qtcreator/translations/`，生成的 `.qm` 不再嵌入 HelloUtauEditor（作者 2026-10-17 决定，见 `Distribution.md`「安装目录」）。插件的翻译仍嵌入插件自身。
 
 ## 已知问题
 

@@ -68,17 +68,39 @@ namespace hello::daw {
         /// Qt, ahead of the defaults. Called before the application object is created, because
         /// Qt loads the platform plugin as the object is created, so that no \c qt.conf is
         /// needed. See qtPluginPaths(). Qt searches the directory of the program as well, where
-        /// a user may have put the plugin directories of Qt. On macOS Qt finds the plugins of
-        /// the bundle itself.
+        /// a user may have put the plugin directories of Qt.
         static void addQtPluginPaths();
 
         /// Returns the directories of the Qt plugins for the program in \a programDirectory that
         /// exist: <tt>lib/Qt/plugins</tt> beside the plugins of the application, where the
-        /// package puts them.
+        /// package puts them, or <tt>Contents/Frameworks/Qt/plugins</tt> of a macOS bundle.
         static QStringList qtPluginPaths(const QString &programDirectory);
 
-        /// Returns the plugin paths: builtinPluginPath() followed by the directories of the
-        /// command line.
+        /// Returns the directory of the extensions that the user installs, \c Extensions in the
+        /// user directory of the settings, with the native plugins in \c plugins and the
+        /// translations in \c translations. See the user directories in docs/Distribution.md.
+        /// The directory is not created.
+        QString extensionPath() const;
+
+        /// Returns the directories of the translations of the application and of its plugins, in
+        /// the order of search: \c translations in extensionPath(), then that of the program in
+        /// the directory of the program, see applicationTranslationPath().
+        QStringList translationPaths() const;
+
+        /// Returns the directory of the translations that come with the program in
+        /// \a programDirectory: <tt>share/helloutau/translations</tt> beside the directory of
+        /// the program, or <tt>Contents/Resources/translations</tt> of a macOS bundle, the data
+        /// directory of qmsetup in either case.
+        static QString applicationTranslationPath(const QString &programDirectory);
+
+        /// Returns the directories of the translations of Qt for the program in
+        /// \a programDirectory, in the order of search: <tt>share/Qt/translations</tt> beside
+        /// the directory of the program, or <tt>Contents/Resources/Qt/translations</tt> of a
+        /// macOS bundle, then the translations of Qt itself.
+        static QStringList qtTranslationPaths(const QString &programDirectory);
+
+        /// Returns the plugin paths: builtinPluginPath(), \c plugins in extensionPath(), and the
+        /// directories of the command line.
         QStringList pluginPaths() const;
 
         /// Replaces the plugin paths before load(). Tests use this function to search only

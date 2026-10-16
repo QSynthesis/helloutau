@@ -31,6 +31,36 @@ namespace hello::daw {
 
         AppLoader *currentAppLoader = nullptr;
 
+        // Returns whether the program in programDirectory is that of a macOS bundle, in
+        // Contents/MacOS. The other directories of the bundle are Contents/Frameworks for the
+        // libraries and the plugins of Qt, and Contents/Resources for the data, the counterparts
+        // of lib and share beside the bin directory elsewhere.
+        bool isBundle(const QString &programDirectory) {
+#ifdef Q_OS_MACOS
+            const QDir directory(programDirectory);
+            return directory.dirName() == QLatin1String("MacOS") &&
+                   QFileInfo(directory.absoluteFilePath(QStringLiteral(".."))).fileName() ==
+                       QLatin1String("Contents");
+#else
+            Q_UNUSED(programDirectory);
+            return false;
+#endif
+        }
+
+        // Returns path relative to the parent of the directory of the program, the installation
+        // or Contents of a bundle
+        QString besideProgram(const QString &programDirectory, const QString &path) {
+            return QDir::cleanPath(programDirectory + QStringLiteral("/../") + path);
+        }
+
+        // Returns the shared data directory, share or Contents/Resources of a bundle, as qmsetup
+        // lays it out
+        QString sharePath(const QString &programDirectory) {
+            return besideProgram(programDirectory, isBundle(programDirectory)
+                                                       ? QStringLiteral("Resources")
+                                                       : QStringLiteral("share"));
+        }
+
     }
 
     class AppLoader::Impl {
@@ -127,19 +157,17 @@ namespace hello::daw {
             impl.settings.emplace(settingsFile);
         }
         impl.readPluginSettings();
+        // The plugins of the user after those of the application, which the user directory of
+        // the settings determines
+        impl.pluginPaths.insert(1, extensionPath() + QStringLiteral("/plugins"));
 
         impl.translations.emplace(
             AppearanceSettings::localeOf(impl.settings->appearance().language()));
-        // The translation of Qt, so that the standard buttons and dialogs match the rest: that
-        // of the installation, see helloutau/CMakeLists.txt, or else that of Qt itself.
-        const auto packaged = QDir::cleanPath(QCoreApplication::applicationDirPath() +
-                                              QStringLiteral("/../share/Qt/translations"));
-        const auto system = QDir::cleanPath(QLibraryInfo::path(QLibraryInfo::TranslationsPath));
-        if (!impl.translations->load(QStringLiteral("qtbase"), packaged) && packaged != system) {
-            impl.translations->load(QStringLiteral("qtbase"), system);
-        }
-        impl.translations->load(QStringLiteral("helloutau"),
-                                QStringLiteral(":/helloutau/translations"));
+        // The translation of Qt, so that the standard buttons and dialogs match the rest, and
+        // that of the libraries
+        impl.translations->load(QStringLiteral("qtbase"),
+                                qtTranslationPaths(QCoreApplication::applicationDirPath()));
+        impl.translations->load(QStringLiteral("helloutau"), translationPaths());
     }
 
     AppLoader::~AppLoader() {
@@ -157,13 +185,10 @@ namespace hello::daw {
     }
 
     void AppLoader::addQtPluginPaths() {
-        // TODO: Support the macOS bundle, which has not been built or tested:
-        // - HELLOUTAU_BUILTIN_PLUGINS_PATH is ../Plugins in a bundle, so the path computed by
-        //   qtPluginPaths() is outside Contents, does not exist, and nothing is added.
-        // - Qt itself searches Contents/PlugIns of the main bundle. The bundle layout of qmsetup
-        //   uses Contents/Plugins, which equals Contents/PlugIns only on a case-insensitive file
-        //   system.
-        // - The location of the Qt plugins in the bundle is not yet decided.
+        // TODO: Build and test the macOS bundle. Its plugins of Qt are in
+        // Contents/Frameworks/Qt/plugins rather than in Contents/PlugIns, which Qt searches
+        // itself, because Contents/Plugins holds the plugins of the application in the layout of
+        // qmsetup, and both names denote one directory on a case-insensitive file system.
 
         // The directory of the program from the system, known before the application object
         const auto directory =
@@ -182,10 +207,41 @@ namespace hello::daw {
 
     QStringList AppLoader::qtPluginPaths(const QString &programDirectory) {
         // lib/Qt/plugins is laid out as lib/helloutau/plugins.
-        const auto path = QDir::cleanPath(programDirectory + QLatin1Char('/') +
-                                          QStringLiteral(HELLOUTAU_BUILTIN_PLUGINS_PATH) +
-                                          QStringLiteral("/../../Qt/plugins"));
+        const auto path =
+            isBundle(programDirectory)
+                ? besideProgram(programDirectory, QStringLiteral("Frameworks/Qt/plugins"))
+                : QDir::cleanPath(programDirectory + QLatin1Char('/') +
+                                  QStringLiteral(HELLOUTAU_BUILTIN_PLUGINS_PATH) +
+                                  QStringLiteral("/../../Qt/plugins"));
         return QFileInfo(path).isDir() ? QStringList{path} : QStringList();
+    }
+
+    QString AppLoader::extensionPath() const {
+        stdc_impl_t;
+        return QString::fromStdU16String(impl.settings->userDirectory().u16string()) +
+               QStringLiteral("/Extensions");
+    }
+
+    QStringList AppLoader::translationPaths() const {
+        return {extensionPath() + QStringLiteral("/translations"),
+                applicationTranslationPath(QCoreApplication::applicationDirPath())};
+    }
+
+    QString AppLoader::applicationTranslationPath(const QString &programDirectory) {
+        // The data directory of qmsetup, share/helloutau, or Contents/Resources of a bundle
+        const auto share = sharePath(programDirectory);
+        return isBundle(programDirectory) ? share + QStringLiteral("/translations")
+                                          : share + QStringLiteral("/helloutau/translations");
+    }
+
+    QStringList AppLoader::qtTranslationPaths(const QString &programDirectory) {
+        // Those of the installation, see helloutau/CMakeLists.txt, and those of Qt itself
+        QStringList paths{sharePath(programDirectory) + QStringLiteral("/Qt/translations")};
+        const auto system = QDir::cleanPath(QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+        if (!paths.contains(system)) {
+            paths.append(system);
+        }
+        return paths;
     }
 
     QStringList AppLoader::pluginPaths() const {

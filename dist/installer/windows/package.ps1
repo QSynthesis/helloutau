@@ -21,6 +21,9 @@ param(
 #                             other dependencies, and the C++ runtime
 #     lib/helloutau/plugins/  the plugins of the application, where cmake --install puts them
 #     lib/Qt/plugins/         the plugins of Qt, which AppLoader::addQtPluginPaths() adds
+#     share/helloutau/translations/
+#                             the translations of the libraries, installed by
+#                             helloutau/CMakeLists.txt
 #     share/Qt/translations/  the translations of Qt, installed by helloutau/CMakeLists.txt
 #     share/helloutau/update/ UpdateManifest.json, installed by helloutau/CMakeLists.txt
 #

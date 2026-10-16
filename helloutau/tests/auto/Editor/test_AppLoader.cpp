@@ -5,6 +5,7 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QLibraryInfo>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
@@ -146,7 +147,8 @@ private Q_SLOTS:
     }
 
     // --plugin-path adds the following directory, --settings specifies the settings directory,
-    // and the remaining arguments are files.
+    // and the remaining arguments are files. The plugins and the translations of the user are in
+    // Extensions of the settings directory, which serves as the user directory with --settings.
     void the_arguments_are_plugin_paths_and_files() {
         QCOMPARE(AppLoader::instance(), nullptr);
         QTemporaryDir directory;
@@ -156,8 +158,16 @@ private Q_SLOTS:
                                     QStringLiteral("--settings"), directory.path(),
                                     QStringLiteral("b.ust"), QStringLiteral("--plugin-path")});
             QCOMPARE(AppLoader::instance(), &loader);
+            const auto extensions = directory.filePath(QStringLiteral("Extensions"));
+            QCOMPARE(QDir::cleanPath(loader.extensionPath()), QDir::cleanPath(extensions));
             QCOMPARE(loader.pluginPaths(),
-                     QStringList({AppLoader::builtinPluginPath(), QStringLiteral("extra")}));
+                     QStringList({AppLoader::builtinPluginPath(),
+                                  loader.extensionPath() + QStringLiteral("/plugins"),
+                                  QStringLiteral("extra")}));
+            QCOMPARE(loader.translationPaths(),
+                     QStringList({loader.extensionPath() + QStringLiteral("/translations"),
+                                  AppLoader::applicationTranslationPath(
+                                      QCoreApplication::applicationDirPath())}));
             QCOMPARE(loader.files(),
                      QStringList({QStringLiteral("a.ust"), QStringLiteral("b.ust")}));
             QCOMPARE(loader.settingsDirectory(), directory.path());
@@ -187,6 +197,20 @@ private Q_SLOTS:
         QVERIFY(AppLoader::qtPluginPaths(bin).isEmpty());
         QVERIFY(QDir().mkpath(packaged));
         QCOMPARE(AppLoader::qtPluginPaths(bin), QStringList{packaged});
+    }
+
+    // The translations of the application are in the data directory of qmsetup, and those of Qt
+    // in Qt/translations of the shared directory, ahead of those of Qt itself. The tests run
+    // outside a macOS bundle.
+    void the_translations_are_found_beside_the_program() {
+        QTemporaryDir dir;
+        const auto bin = dir.filePath(QStringLiteral("bin"));
+        QCOMPARE(AppLoader::applicationTranslationPath(bin),
+                 dir.filePath(QStringLiteral("share/helloutau/translations")));
+        const auto qt = AppLoader::qtTranslationPaths(bin);
+        QCOMPARE(qt.value(0), dir.filePath(QStringLiteral("share/Qt/translations")));
+        QCOMPARE(qt.value(1), QDir::cleanPath(QLibraryInfo::path(QLibraryInfo::TranslationsPath)));
+        QCOMPARE(qt.size(), 2);
     }
 
     // The directory is added for the program that runs, ahead of the defaults of Qt. It is
