@@ -79,8 +79,9 @@ namespace hello::daw {
         /// The part of the view to the left of the playhead after the view turns a page
         static constexpr double FollowMargin = 0.1;
 
-        /// The milliseconds of a movement of the view that follows the playhead
-        static constexpr int FollowDuration = 500;
+        /// The milliseconds of a movement of the view that follows the playhead, unless
+        /// PianoRoll::setFollowDuration() sets others
+        static constexpr int DefaultFollowDuration = 500;
 
         /// The keys kept in sight above and below the notes that the view follows
         static constexpr double FollowKeyMargin = 1;

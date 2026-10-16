@@ -550,6 +550,10 @@ private Q_SLOTS:
         PianoRoll roll(&session);
         show(roll);
         QCOMPARE(roll.playheadFollow(), PianoRoll::PageFollow);
+        QCOMPARE(roll.followDuration(), 500);
+        // A short movement, so that the test waits little
+        roll.setFollowDuration(50);
+        QCOMPARE(roll.followDuration(), 50);
         const auto &time = roll.view()->timeAxis();
         const double visible = roll.view()->viewport()->width() / time.pixelsPerTick;
 
@@ -573,7 +577,7 @@ private Q_SLOTS:
         scrolled.left = 500;
         roll.view()->setTimeAxis(scrolled);
         // Twice the duration of a movement
-        QTest::qWait(1000);
+        QTest::qWait(100);
         QCOMPARE(time.left, 500.0);
     }
 
@@ -2727,6 +2731,7 @@ private Q_SLOTS:
         kit::ProjectSession session(project);
         PianoRoll roll(&session);
         show(roll);
+        roll.setFollowDuration(50);
         const auto view = roll.view();
         const double height = view->viewport()->height();
         const auto shows = [view, height](int key) {

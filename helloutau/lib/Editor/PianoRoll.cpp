@@ -341,7 +341,7 @@ namespace hello::daw {
         impl.timeFollow = new QVariantAnimation(this);
         impl.keyFollow = new QVariantAnimation(this);
         for (const auto animation : {impl.timeFollow, impl.keyFollow}) {
-            animation->setDuration(PianoRollState::FollowDuration);
+            animation->setDuration(PianoRollState::DefaultFollowDuration);
             animation->setEasingCurve(QEasingCurve::OutCubic);
         }
         connect(impl.timeFollow, &QVariantAnimation::valueChanged, this,
@@ -1150,6 +1150,17 @@ namespace hello::daw {
     void PianoRoll::setPlayheadFollow(PlayheadFollow follow) {
         stdc_impl_t;
         impl.playheadFollow = follow;
+    }
+
+    int PianoRoll::followDuration() const {
+        stdc_impl_t;
+        return impl.timeFollow->duration();
+    }
+
+    void PianoRoll::setFollowDuration(int milliseconds) {
+        stdc_impl_t;
+        impl.timeFollow->setDuration(milliseconds);
+        impl.keyFollow->setDuration(milliseconds);
     }
 
     double PianoRoll::cursorPosition() const {

@@ -375,6 +375,11 @@ namespace hello::daw {
         PlayheadFollow playheadFollow() const;
         void setPlayheadFollow(PlayheadFollow follow);
 
+        /// Returns the milliseconds of a movement of the view that follows the playhead, across or
+        /// along the keys. The default is 500.
+        int followDuration() const;
+        void setFollowDuration(int milliseconds);
+
         /// The playhead at rest, in ticks, 0 at first: where a preview starts and where the line
         /// returns to when playback stops. The line is drawn there while playheadPosition() is
         /// none. Pressing or dragging on the ruler moves it, snapped to the quantization unless
