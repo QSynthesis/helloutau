@@ -11,7 +11,7 @@ qm_find_qt(Core Gui Widgets)
 helloutau_add_native_plugin(${PROJECT_NAME}
     ID org.helloutau.synthtoolsupport
     DISPLAY_NAME "Synth Tool Support"
-    DESCRIPTION "Supports the frequency maps and the failures of third-party synth tools."
+    DESCRIPTION "Supports the frequency maps and other features specific to third-party synth tools."
     CATEGORY SynthToolSupport
     DEPENDENCIES org.helloutau.core
     SOURCES ${_src}
