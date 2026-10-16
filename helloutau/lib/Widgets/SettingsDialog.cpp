@@ -1,5 +1,6 @@
 #include "SettingsDialog.h"
 
+#include <QtCore/QEvent>
 #include <QtWidgets/QAbstractButton>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtGui/QPalette>
@@ -244,7 +245,9 @@ namespace hello::daw {
 
     void SettingsDialog::showPage(SettingPage *page) {
         // The page is taken out, not deleted: it keeps its edits until the dialog closes.
-        m_scroll->takeWidget();
+        if (const auto widget = m_scroll->takeWidget()) {
+            widget->removeEventFilter(this);
+        }
         delete m_category;
         m_message->hide();
         if (!page) {
@@ -262,11 +265,10 @@ namespace hello::daw {
         m_description->setVisible(!page->description().isEmpty());
 
         if (const auto widget = page->widget()) {
-            // The page keeps its preferred height with the style of the dialog, which the scroll
-            // area scrolls if the dialog is lower.
             m_scroll->setWidget(widget);
             widget->ensurePolished();
-            widget->setMinimumHeight(widget->sizeHint().height());
+            widget->installEventFilter(this);
+            fitPage();
         } else {
             // A category shows the links to its pages.
             m_category = new QWidget();
@@ -367,12 +369,31 @@ namespace hello::daw {
     }
 
     void SettingsDialog::releaseAll() {
-        m_scroll->takeWidget();
+        if (const auto widget = m_scroll->takeWidget()) {
+            widget->removeEventFilter(this);
+        }
         delete m_category;
         m_highlighted.clear();
         for (const auto page : m_catalog->allPages()) {
             page->release();
         }
+    }
+
+    // The page keeps its preferred height with the style of the dialog, which the scroll area
+    // scrolls if the dialog is lower. A larger dialog gives the page the rest of its height.
+    void SettingsDialog::fitPage() {
+        if (const auto widget = m_scroll->widget(); widget && widget != m_category) {
+            widget->setMinimumHeight(widget->sizeHint().height());
+        }
+    }
+
+    bool SettingsDialog::eventFilter(QObject *watched, QEvent *event) {
+        // A layout request of the page follows a change of its preferred height, such as a part
+        // of it hidden or shown.
+        if (event->type() == QEvent::LayoutRequest && watched == m_scroll->widget()) {
+            QMetaObject::invokeMethod(this, &SettingsDialog::fitPage, Qt::QueuedConnection);
+        }
+        return QDialog::eventFilter(watched, event);
     }
 
 }

@@ -28,7 +28,9 @@ namespace hello::daw {
     /// in docs/Widgets.md.
     ///
     /// The page lies in a scroll area below its path and its description, at least as high as
-    /// its preferred height, so that the dialog can be lower than a page, which then scrolls.
+    /// its preferred height, so that the dialog can be lower than a page, which then scrolls. The
+    /// least height follows the preferred height whenever the layout of the page changes, such as
+    /// when a part of the page is hidden.
     ///
     /// Apply is enabled while a page is modified, and the modified pages are bold in the tree.
     /// Apply and OK apply them, and a page that rejects the settings keeps the dialog open on
@@ -72,6 +74,9 @@ namespace hello::daw {
         /// The modified pages were applied, by Apply or OK.
         void applied();
 
+    protected:
+        bool eventFilter(QObject *watched, QEvent *event) override;
+
     private:
         SettingCatalog *m_catalog;
         QLineEdit *m_search;
@@ -92,6 +97,7 @@ namespace hello::daw {
         void search();
         void highlight();
         void releaseAll();
+        void fitPage();
     };
 
 }

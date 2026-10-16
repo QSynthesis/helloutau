@@ -80,6 +80,27 @@ namespace {
         }
     };
 
+    // A page with a high part that can be hidden above a line
+    class FoldingPage : public SettingPage {
+    public:
+        FoldingPage() : SettingPage(QStringLiteral("folding")) {
+            setTitle(QStringLiteral("Folding"));
+        }
+
+        QPointer<QWidget> high;
+
+    protected:
+        QWidget *createWidget() override {
+            auto widget = new QWidget();
+            auto layout = new QVBoxLayout(widget);
+            high = new QWidget();
+            high->setMinimumHeight(900);
+            layout->addWidget(high);
+            layout->addWidget(new QLineEdit());
+            return widget;
+        }
+    };
+
     // Audio, a category of Output and Export, and Appearance
     struct Pages {
         SettingCatalog catalog;
@@ -265,6 +286,25 @@ private Q_SLOTS:
         QVERIFY(QTest::qWaitForWindowExposed(&dialog));
         QVERIFY(dialog.height() < preferred);
         QVERIFY(widget->height() >= preferred);
+    }
+
+    // The least height of the page follows its preferred height when a part of it is hidden, so
+    // that the page does not keep the height of the hidden part.
+    void the_page_follows_a_change_of_its_height() {
+        SettingCatalog catalog;
+        const auto page = new FoldingPage();
+        catalog.addPage(page);
+        SettingsDialog dialog(&catalog);
+        dialog.selectPage(QStringLiteral("folding"));
+        dialog.resize(800, 400);
+        dialog.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&dialog));
+        const auto widget = page->widget();
+        QVERIFY(widget->minimumHeight() >= 900);
+        page->high->hide();
+        QTRY_VERIFY(widget->minimumHeight() < 900);
+        page->high->show();
+        QTRY_VERIFY(widget->minimumHeight() >= 900);
     }
 
     // Cancel releases the pages, and their edits with them. The next dialog reads the values
