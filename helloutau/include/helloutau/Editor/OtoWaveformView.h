@@ -13,6 +13,8 @@
 #include <hellokit/VoiceBank/FrequencyMap.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include <helloutau/Widgets/KeyboardModifierBindings.h>
+
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace hello::daw {
@@ -26,8 +28,9 @@ namespace hello::daw {
     /// dragged by the pointer within grip() pixels of it. A drag changes only the view and emits
     /// entryEdited() once released. Escape abandons it. See moved() for the rules of a move.
     ///
-    /// Times are in milliseconds from the start of the audio file. The wheel scrolls, and the
-    /// wheel with Ctrl zooms about the pointer.
+    /// Times are in milliseconds from the start of the audio file. The wheel scrolls or zooms
+    /// about the pointer as the bindings of OtoWaveformKeyboardModifiers select, see
+    /// setKeyboardModifierBindings().
     ///
     /// The colors are properties that a style sheet can set. Unset, they have fixed defaults
     /// that read on light and dark palettes alike.
@@ -88,6 +91,11 @@ namespace hello::daw {
 
         /// Shows the whole audio in the viewport.
         void fit();
+
+        /// The bindings of OtoWaveformKeyboardModifiers that select the action of the wheel, the
+        /// defaults of the scheme unless set.
+        KeyboardModifierBindings keyboardModifierBindings() const;
+        void setKeyboardModifierBindings(const KeyboardModifierBindings &bindings);
 
         /// The time at \a x of the viewport, and the reverse.
         double timeAt(double x) const;

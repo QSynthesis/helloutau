@@ -79,6 +79,7 @@
 #include "Editor.h"
 #include "FindSupport_p.h"
 #include "GenerateFrequencyMapsDialog.h"
+#include "OtoWaveformKeyboardModifiers.h"
 #include "OtoWaveformView.h"
 #include "OutputLogDialog.h"
 #include "ProcessAudioFilesDialog.h"
@@ -618,6 +619,17 @@ namespace hello::daw {
 
             // The waveform of the current entry below, across the window
             waveform = new OtoWaveformView();
+            const auto updateModifiers = [waveform = waveform, editor = editor] {
+                waveform->setKeyboardModifierBindings(editor->keyboardModifierBindings(
+                    Editor::VoiceBankWindowKind, OtoWaveformKeyboardModifiers::scheme()));
+            };
+            updateModifiers();
+            QObject::connect(editor, &Editor::keyboardModifierBindingsChanged, waveform,
+                             [updateModifiers](Editor::WindowKind kind) {
+                                 if (kind == Editor::VoiceBankWindowKind) {
+                                     updateModifiers();
+                                 }
+                             });
             // Keys of the waveform alone, which the table and the search box type otherwise
             QStringList waveformIds{QStringLiteral("helloutau.voiceBank.playFromPointer")};
             for (const auto &command : valueCommands()) {

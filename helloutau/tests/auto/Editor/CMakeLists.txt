@@ -10,6 +10,7 @@ add_auto_test(test_Editor.cpp HelloUtauTestingEditor SynthToolSupportPlugin)
 set_property(TEST test_Editor APPEND PROPERTY ENVIRONMENT_MODIFICATION
     "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:SynthToolSupportPlugin>>"
 )
+add_auto_test(test_OtoWaveformKeyboardModifiers.cpp HelloUtauEditor)
 add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
 add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
 add_auto_test(test_Playback.cpp HelloUtauEditor)

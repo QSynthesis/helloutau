@@ -48,6 +48,7 @@
 #include "FrequencyViewKeyboardModifiers.h"
 #include "KeymapFile.h"
 #include "NoteViewKeyboardModifiers.h"
+#include "OtoWaveformKeyboardModifiers.h"
 #include "ParameterViewKeyboardModifiers.h"
 #include "ProjectWindow.h"
 #include "UpdateChecker.h"
@@ -555,6 +556,9 @@ namespace hello::daw {
         }
         if (kind == FrequencyMapEditorKind) {
             return {&FrequencyViewKeyboardModifiers::scheme()};
+        }
+        if (kind == VoiceBankWindowKind) {
+            return {&OtoWaveformKeyboardModifiers::scheme()};
         }
         return {};
     }

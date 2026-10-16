@@ -1808,6 +1808,21 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::OtoWaveformKeyboardModifiers</name>
+    <message>
+        <source>Waveform Area</source>
+        <translation>波形区</translation>
+    </message>
+    <message>
+        <source>Wheel: Scroll Horizontally</source>
+        <translation>滚轮：横向滚动</translation>
+    </message>
+    <message>
+        <source>Wheel: Zoom Time</source>
+        <translation>滚轮：横向缩放</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::OtoWaveformView</name>
     <message>
         <source>Offset</source>

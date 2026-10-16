@@ -21,6 +21,10 @@
 
 #include <stdcorelib/pimpl.h>
 
+#include <helloutau/Widgets/PlatformWheel.h>
+
+#include "OtoWaveformKeyboardModifiers.h"
+
 namespace hello::daw {
 
     namespace {
@@ -52,6 +56,7 @@ namespace hello::daw {
         Decl *_decl;
         std::shared_ptr<const kit::WaveAudio> audio;
         std::optional<kit::VoiceOtoEntry> entry;
+        KeyboardModifierBindings bindings{OtoWaveformKeyboardModifiers::scheme()};
 
         double scale = 1;
         double viewStart = 0;
@@ -334,6 +339,16 @@ namespace hello::daw {
         impl.scale = impl.minimumScale();
         impl.viewStart = 0;
         impl.clampView();
+    }
+
+    KeyboardModifierBindings OtoWaveformView::keyboardModifierBindings() const {
+        stdc_impl_t;
+        return impl.bindings;
+    }
+
+    void OtoWaveformView::setKeyboardModifierBindings(const KeyboardModifierBindings &bindings) {
+        stdc_impl_t;
+        impl.bindings = bindings;
     }
 
     double OtoWaveformView::timeAt(double x) const {
@@ -772,10 +787,13 @@ namespace hello::daw {
 
     void OtoWaveformView::wheelEvent(QWheelEvent *event) {
         stdc_impl_t;
-        const auto delta = event->angleDelta();
-        if (event->modifiers() & Qt::ControlModifier) {
+        const auto delta = PlatformWheel::angleDelta(*event);
+        const auto activation =
+            impl.bindings.activate(OtoWaveformKeyboardModifiers::WheelScene, event->modifiers());
+        if (activation && activation->operation == OtoWaveformKeyboardModifiers::TimeZoom) {
             zoom(std::pow(1.2, delta.y() / 120.0), event->position().x());
-        } else {
+        } else if (activation &&
+                   activation->operation == OtoWaveformKeyboardModifiers::HorizontalScroll) {
             const int steps = delta.x() != 0 ? delta.x() : delta.y();
             horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
                                             steps * viewport()->width() / 8 / 120);

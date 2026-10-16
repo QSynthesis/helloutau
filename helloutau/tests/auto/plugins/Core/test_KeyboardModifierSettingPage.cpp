@@ -115,7 +115,7 @@ private Q_SLOTS:
         const auto widget = page.widget();
         const auto tabs = widget->findChild<QTabWidget *>(QStringLiteral("windows"));
         QVERIFY(tabs);
-        QCOMPARE(tabs->count(), 2);
+        QCOMPARE(tabs->count(), int(std::size(Editor::windowKinds)));
         for (int i = 0; i < tabs->count(); ++i) {
             QVERIFY(qobject_cast<QScrollArea *>(tabs->widget(i)));
         }

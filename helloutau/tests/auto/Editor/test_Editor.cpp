@@ -91,6 +91,7 @@
 #include <helloutau/Editor/FrequencyMapView.h>
 #include <helloutau/Editor/FrequencyMapWaveform.h>
 #include <helloutau/Editor/Dialogs/NotePropertiesDialog.h>
+#include <helloutau/Editor/OtoWaveformKeyboardModifiers.h>
 #include <helloutau/Editor/OtoWaveformView.h>
 #include <helloutau/Editor/Dialogs/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
@@ -1852,6 +1853,26 @@ private:
     }
 
 private Q_SLOTS:
+    // The waveform of a voice bank window has the modifier bindings of the voice bank windows
+    // when it opens, and the bindings that the editor sets later.
+    void the_waveform_has_the_modifiers_of_the_voice_bank_windows() {
+        QTemporaryDir dir;
+        const auto e = editor();
+        auto bindings = e->keyboardModifierBindings(Editor::VoiceBankWindowKind);
+        QCOMPARE(bindings.size(), 1);
+        bindings[0].setModifiers(OtoWaveformKeyboardModifiers::TimeZoom, Qt::AltModifier);
+        e->setKeyboardModifierBindings(Editor::VoiceBankWindowKind, bindings);
+        const auto window = e->openVoiceBank(voiceBank(dir));
+        QVERIFY(window);
+        const auto waveform = window->findChild<OtoWaveformView *>();
+        QVERIFY(waveform);
+        QVERIFY(waveform->keyboardModifierBindings() == bindings[0]);
+
+        bindings[0].setModifiers(OtoWaveformKeyboardModifiers::TimeZoom, Qt::ShiftModifier);
+        e->setKeyboardModifierBindings(Editor::VoiceBankWindowKind, bindings);
+        QVERIFY(waveform->keyboardModifierBindings() == bindings[0]);
+    }
+
     // A voice bank opens in a window of its own, its folders in a tree and the entries of the
     // folder chosen there in a table, with the files without an entry among them.
     // A changed oto.ini is asked about and read as one undo step. If the read is declined, the

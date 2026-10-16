@@ -1,10 +1,12 @@
 #include <cmath>
 
 #include <QtCore/QtMath>
+#include <QtGui/QWheelEvent>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 
+#include <helloutau/Editor/OtoWaveformKeyboardModifiers.h>
 #include <helloutau/Editor/OtoWaveformView.h>
 
 using namespace hello;
@@ -304,6 +306,37 @@ private Q_SLOTS:
         QTest::mouseDClick(view.viewport(), Qt::LeftButton, {}, pointAt(view, 700));
         QCOMPARE(play.size(), 1);
         QVERIFY(qAbs(play.at(0).at(0).toDouble() - 700) < 1);
+    }
+
+    // By default the wheel zooms with Ctrl and scrolls without modifiers. Other bindings apply
+    // once set, and modifiers that no role has do nothing.
+    void the_wheel_follows_the_bindings() {
+        OtoWaveformView view;
+        show(view);
+        const auto wheel = [&view](Qt::KeyboardModifiers modifiers) {
+            const QPointF at(300, 100);
+            QWheelEvent event(at, view.viewport()->mapToGlobal(at), QPoint(), QPoint(0, 120),
+                              Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
+            QApplication::sendEvent(view.viewport(), &event);
+        };
+        const double fitted = view.scale();
+        wheel(Qt::ControlModifier);
+        QVERIFY(view.scale() > fitted);
+        double start = view.viewStart();
+        QVERIFY(start > 0);
+        wheel(Qt::NoModifier);
+        QVERIFY(view.viewStart() < start);
+
+        KeyboardModifierBindings bindings(OtoWaveformKeyboardModifiers::scheme());
+        bindings.setModifiers(OtoWaveformKeyboardModifiers::TimeZoom, Qt::AltModifier);
+        view.setKeyboardModifierBindings(bindings);
+        const double scale = view.scale();
+        start = view.viewStart();
+        wheel(Qt::ControlModifier);
+        QCOMPARE(view.scale(), scale);
+        QCOMPARE(view.viewStart(), start);
+        wheel(Qt::AltModifier);
+        QVERIFY(view.scale() > scale);
     }
 };
 
