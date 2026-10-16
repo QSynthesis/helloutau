@@ -348,11 +348,7 @@ namespace hello::daw {
         connect(impl.timeFollow, &QVariantAnimation::valueChanged, this,
                 [this](const QVariant &value) {
                     stdc_impl_t;
-                    auto time = impl.view->timeAxis();
-                    time.left = value.toDouble();
-                    impl.following = true;
-                    impl.view->setTimeAxis(time);
-                    impl.following = false;
+                    impl.placePlayhead(value.toDouble());
                 });
         connect(impl.keyFollow, &QVariantAnimation::valueChanged, this,
                 [this](const QVariant &value) {
@@ -1139,6 +1135,8 @@ namespace hello::daw {
         impl.playhead = tick;
         if (tick) {
             impl.followPlayhead(*tick);
+        } else {
+            impl.timeFollow->stop();
         }
         impl.view->viewport()->update();
     }

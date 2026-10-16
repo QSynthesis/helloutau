@@ -353,20 +353,34 @@ namespace hello::daw {
             view->setTimeAxis(time);
             following = false;
             time = view->timeAxis();
-        } else {
-            // The page is turned using the axis that a movement in progress reaches, so that
-            // the movement is not started again on each step of the playhead.
-            if (timeFollow->state() == QAbstractAnimation::Running) {
-                time.left = timeFollow->endValue().toDouble();
-            }
-            const double x = time.toX(tick);
-            if (x < 0 || x > width) {
-                const double left = tick - width / time.pixelsPerTick * FollowMargin;
-                moveTo(timeFollow, view->timeAxis().left, left);
-                time.left = left;
-            }
+        } else if (timeFollow->state() == QAbstractAnimation::Running) {
+            // A step of the playhead during a page turn keeps the playhead at the x that the
+            // movement has reached.
+            placePlayhead(timeFollow->currentValue().toDouble());
+            time.left = tick - timeFollow->endValue().toDouble() / time.pixelsPerTick;
+        } else if (const double x = time.toX(tick); x < 0 || x > width) {
+            const double margin = followMargin();
+            moveTo(timeFollow, x, margin);
+            time.left = tick - margin / time.pixelsPerTick;
         }
         followKeys(tick, time);
+    }
+
+    double PianoRollState::followMargin() const {
+        const double width = view->viewport()->width();
+        return std::clamp(kit::ticksPerQuarter * view->timeAxis().pixelsPerTick,
+                          width * FollowMinimumMargin, width * FollowMaximumMargin);
+    }
+
+    void PianoRollState::placePlayhead(double x) {
+        if (!playhead) {
+            return;
+        }
+        auto time = view->timeAxis();
+        time.left = *playhead - x / time.pixelsPerTick;
+        following = true;
+        view->setTimeAxis(time);
+        following = false;
     }
 
     void PianoRollState::followKeys(double tick, const TimeAxis &time) {

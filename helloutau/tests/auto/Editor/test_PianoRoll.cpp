@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cmath>
 
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTimer>
 #include <QtGui/QPalette>
@@ -555,7 +557,11 @@ private Q_SLOTS:
         roll.setFollowDuration(50);
         QCOMPARE(roll.followDuration(), 50);
         const auto &time = roll.view()->timeAxis();
-        const double visible = roll.view()->viewport()->width() / time.pixelsPerTick;
+        const double width = roll.view()->viewport()->width();
+        const double visible = width / time.pixelsPerTick;
+        // A quarter note to the left of the playhead, within 2.5% and 5% of the view
+        const double margin =
+            std::clamp(kit::ticksPerQuarter * time.pixelsPerTick, width * 0.025, width * 0.05);
 
         roll.setPlayheadPosition(visible / 2);
         QCOMPARE(roll.playheadPosition(), std::optional<double>(visible / 2));
@@ -564,12 +570,13 @@ private Q_SLOTS:
         roll.setPlayheadPosition(visible * 1.5);
         // The movement starts where the view is, instead of jumping.
         QCOMPARE(time.left, 0.0);
+        const double turned = visible * 1.5 - margin / time.pixelsPerTick;
         // The loop of QTRY_COMPARE compares with ==, and the arithmetic of the movement does not
         // reach the exact value.
-        QTRY_VERIFY(qFuzzyCompare(time.left, visible * 1.4));
+        QTRY_VERIFY(qFuzzyCompare(time.left, turned));
         roll.setPlayheadPosition(std::nullopt);
         QVERIFY(!roll.playheadPosition());
-        QCOMPARE(time.left, visible * 1.4);
+        QCOMPARE(time.left, turned);
 
         // The movement to the next page is stopped by a scroll of the user before it ends.
         roll.setPlayheadPosition(visible * 2.5);
@@ -579,6 +586,69 @@ private Q_SLOTS:
         // The test waits twice the duration of a movement.
         QTest::qWait(100);
         QCOMPARE(time.left, 500.0);
+    }
+
+    // During a page turn the playhead moves on, and still ends at the margin, moving only
+    // leftward in the viewport on the way.
+    void the_playhead_ends_a_page_turn_at_the_margin() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setFollowDuration(100);
+        const auto &time = roll.view()->timeAxis();
+        const double width = roll.view()->viewport()->width();
+        const double visible = width / time.pixelsPerTick;
+        const double margin =
+            std::clamp(kit::ticksPerQuarter * time.pixelsPerTick, width * 0.025, width * 0.05);
+
+        double tick = visible * 1.01;
+        roll.setPlayheadPosition(tick);
+        double x = time.toX(tick);
+        const auto verifyLeftward = [&x](double next) {
+            QVERIFY2(next <= x + 0.001, qPrintable(QStringLiteral("%1 > %2").arg(next).arg(x)));
+            x = next;
+        };
+        QElapsedTimer timer;
+        timer.start();
+        // A hundredth of the view on each step, so that the playhead moves about a tenth of the
+        // view during the movement, as in a view zoomed in
+        while (timer.elapsed() < 300) {
+            QTest::qWait(10);
+            verifyLeftward(time.toX(tick));
+            if (qAbs(x - margin) < 0.01) {
+                break;
+            }
+            tick += visible / 100;
+            roll.setPlayheadPosition(tick);
+            verifyLeftward(time.toX(tick));
+        }
+        QVERIFY(qAbs(time.toX(tick) - margin) < 0.01);
+    }
+
+    // The margin after a page turn is a quarter note, but at least 2.5% and at most 5% of the
+    // width of the view.
+    void the_margin_of_a_page_turn_is_a_quarter_note_within_limits() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setFollowDuration(10);
+        const double width = roll.view()->viewport()->width();
+        const auto marginAt = [&roll, width](double quarter) {
+            auto axis = roll.view()->timeAxis();
+            axis.pixelsPerTick = quarter / kit::ticksPerQuarter;
+            axis.left = 0;
+            roll.view()->setTimeAxis(axis);
+            const auto &time = roll.view()->timeAxis();
+            const double tick = time.left + width / time.pixelsPerTick * 1.01;
+            roll.setPlayheadPosition(tick);
+            QTest::qWait(50);
+            const double x = time.toX(tick);
+            roll.setPlayheadPosition(std::nullopt);
+            return x;
+        };
+        QVERIFY(qAbs(marginAt(width * 0.04) - width * 0.04) < 0.01);
+        QVERIFY(qAbs(marginAt(width * 0.02) - width * 0.025) < 0.01);
+        QVERIFY(qAbs(marginAt(width * 0.2) - width * 0.05) < 0.01);
     }
 
     // The playhead at rest moves where the ruler is pressed or dragged, snapped to the

@@ -76,8 +76,10 @@ namespace hello::daw {
         /// The type of the notes that PianoRoll::copySelected() puts on the clipboard
         static constexpr char NotesMimeType[] = "application/x-helloutau-notes+json";
 
-        /// The part of the view to the left of the playhead after the view turns a page
-        static constexpr double FollowMargin = 0.1;
+        /// The least and the most part of the view to the left of the playhead after the view
+        /// turns a page, see followMargin()
+        static constexpr double FollowMinimumMargin = 0.025;
+        static constexpr double FollowMaximumMargin = 0.05;
 
         /// The milliseconds of a movement of the view that follows the playhead, unless
         /// PianoRoll::setFollowDuration() sets another value
@@ -264,7 +266,9 @@ namespace hello::daw {
 
         std::optional<double> playhead;
         PianoRoll::PlayheadFollow playheadFollow = PianoRoll::PageFollow;
-        /// The movements of the axes of the view that follow the playhead
+        /// The movements of the axes of the view that follow the playhead. The movement across
+        /// animates the x of the playhead in the viewport, rather than the time at the left edge,
+        /// so that the playhead ends at followMargin() however far it moves meanwhile.
         QVariantAnimation *timeFollow = nullptr;
         QVariantAnimation *keyFollow = nullptr;
         /// Set while a movement sets an axis, so that only other changes stop the movements
@@ -401,6 +405,15 @@ namespace hello::daw {
         /// Moves the view to follow the playhead at \a tick, across as playheadFollow selects and
         /// up or down as followKeys() does.
         void followPlayhead(double tick);
+
+        /// Returns the pixels to the left of the playhead after the view turns a page: the width
+        /// of a quarter note, within FollowMinimumMargin and FollowMaximumMargin of the width of
+        /// the view.
+        double followMargin() const;
+
+        /// Sets the time axis so that the playhead is at \a x of the viewport, which the movement
+        /// of a page turn animates.
+        void placePlayhead(double x);
 
         /// Scrolls the keys with an easing, if needed, so that the keys of the notes from \a tick
         /// to the right edge of \a time are in sight, or the key of the note at \a tick if those
