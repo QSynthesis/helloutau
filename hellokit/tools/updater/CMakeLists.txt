@@ -10,7 +10,7 @@ project(hello-updater
 # The application runs a copy outside the installation directory, where no library of the
 # application is available. The program therefore links neither Qt nor any shared library of
 # this repository, and links the C++ runtime statically. Its libraries of this repository are
-# static: HelloKitNativeSystem, which links the same runtime, and, on Windows, HelloKitWinMain,
+# static: HelloKitNativeSystem-static-crt, which links the same runtime, and, on Windows, HelloKitWinMain,
 # which requires no particular runtime. It is a GUI program on Windows, so that no console window
 # appears.
 hellokit_add_executable(${PROJECT_NAME}
@@ -29,7 +29,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE HelloKitNativeSystem)
+target_link_libraries(${PROJECT_NAME} PRIVATE HelloKitNativeSystem-static-crt)
 
 if(WIN32)
     # The entry point of the GUI program, which passes the arguments to main in UTF-8

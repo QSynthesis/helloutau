@@ -17,9 +17,10 @@ namespace hello::kit {
     /// \c std::wstring on Windows, and bytes in \c std::string elsewhere, which are UTF-8 in the
     /// locales that HelloUtau supports. The type equals \c std::filesystem::path::string_type .
     ///
-    /// The library HelloKitNativeSystem serves the programs that link no Qt, such as
-    /// hello-updater and hello-plugin-play. It is static and, on Windows, links the static C
-    /// runtime, as these programs do.
+    /// The library serves the programs that link no Qt, such as hello-updater and
+    /// hello-plugin-play, and the application before its windows. It is static, and is built
+    /// once for each C runtime of the MSVC ABI: HelloKitNativeSystem with the runtime in a DLL,
+    /// and HelloKitNativeSystem-static-crt with the static runtime.
 #ifdef _WIN32
     using NativeString = std::wstring;
 #else

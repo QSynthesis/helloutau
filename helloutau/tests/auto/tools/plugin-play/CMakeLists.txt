@@ -13,7 +13,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 # C++ runtime statically.
 add_executable(plugin-play-original-stub original_stub.cpp)
 target_compile_features(plugin-play-original-stub PRIVATE cxx_std_17)
-target_link_libraries(plugin-play-original-stub PRIVATE HelloKitNativeSystem)
+target_link_libraries(plugin-play-original-stub PRIVATE HelloKitNativeSystem-static-crt)
 if(WIN32)
     set_target_properties(plugin-play-original-stub PROPERTIES
         WIN32_EXECUTABLE TRUE

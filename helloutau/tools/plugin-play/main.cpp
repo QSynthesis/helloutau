@@ -15,20 +15,18 @@
 #else
 #  include <cerrno>
 #  include <csignal>
-#  include <spawn.h>
 #  include <sys/socket.h>
 #  include <sys/types.h>
 #  include <sys/un.h>
-#  include <sys/wait.h>
 #  include <unistd.h>
 #  ifdef __APPLE__
 #    include <mach-o/dyld.h>
 #  endif
-extern char **environ;
 #endif
 
 #include <hellokit/Config.h>
 #include <hellokit/NativeSystem/NativeMessageBox.h>
+#include <hellokit/NativeSystem/NativeProcess.h>
 #include <hellokit/NativeSystem/NativeString.h>
 
 // hello-plugin-play: the preview program for classic plugins. A plugin such as PitTrace starts it
@@ -467,40 +465,10 @@ namespace {
 #ifdef _WIN32
         static_cast<void>(arguments);
         // A file name cannot contain a quotation mark, which therefore needs no escape here.
-        auto commandLine = L"\"" + original.native() + L"\"" + argumentsAsWritten();
-        STARTUPINFOW startup = {};
-        startup.cb = sizeof(startup);
-        PROCESS_INFORMATION process = {};
-        if (!CreateProcessW(original.c_str(), commandLine.data(), nullptr, nullptr, FALSE, 0,
-                            nullptr, nullptr, &startup, &process)) {
-            return std::nullopt;
-        }
-        CloseHandle(process.hThread);
-        WaitForSingleObject(process.hProcess, INFINITE);
-        DWORD code = 0;
-        GetExitCodeProcess(process.hProcess, &code);
-        CloseHandle(process.hProcess);
-        return int(code);
+        return kit::NativeProcess::runCommandLine(original, L"\"" + original.native() + L"\"" +
+                                                                argumentsAsWritten());
 #else
-        std::string path = original.native();
-        auto values = arguments;
-        std::vector<char *> argv = {path.data()};
-        for (auto &value : values) {
-            argv.push_back(value.data());
-        }
-        argv.push_back(nullptr);
-        pid_t pid = 0;
-        if (posix_spawn(&pid, path.c_str(), nullptr, nullptr, argv.data(), environ) != 0) {
-            return std::nullopt;
-        }
-        int status = 0;
-        while (waitpid(pid, &status, 0) < 0) {
-            if (errno != EINTR) {
-                return int(NoHost);
-            }
-        }
-        // A terminating signal as a shell reports it
-        return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+        return kit::NativeProcess::run(original, arguments);
 #endif
     }
 

@@ -3,37 +3,52 @@ project(HelloKitNativeSystem
     LANGUAGES CXX
 )
 
-# The facilities of the system for the programs that link no Qt, such as hello-updater and
-# hello-plugin-play: the native string with its conversion from and to UTF-8, and a message box.
+# The facilities of the system without Qt: the native string with its conversion from and to
+# UTF-8, the current process and the processes that it starts, and a message box. The application
+# uses them before its windows, and hello-updater and hello-plugin-play use them throughout.
 set(_src NativeString.cpp)
 
 if(WIN32)
-    list(APPEND _src NativeMessageBox_win.cpp)
+    list(APPEND _src NativeMessageBox_win.cpp NativeProcess_win.cpp)
 elseif(APPLE)
-    list(APPEND _src NativeMessageBox_mac.cpp)
+    list(APPEND _src NativeMessageBox_mac.cpp NativeProcess_unix.cpp)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND _src NativeMessageBox_linux.cpp)
+    list(APPEND _src NativeMessageBox_linux.cpp NativeProcess_unix.cpp)
 else()
     message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} is not a system this project runs on.")
 endif()
 
-hellokit_add_library(${PROJECT_NAME} STATIC
-    SOURCES ${_src}
-    INCLUDE_PRIVATE ../../include/hellokit/NativeSystem/** **
-    MACRO_PREFIX HELLOKIT_NATIVESYSTEM
-)
+# One library for each C runtime of the MSVC ABI, because the objects use the standard library,
+# which requires the runtime of the program. HelloKitNativeSystem has the runtime in a DLL, as the
+# application and the plugins have it. HelloKitNativeSystem-static-crt has the static runtime, as
+# hello-updater and hello-plugin-play link it, and is neither installed nor exported, because only
+# these programs link it. Compilers of other ABIs ignore the property, and the libraries are alike
+# there.
+foreach(_variant dll static-crt)
+    if(_variant STREQUAL "dll")
+        set(_target ${PROJECT_NAME})
+        set(_runtime "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+        set(_options)
+    else()
+        set(_target ${PROJECT_NAME}-static-crt)
+        set(_runtime "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        set(_options NO_EXPORT NO_INSTALL)
+    endif()
 
-# The libraries obtain C++17 through Qt, which this target does not link.
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+    hellokit_add_library(${_target} STATIC ${_options}
+        SOURCES ${_src}
+        INCLUDE_PRIVATE ../../include/hellokit/NativeSystem/** **
+        MACRO_PREFIX HELLOKIT_NATIVESYSTEM
+    )
 
-# The static runtime of the MSVC ABI, as the programs that link the library use it. The objects
-# use the standard library, which requires the runtime of the program.
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-)
+    # The libraries obtain C++17 through Qt, which this target does not link.
+    target_compile_features(${_target} PUBLIC cxx_std_17)
 
-if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE user32)
-elseif(APPLE)
-    target_link_libraries(${PROJECT_NAME} PRIVATE "-framework CoreFoundation")
-endif()
+    set_target_properties(${_target} PROPERTIES MSVC_RUNTIME_LIBRARY "${_runtime}")
+
+    if(WIN32)
+        target_link_libraries(${_target} PRIVATE user32 advapi32)
+    elseif(APPLE)
+        target_link_libraries(${_target} PRIVATE "-framework CoreFoundation")
+    endif()
+endforeach()

@@ -19,13 +19,12 @@
 #else
 #  include <cerrno>
 #  include <csignal>
-#  include <spawn.h>
 #  include <sys/types.h>
-extern char **environ;
 #endif
 
 #include <hellokit/Config.h>
 #include <hellokit/NativeSystem/NativeMessageBox.h>
+#include <hellokit/NativeSystem/NativeProcess.h>
 #include <hellokit/NativeSystem/NativeString.h>
 
 // hello-updater: replaces the installation directory of a portable application with the directory
@@ -251,65 +250,6 @@ namespace {
         }
     }
 
-#ifdef _WIN32
-    // Appends argument to commandLine as CommandLineToArgvW() and the C runtime parse it: in
-    // quotation marks, with each quotation mark escaped and the backslashes before a quotation
-    // mark doubled.
-    void appendArgument(std::wstring &commandLine, const std::wstring &argument) {
-        if (!commandLine.empty()) {
-            commandLine += L' ';
-        }
-        commandLine += L'"';
-        size_t backslashes = 0;
-        for (const auto c : argument) {
-            if (c == L'\\') {
-                ++backslashes;
-                continue;
-            }
-            if (c == L'"') {
-                commandLine.append(backslashes * 2 + 1, L'\\');
-            } else {
-                commandLine.append(backslashes, L'\\');
-            }
-            backslashes = 0;
-            commandLine += c;
-        }
-        // The closing quotation mark follows, so that the trailing backslashes are doubled.
-        commandLine.append(backslashes * 2, L'\\');
-        commandLine += L'"';
-    }
-#endif
-
-    bool launch(const fs::path &program, const std::vector<NativeString> &arguments) {
-#ifdef _WIN32
-        std::wstring commandLine;
-        appendArgument(commandLine, program.native());
-        for (const auto &argument : arguments) {
-            appendArgument(commandLine, argument);
-        }
-        STARTUPINFOW startup = {};
-        startup.cb = sizeof(startup);
-        PROCESS_INFORMATION process = {};
-        const auto directory = program.parent_path();
-        if (!CreateProcessW(program.c_str(), commandLine.data(), nullptr, nullptr, FALSE, 0,
-                            nullptr, directory.c_str(), &startup, &process)) {
-            return false;
-        }
-        CloseHandle(process.hThread);
-        CloseHandle(process.hProcess);
-        return true;
-#else
-        std::string path = program.native();
-        auto values = arguments;
-        std::vector<char *> argv = {path.data()};
-        for (auto &value : values) {
-            argv.push_back(value.data());
-        }
-        argv.push_back(nullptr);
-        pid_t pid = 0;
-        return posix_spawn(&pid, path.c_str(), nullptr, nullptr, argv.data(), environ) == 0;
-#endif
-    }
 
 #ifdef _WIN32
     // Returns whether the standard output is redirected to a file or a pipe. Windows has no
@@ -382,7 +322,10 @@ namespace {
         fs::current_path(target.parent_path(), ec);
 
         const auto finish = [&](int code) {
-            if (!options.launch.empty() && !launch(options.launch, options.launchArguments)) {
+            // In the directory of the program, so that it holds no directory that is replaced
+            if (!options.launch.empty() &&
+                !kit::NativeProcess::start(options.launch, options.launchArguments,
+                                           options.launch.parent_path())) {
                 log.write("cannot start " + text(options.launch));
             }
             return code;
