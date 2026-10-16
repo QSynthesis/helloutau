@@ -258,8 +258,8 @@
         <translation>试听程序</translation>
     </message>
     <message>
-        <source>Some plugins play their notes through the program playinplugin.exe in their folder. The preview program of HelloUtau replaces it, so that the notes are rendered and played in HelloUtau. The original program is kept, and still runs if UTAU runs the plugin.</source>
-        <translation>某些插件通过其文件夹中的程序 playinplugin.exe 试听音符。HelloUtau 的试听程序替换该程序，使音符在 HelloUtau 中渲染与播放。原有的程序予以保留，UTAU 运行插件时仍使用它。</translation>
+        <source>Some plugins play their notes through the program %1 in their folder. The preview program of HelloUtau replaces it, so that the notes are rendered and played in HelloUtau. The original program is kept, and still runs if UTAU runs the plugin.</source>
+        <translation>某些插件通过其文件夹中的程序 %1 试听音符。HelloUtau 的试听程序替换该程序，使音符在 HelloUtau 中渲染与播放。原有的程序予以保留，UTAU 运行插件时仍使用它。</translation>
     </message>
     <message>
         <source>Open</source>
@@ -278,8 +278,8 @@
         <translation>该插件的 plugin.txt 没有声明编码。请选择使其文本正确显示的编码。安装时，该文件将转写为 UTF-8 的 plugin.json。</translation>
     </message>
     <message>
-        <source>The preview program hello-plugin-play.exe is not in the folder of HelloUtau.</source>
-        <translation>HelloUtau 的文件夹中没有试听程序 hello-plugin-play.exe。</translation>
+        <source>The preview program %1 is not in the folder of HelloUtau.</source>
+        <translation>HelloUtau 的文件夹中没有试听程序 %1。</translation>
     </message>
     <message>
         <source>No plugin is found.</source>
@@ -290,8 +290,8 @@
         <translation>一键安装</translation>
     </message>
     <message>
-        <source>Installs the preview program in the plugins whose folder has a playinplugin.exe, and updates the older versions.</source>
-        <translation>为文件夹中有 playinplugin.exe 的插件安装试听程序，并更新版本较旧的试听程序。</translation>
+        <source>Installs the preview program in the plugins whose folder has a %1, and updates the older versions.</source>
+        <translation>为文件夹中有 %1 的插件安装试听程序，并更新版本较旧的试听程序。</translation>
     </message>
     <message>
         <source>Remove All</source>
@@ -318,8 +318,8 @@
         <translation>未安装</translation>
     </message>
     <message>
-        <source>The folder of the plugin has a playinplugin.exe, which the plugin starts for a preview.</source>
-        <translation>该插件的文件夹中有 playinplugin.exe，插件以它试听。</translation>
+        <source>The folder of the plugin has a %1, which the plugin starts for a preview.</source>
+        <translation>该插件的文件夹中有 %1，插件以它试听。</translation>
     </message>
     <message>
         <source>Installed</source>
@@ -330,14 +330,14 @@
         <translation>安装</translation>
     </message>
     <message numerus="yes">
-        <source>%n plugin(s) below come with a playinplugin.exe, which they start for a preview, and are recommended. Install All installs the preview program in exactly these plugins, or updates its older version.</source>
+        <source>%n plugin(s) below come with a %1, which they start for a preview, and are recommended. Install All installs the preview program in exactly these plugins, or updates its older version.</source>
         <translation>
-            <numerusform>下列插件中有 %n 个自带 playinplugin.exe 并以它试听，推荐安装。「一键安装」只在这些插件中安装试听程序，或更新其旧版本。</numerusform>
+            <numerusform>下列插件中有 %n 个自带 %1 并以它试听，推荐安装。「一键安装」只在这些插件中安装试听程序，或更新其旧版本。</numerusform>
         </translation>
     </message>
     <message>
-        <source>No plugin is recommended. A plugin that comes with a playinplugin.exe, which it starts for a preview, is recommended.</source>
-        <translation>没有推荐安装的插件。自带 playinplugin.exe 并以它试听的插件才推荐安装。</translation>
+        <source>No plugin is recommended. A plugin that comes with a %1, which it starts for a preview, is recommended.</source>
+        <translation>没有推荐安装的插件。自带 %1 并以它试听的插件才推荐安装。</translation>
     </message>
     <message>
         <source>Installed, older version, update recommended</source>

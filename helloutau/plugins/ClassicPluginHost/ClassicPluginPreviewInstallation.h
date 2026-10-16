@@ -14,7 +14,8 @@ namespace hello::daw {
 
     /// The preview program of a classic plugin: hello-plugin-play, deployed in the folder of the
     /// plugin under the name playinplugin.exe, which some plugins start for a preview. See the
-    /// section on deployment in docs/PluginPlay.md.
+    /// section on deployment in docs/PluginPlay.md. The file names have no .exe on systems other
+    /// than Windows.
     ///
     /// An installation keeps the playinplugin.exe of the plugin as playinplugin-original.exe,
     /// which hello-plugin-play runs if HelloUtau does not run the plugin. It is recorded at
@@ -36,6 +37,9 @@ namespace hello::daw {
 
         /// The file name under which the program of the plugin is kept
         static const QString originalName;
+
+        /// The file name of hello-plugin-play beside the application
+        static const QString bundledName;
 
         /// Returns the hello-plugin-play beside the application, or an empty path if it is
         /// absent.

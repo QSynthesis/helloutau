@@ -68,10 +68,10 @@ namespace hello::daw {
         auto previews = new QGroupBox(tr("Preview program"), widget);
         auto previewsLayout = new QVBoxLayout(previews);
         auto previewNote = new QLabel(
-            tr("Some plugins play their notes through the program playinplugin.exe in their "
-               "folder. The preview program of HelloUtau replaces it, so that the notes are "
-               "rendered and played in HelloUtau. The original program is kept, and still runs "
-               "if UTAU runs the plugin."),
+            tr("Some plugins play their notes through the program %1 in their folder. The preview "
+               "program of HelloUtau replaces it, so that the notes are rendered and played in "
+               "HelloUtau. The original program is kept, and still runs if UTAU runs the plugin.")
+                .arg(Installation::programName),
             previews);
         previewNote->setWordWrap(true);
         previewsLayout->addWidget(previewNote);
@@ -211,9 +211,10 @@ namespace hello::daw {
         qDeleteAll(m_previews->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly));
         const auto program = Installation::bundledProgram();
         if (program.empty()) {
-            auto missing = new QLabel(tr("The preview program hello-plugin-play.exe is not in the "
-                                         "folder of HelloUtau."),
-                                      m_previews);
+            auto missing =
+                new QLabel(tr("The preview program %1 is not in the folder of HelloUtau.")
+                               .arg(Installation::bundledName),
+                           m_previews);
             missing->setWordWrap(true);
             m_previews->layout()->addWidget(missing);
             return;
@@ -246,7 +247,8 @@ namespace hello::daw {
         allLayout->setContentsMargins(0, 0, 0, 0);
         auto installAll = new QPushButton(tr("Install All"), all);
         installAll->setToolTip(tr("Installs the preview program in the plugins whose folder has a "
-                                  "playinplugin.exe, and updates the older versions."));
+                                  "%1, and updates the older versions.")
+                                   .arg(Installation::programName));
         installAll->setEnabled(!installable.isEmpty() || !outdated.isEmpty());
         auto removeAll = new QPushButton(tr("Remove All"), all);
         removeAll->setToolTip(tr("Removes the preview program from every plugin."));
@@ -258,12 +260,14 @@ namespace hello::daw {
         const auto recommended = int(installable.size() + outdated.size());
         auto recommendation = new QLabel(
             recommended > 0
-                ? tr("%n plugin(s) below come with a playinplugin.exe, which they start for a "
-                     "preview, and are recommended. Install All installs the preview program in "
-                     "exactly these plugins, or updates its older version.",
+                ? tr("%n plugin(s) below come with a %1, which they start for a preview, and are "
+                     "recommended. Install All installs the preview program in exactly these "
+                     "plugins, or updates its older version.",
                      nullptr, recommended)
-                : tr("No plugin is recommended. A plugin that comes with a playinplugin.exe, "
-                     "which it starts for a preview, is recommended."),
+                      .arg(Installation::programName)
+                : tr("No plugin is recommended. A plugin that comes with a %1, which it starts for "
+                     "a preview, is recommended.")
+                      .arg(Installation::programName),
             m_previews);
         recommendation->setWordWrap(true);
         m_previews->layout()->addWidget(recommendation);
@@ -338,8 +342,9 @@ namespace hello::daw {
                     status->setText(recommended ? tr("Not installed, recommended")
                                                 : tr("Not installed"));
                     if (recommended) {
-                        status->setToolTip(tr("The folder of the plugin has a playinplugin.exe, "
-                                              "which the plugin starts for a preview."));
+                        status->setToolTip(tr("The folder of the plugin has a %1, which the "
+                                              "plugin starts for a preview.")
+                                               .arg(Installation::programName));
                     }
                     break;
                 case Installation::Installed:

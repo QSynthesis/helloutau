@@ -21,9 +21,9 @@ plugin-play 以同样的命令行接受调用，把请求交给运行该插件�
 - 底稿是宿主本次运行插件时的工程快照与选区，输入文件只用于核对。
 - `/noplay` 时不弹出试听对话框。
 - 不清空输入文件，与原版不同。
-- 先只支持 Windows。
+- 最初只支持 Windows。作者 2026-10-16 改为 macOS 与 Linux 同样提供，供按经典插件规范提供原生程序的插件使用，目前尚无这类插件。
 - 部署须由用户在设置页确认，届时把 `plugin.txt` 转写为 `plugin.json` 并请用户确认编码，替换的记录写入 `plugin.json`。
-- 没有宿主时运行原版（`playinplugin-original.exe`），没有原版才报错。
+- 没有宿主时运行原版（`playinplugin-original.exe`，其他平台不带 `.exe`），没有原版才报错。
 - 渲染采用预渲染：渲染选区后播放，不采用实时模式。
 - 试听对话框存在期间 plugin-play 的进程保持运行，因为插件可能以此判断试听是否结束。
 
@@ -31,11 +31,11 @@ plugin-play 以同样的命令行接受调用，把请求交给运行该插件�
 
 | 部分 | 位置 | 职责 |
 |---|---|---|
-| `hello-plugin-play` | `helloutau/tools/plugin-play`（2026-10-15 由 `hellokit/tools` 移入，作者决定，因为它只服务于 ClassicPluginHost 插件；测试在 `helloutau/tests/auto/tools/plugin-play`） | 解析命令行，经命名管道把请求交给宿主，等待回复后退出 |
+| `hello-plugin-play` | `helloutau/tools/plugin-play`（2026-10-15 由 `hellokit/tools` 移入，作者决定，因为它只服务于 ClassicPluginHost 插件。测试在 `helloutau/tests/auto/tools/plugin-play`） | 解析命令行，经命名管道（其他平台为本地套接字）把请求交给宿主，等待回复后退出 |
 | 管道服务器 | ClassicPluginHost | 插件运行期间接受请求，核对、叠加修改、渲染，回复结果 |
 | 试听对话框 | ClassicPluginHost（`Internal`） | 显示渲染进度，播放，取消 |
 
-部署时 `hello-plugin-play.exe` 以 `playinplugin.exe` 的名称复制到插件文件夹，因为 PitTrace 在自己的文件夹中按这个名称查找。
+部署时 `hello-plugin-play.exe` 以 `playinplugin.exe` 的名称复制到插件文件夹，因为 PitTrace 在自己的文件夹中按这个名称查找。其他平台上三个名称都不带 `.exe`：`hello-plugin-play`、`playinplugin` 与 `playinplugin-original`。
 
 ## 命令行
 
@@ -48,7 +48,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 - 第一个参数是输入文件。其余参数中，`/m:`、`/o:` 以前缀识别，四个开关须完全一致，区分大小写。未知的参数被忽略。
 - 相对路径按工作目录解析为绝对路径后再交给宿主。
 - 退出码恒为 0，与原版的实测一致。没有管道时例外，见「没有宿主时的行为」。
-- 唯一的参数为 `/?`、`-h` 或 `--help` 时显示用法，为 `--version` 时显示版本（`hellokit/Config.h` 的 `HELLOKIT_VERSION`），退出码为 0（作者 2026-10-15 要求）。只在唯一参数时识别，因为原版把第一个参数一律当作输入文件，而 `/?` 不可能是文件名。标准输出被重定向到文件或管道时写到标准输出，否则以消息框显示，因为它是没有控制台的窗口程序。
+- 唯一的参数为 `/?`、`-h` 或 `--help` 时显示用法，为 `--version` 时显示版本（`hellokit/Config.h` 的 `HELLOKIT_VERSION`），退出码为 0（作者 2026-10-15 要求）。只在唯一参数时识别，因为原版把第一个参数一律当作输入文件，而 `/?` 不可能是文件名。Windows 上标准输出被重定向到文件或管道时写到标准输出，否则以消息框显示，因为它是没有控制台的窗口程序。其他平台一律写到标准输出。
 
 ## 管道
 
@@ -56,7 +56,8 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 - **管道名**：宿主在插件启动后创建一个 `QLocalServer`，名称为 `helloutau-plugin-play-<插件进程的进程号>`，选项为 `QLocalServer::UserAccessOption`。
 - **查找宿主**：plugin-play 以 `QueryInformationJobObject(nullptr, JobObjectBasicProcessIdList, ...)` 取得自身所在作业的进程号（句柄为空即调用进程所在的作业），对其中自身以外的进程号连接 `\\.\pipe\helloutau-plugin-play-<进程号>`，存在的管道即本次运行的宿主。这一方式不依赖插件传递环境变量或参数，中间进程退出也不影响作业的归属，并且只查找本次运行的进程，不涉及其他 HelloUtau 实例。
 - **找不到宿主的情形**：plugin-play 不在作业中（`IsProcessInJob` 不成立），或作业中没有对应的管道。例如由官方 UTAU 运行插件，或 `shell=use` 的插件交给已在运行的程序处理、宿主无法取得进程句柄时。处理见「没有宿主时的行为」。
-- **消息**：每条消息是一行 UTF-8 的 JSON，以 LF 结尾。plugin-play 用 `WideCharToMultiByte` 转换路径并手工拼写 JSON，宿主用 `QJsonDocument` 解析。
+- **其他平台**：没有作业对象，改用进程组（作者 2026-10-16 决定）。`ClassicPluginRunner` 以 `setpgid(0, 0)` 让插件自成一个进程组，组号即插件的进程号，插件启动的进程默认留在该组中，「取消」也以此结束整组。plugin-play 以 `getpgid(0)` 取得组号，连接临时目录中的本地套接字 `helloutau-plugin-play-<组号>`，即 `QLocalServer` 以同一名称建立的文件。临时目录的取法与 Qt 的 `QDir::tempPath()` 相同：`TMPDIR` 去掉末尾的斜杠，未设置时 macOS 为用户的临时目录（`confstr(_CS_DARWIN_USER_TEMP_DIR)`），Linux 为 `/tmp`。plugin-play 自身是组长时视为不由插件启动。插件改变 `TMPDIR`，或在新的进程组、新的会话中启动 plugin-play 时，找不到宿主。连上宿主后才忽略 `SIGPIPE`，因为被忽略的信号会传给运行的原版。
+- **消息**：每条消息是一行 UTF-8 的 JSON，以 LF 结尾。plugin-play 在 Windows 上用 `WideCharToMultiByte` 转换路径，其他平台原样使用命令行的字节（支持的语言环境下为 UTF-8），并手工拼写 JSON，宿主用 `QJsonDocument` 解析。
 - **请求**：
 
   ```json
@@ -74,8 +75,8 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 
 找不到宿主时（见「管道」），plugin-play 按以下顺序处理：
 
-- 同一文件夹中有 `playinplugin-original.exe` 时，以相同的参数运行它，等待它结束，并以它的退出码结束。原版在部署时以这个名称保留，见「部署」。
-- 没有原版时，以 `MessageBoxW` 说明它须由 HelloUtau 运行插件时调用，然后以退出码 1 结束。
+- 同一文件夹中有 `playinplugin-original.exe`（其他平台为 `playinplugin-original`）时，以相同的参数运行它，等待它结束，并以它的退出码结束。原版在部署时以这个名称保留，见「部署」。Windows 上原样传递命令行，其他平台以 `posix_spawn` 传递参数，被信号结束时退出码为 128 加信号值。
+- 没有原版时，以 `HelloKitNativeSystem` 的消息框说明它须由 HelloUtau 运行插件时调用，无法显示消息框时写到标准错误，然后以退出码 1 结束。
 
 ## 宿主的处理
 
@@ -113,7 +114,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 ## 部署
 
 - 设置的「Classic Plugins」页有「试听程序」一组，列出发现的插件，每行有安装、更新与卸载，均须用户确认。界面中文统一称「卸载」（作者 2026-10-15 定），与「一键卸载」一致。文件的操作由 `ClassicPluginPreviewInstallation` 完成。
-- 程序为 `HelloUtau.exe` 旁的 `hello-plugin-play.exe`（安装规则与 `hello-updater` 相同，位于 `bin`），复制为插件文件夹中的 `playinplugin.exe`。原有的 `playinplugin.exe` 改名为 `playinplugin-original.exe` 保留，没有宿主时由 plugin-play 运行。
+- 程序为 `HelloUtau.exe` 旁的 `hello-plugin-play.exe`（安装规则与 `hello-updater` 相同，位于 `bin`），复制为插件文件夹中的 `playinplugin.exe`。原有的 `playinplugin.exe` 改名为 `playinplugin-original.exe` 保留，没有宿主时由 plugin-play 运行。其他平台的名称见「组成」，复制保留文件的权限，执行权限因此随之保留。
 - 没有 `plugin.json` 的插件，安装前把 `plugin.txt` 转写为 `plugin.json`（`name`、`execute`、`shell`、`notes`、`ustversion`，不写 `charset`，临时文件因此仍为本地编码），因为有 `plugin.json` 时不再读取 `plugin.txt`（[`note.md`](note.md)「插件」）。`plugin.txt` 的编码由用户在与打开 UST 时相同形式的对话框中选择：候选编码、无效字节序列的灰显与预选，以及按所选编码解码的全文（作者 2026-10-14 要求）。
 - 记录写入 `plugin.json` 的 `hostData/ClassicPluginHost/playinplugin`（note.md「插件」）。卸载时还原原有程序，并只删去这条记录。`plugin.json` 一律保留，包括转写来的，以免丢失安装后用户或其他原生插件的修改。原先的做法是删除转写来的 `plugin.json`，作者 2026-10-15 指出会丢失这些修改，改为保留。
 - 安装中途失败时撤回已做的步骤。
@@ -132,7 +133,8 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 4. ~~**试听对话框**~~：`Internal/ClassicPluginPreview`，在插件运行期间（`ClassicPluginRun.cpp` 的等待对话框之内）建立管道服务器与试听缓存，插件结束、应用结果之前停止渲染并删除缓存。合成工具不存在或不可信时显示错误窗口。`/noplay` 以 `Playback::renderTrack()` 的重载只渲染。其余请求显示试听对话框，渲染完成后自动播放，`/o:` 的文件为渲染结果的副本。作者已试用。
 5. ~~**部署**~~：见上节。`plugin.json` 的 `ustversion` 与 `hostData` 键（2026-10-15 由根上的 `ClassicPluginHost` 键移入 `hostData`），安装类 `ClassicPluginPreviewInstallation`（QtTest），设置页（作者已试用）。
 6. ~~**验收**~~：作者以 PitTrace 试听，2026-10-14 通过。
+7. **macOS 与 Linux**（2026-10-16）：plugin-play 以进程组查找宿主，宿主一侧的文件名不带 `.exe`，测试在这些平台上以进程组与 Unix 域套接字充当宿主，原版的替身记录以制表符分隔的参数。代码与测试已写，尚未在这两个平台上构建与运行。
 
 ## 不做的事
 
-- macOS 与 Linux：插件在 Wine 中运行，Win32 命名管道无法连接宿主的 Unix 域套接字，待 ClassicPluginHost 支持 Wine 时再定。
+- Wine 中的插件：ClassicPluginHost 不启动 Wine（见 `ClassicPluginHost.md`）。用户以包装脚本在 Wine 中运行的 Windows 插件，其 Win32 命名管道无法连接宿主的 Unix 域套接字，因此不能试听。

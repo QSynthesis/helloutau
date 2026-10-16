@@ -147,15 +147,23 @@ namespace hello::daw {
 
     }
 
+#ifdef Q_OS_WINDOWS
+#  define PROGRAM_SUFFIX ".exe"
+#else
+#  define PROGRAM_SUFFIX ""
+#endif
+
     const QString ClassicPluginPreviewInstallation::programName =
-        QStringLiteral("playinplugin.exe");
+        QStringLiteral("playinplugin" PROGRAM_SUFFIX);
 
     const QString ClassicPluginPreviewInstallation::originalName =
-        QStringLiteral("playinplugin-original.exe");
+        QStringLiteral("playinplugin-original" PROGRAM_SUFFIX);
+
+    const QString ClassicPluginPreviewInstallation::bundledName =
+        QStringLiteral("hello-plugin-play" PROGRAM_SUFFIX);
 
     std::filesystem::path ClassicPluginPreviewInstallation::bundledProgram() {
-        const auto path = QDir(QCoreApplication::applicationDirPath())
-                              .filePath(QStringLiteral("hello-plugin-play.exe"));
+        const auto path = QDir(QCoreApplication::applicationDirPath()).filePath(bundledName);
         if (!QFile::exists(path)) {
             return {};
         }
