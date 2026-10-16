@@ -47,8 +47,8 @@ namespace hello::daw {
             SmoothFollow, ///< Keeps the playhead at the center of the view, stored as smooth
         };
 
-        /// Returns the way in which the piano roll follows the playhead. The default, also for a
-        /// value that is not known, is PageFollow.
+        /// Returns the way in which the piano roll follows the playhead. The default, also for an
+        /// unknown value, is PageFollow.
         PlayheadFollow playheadFollow() const;
         void setPlayheadFollow(PlayheadFollow follow);
 

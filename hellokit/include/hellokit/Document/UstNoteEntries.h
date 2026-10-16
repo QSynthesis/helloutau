@@ -36,7 +36,7 @@ namespace hello::kit {
         /// The parts of a value between \c , and \c ; are compared as numbers if both read as
         /// numbers, so that the formatting of a number does not matter. Trailing parts that are
         /// zero or \c % are not compared, because a UST may omit them. A value that the reading
-        /// of a UST corrects or ignores otherwise, such as a part that is not a number, is
+        /// of a UST corrects or otherwise ignores, such as a part that is not a number, is
         /// therefore refused. Empty lines are skipped.
         static std::optional<Note> withBuiltInLines(Note note, const QStringList &lines,
                                                     DiagnosticList &diagnostics);

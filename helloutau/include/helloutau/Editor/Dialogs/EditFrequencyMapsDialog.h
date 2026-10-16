@@ -65,8 +65,9 @@ namespace hello::daw {
     ///
     /// The dialog opens wide enough to show the whole file list, unless the screen is narrower.
     ///
-    /// The title of the window is that of the voice bank window: the name of the voice bank that
-    /// setVoiceBankName() sets, an asterisk while a map is modified, and the name of the dialog.
+    /// The title of the window has the form of that of the voice bank window: the name of the voice
+    /// bank that setVoiceBankName() sets, an asterisk while a map is modified, and the name of the
+    /// dialog.
     ///
     /// The menus and the shortcuts are those of Editor::FrequencyMapEditorKind. The actions of
     /// contributions are added when the dialog is created.

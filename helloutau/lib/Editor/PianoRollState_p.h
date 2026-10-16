@@ -80,7 +80,7 @@ namespace hello::daw {
         static constexpr double FollowMargin = 0.1;
 
         /// The milliseconds of a movement of the view that follows the playhead, unless
-        /// PianoRoll::setFollowDuration() sets others
+        /// PianoRoll::setFollowDuration() sets another value
         static constexpr int DefaultFollowDuration = 500;
 
         /// The keys kept in sight above and below the notes that the view follows
@@ -267,7 +267,7 @@ namespace hello::daw {
         /// The movements of the axes of the view that follow the playhead
         QVariantAnimation *timeFollow = nullptr;
         QVariantAnimation *keyFollow = nullptr;
-        /// Set while a movement sets an axis, so that only the other changes stop the movements
+        /// Set while a movement sets an axis, so that only other changes stop the movements
         bool following = false;
         /// The playhead at rest, and whether it is drawn and moved
         double cursor = 0;
@@ -398,7 +398,7 @@ namespace hello::daw {
         /// Shows every value of the lane in the height of the parameter area
         void fitParameters();
 
-        /// Moves the view after the playhead at \a tick, across as playheadFollow selects and
+        /// Moves the view to follow the playhead at \a tick, across as playheadFollow selects and
         /// up or down as followKeys() does.
         void followPlayhead(double tick);
 

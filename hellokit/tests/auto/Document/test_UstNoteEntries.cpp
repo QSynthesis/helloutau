@@ -51,7 +51,7 @@ private:
     }
 
 private Q_SLOTS:
-    // The built-in lines are those of the fields without a place in the note properties, and
+    // The built-in lines are those of the fields without a place in the note properties, and are
     // read back to the same fields. The user data are lines of their own.
     void the_built_in_entries_are_written_and_read_back() {
         const auto note = richNote();

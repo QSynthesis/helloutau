@@ -354,7 +354,7 @@ namespace hello::daw {
             following = false;
             time = view->timeAxis();
         } else {
-            // The page is turned against the axis that a movement in progress reaches, so that
+            // The page is turned using the axis that a movement in progress reaches, so that
             // the movement is not started again on each step of the playhead.
             if (timeFollow->state() == QAbstractAnimation::Running) {
                 time.left = timeFollow->endValue().toDouble();

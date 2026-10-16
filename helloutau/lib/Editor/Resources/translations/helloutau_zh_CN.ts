@@ -1602,7 +1602,7 @@
     </message>
     <message>
         <source>The selected notes have different entries, which cannot be edited together. The entries of the first note are shown.</source>
-        <translation>选中的音符这些条目不完全相同，不能一起编辑。下面显示的是第一个音符的条目。</translation>
+        <translation>选中的音符的条目不完全相同，不能一起编辑。下面显示的是第一个音符的条目。</translation>
     </message>
     <message>
         <source>Built-in entries: %1</source>

@@ -24,7 +24,7 @@ private:
 
 private Q_SLOTS:
     // With the same entries on every note, the entries are shown and edited, and the dialog
-    // gives the edited note. Unchanged entries give nothing.
+    // gives the edited note. If the entries are unchanged, the dialog gives nothing.
     void the_entries_of_the_same_notes_are_edited() {
         const auto note = labeled(QStringLiteral("verse"));
         NoteEntriesDialog dialog({note, note});

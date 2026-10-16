@@ -3308,7 +3308,8 @@ private Q_SLOTS:
             QCOMPARE(dialog->bufferOf(0)->map().frames.at(5).frequency, 300.0);
             trigger("helloutau.edit.undo");
             QVERIFY(!dialog->isModified(0));
-            // The title has the name of the voice bank and its modified mark, as the window has.
+            // The title has the name of the voice bank and the modified mark, as does the window
+            // title.
             QVERIFY(dialog->windowTitle().startsWith(
                 window->windowTitle().section(QStringLiteral("[*]"), 0, 0) +
                 QStringLiteral("[*]")));

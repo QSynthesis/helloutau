@@ -337,7 +337,8 @@ namespace hello::daw {
             impl.finishEditing(true);
         });
 
-        // The movements of the view after the playhead, which a scroll or a zoom of the user stops
+        // The movements of the view that follow the playhead, which a scroll or a zoom of the user
+        // stops
         impl.timeFollow = new QVariantAnimation(this);
         impl.keyFollow = new QVariantAnimation(this);
         for (const auto animation : {impl.timeFollow, impl.keyFollow}) {

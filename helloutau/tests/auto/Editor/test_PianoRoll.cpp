@@ -551,7 +551,7 @@ private Q_SLOTS:
         show(roll);
         QCOMPARE(roll.playheadFollow(), PianoRoll::PageFollow);
         QCOMPARE(roll.followDuration(), 500);
-        // A short movement, so that the test waits little
+        // The movement of the view is short, so that the test waits little.
         roll.setFollowDuration(50);
         QCOMPARE(roll.followDuration(), 50);
         const auto &time = roll.view()->timeAxis();
@@ -571,12 +571,12 @@ private Q_SLOTS:
         QVERIFY(!roll.playheadPosition());
         QCOMPARE(time.left, visible * 1.4);
 
-        // The next page, stopped by a scroll of the user before the movement ends
+        // The next page is stopped by a scroll of the user before the movement ends.
         roll.setPlayheadPosition(visible * 2.5);
         auto scrolled = time;
         scrolled.left = 500;
         roll.view()->setTimeAxis(scrolled);
-        // Twice the duration of a movement
+        // The test waits twice the duration of a movement.
         QTest::qWait(100);
         QCOMPARE(time.left, 500.0);
     }

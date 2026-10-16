@@ -147,8 +147,8 @@ namespace hello::daw {
         QDialog::accept();
     }
 
-    // The warnings follow the lines that read as user data. A line that does not is reported
-    // when the dialog is accepted.
+    // The warnings follow the lines that read as user data. A line that does not read as user
+    // data is reported when the dialog is accepted.
     void NoteEntriesDialog::updateWarnings() {
         kit::DiagnosticList diagnostics;
         const auto userData = kit::UstNoteEntries::userDataOf(linesOf(m_userData), diagnostics);
@@ -158,7 +158,7 @@ namespace hello::daw {
                 messages.push_back(warning.message.toHtmlEscaped());
             }
         }
-        // Bold and in color, as the warning of ProjectPropertiesDialog
+        // The warnings are bold and in color, as in the warning of ProjectPropertiesDialog.
         m_warnings->setText(
             messages.isEmpty()
                 ? QString()

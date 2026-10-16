@@ -666,8 +666,8 @@ private Q_SLOTS:
 
     // The properties set change on every note in one step. A cleared property goes back to the
     // default, and the others stay. None that differs makes no step.
-    // The entries of the Others dialog replace those of every note in the same step, the user data
-    // removed, changed and added, and the other fields stay. The same entries make no step.
+    // The entries of the Others dialog replace those of every note in the same step. The user data
+    // are removed, changed and added, and the other fields stay. The same entries make no step.
     void the_others_of_the_notes_change_in_one_step() {
         const auto project = richProject();
         ProjectSession session(project);

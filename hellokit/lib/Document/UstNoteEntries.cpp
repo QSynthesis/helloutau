@@ -19,7 +19,7 @@ namespace hello::kit {
         }
 
         // The keys of the built-in entries. The names of the Mode1 pitch, which UTAU and the
-        // plugins write in three spellings, count as one.
+        // plugins write in three spellings, count as one key.
         const QSet<QString> &builtInKeys() {
             static const QSet<QString> keys = {
                 keyOf(utau::KEY_NAME_ENVELOPE),     keyOf(utau::KEY_NAME_VBR),
@@ -214,7 +214,7 @@ namespace hello::kit {
             written.insert(canonicalKey(line.left(eq)), line.mid(eq + 1));
         }
         for (const auto &[number, key, value] : std::as_const(entries)) {
-            // An empty value, such as that of $direct=, leaves the entry out, as a UST does.
+            // An entry with an empty value, such as $direct=, is left out, as a UST does.
             const auto it = written.constFind(canonicalKey(key));
             if (it == written.cend() ? !value.trimmed().isEmpty() : !sameValue(value, *it)) {
                 addError(diagnostics,
