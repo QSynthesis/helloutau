@@ -11,15 +11,24 @@ qm_find_qt(Core Widgets)
 set(HELLOUTAU_WINDOWS_APPLICATION ON)
 set(HELLOUTAU_CONSOLE_APPLICATION OFF)
 
-# The file is named in lower case like the other programs, and the Windows resource shows the
-# product name.
-set(HELLOUTAU_RC_NAME "HelloUtau")
-
 helloutau_add_application(${PROJECT_NAME}
     SOURCES ${_src}
     LINKS HelloUtauEditor
     QT_LINKS Core Widgets
 )
 
+# A changed icon configures the tree again, which recompiles the resource under every generator
+set_property(DIRECTORY APPEND PROPERTY
+    CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/helloutau.ico"
+)
+
+# The resource with the icon and the product name, which conf.cmake leaves to an application
+qm_add_win_rc(${PROJECT_NAME}
+    NAME "HelloUtau"
+    DESCRIPTION "${PROJECT_DESCRIPTION}"
+    COPYRIGHT "${HELLOUTAU_RC_COPYRIGHT}"
+    ICON "${CMAKE_CURRENT_SOURCE_DIR}/helloutau.ico"
+)
+
 # The manifest of qmsetup, without the UTF-8 code page, so that GetACP() reports the ANSI one
-qm_add_win_manifest(${PROJECT_NAME} NAME "${HELLOUTAU_RC_NAME}")
+qm_add_win_manifest(${PROJECT_NAME} NAME "HelloUtau")

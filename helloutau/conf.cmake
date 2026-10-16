@@ -30,11 +30,8 @@ set(HELLOUTAU_PLUGIN_IID "org.OpenVPI.HelloUtau.Plugin")
 # Windows resource metadata. The libraries share the description of the module. A program is
 # described by the DESCRIPTION of the project() of its own directory, which the function reads in
 # the scope of that directory. project() without DESCRIPTION leaves PROJECT_DESCRIPTION empty.
-# The name is that of the target unless the directory sets HELLOUTAU_RC_NAME, as a program whose
-# file name is in lower case does for the name shown to the user.
 set(HELLOUTAU_RC_DESCRIPTION "${PROJECT_DESCRIPTION}")
 set(HELLOUTAU_RC_COPYRIGHT "Copyright (c) 2026-present SineStriker")
-set(HELLOUTAU_RC_ICON "${CMAKE_CURRENT_LIST_DIR}/tools/driver/helloutau.ico")
 
 function(_helloutau_common_configure_target _target)
     set(_description "${HELLOUTAU_RC_DESCRIPTION}")
@@ -43,22 +40,12 @@ function(_helloutau_common_configure_target _target)
         set(_description "${PROJECT_DESCRIPTION}")
     endif()
 
-    set(_name ${_target})
+    # An application writes its own resource with its icon, see tools/driver/CMakeLists.txt.
+    get_target_property(_type ${_target} HELLOUTAU_TARGET_TYPE)
 
-    if(HELLOUTAU_RC_NAME)
-        set(_name "${HELLOUTAU_RC_NAME}")
-    endif()
-
-    if(WIN32 AND _target STREQUAL "${HELLOUTAU_INSTALL_NAME}")
+    if(WIN32 AND NOT _type STREQUAL "Application")
         qm_add_win_rc(${_target}
-            NAME "${_name}"
-            DESCRIPTION "${_description}"
-            COPYRIGHT "${HELLOUTAU_RC_COPYRIGHT}"
-            ICON "${HELLOUTAU_RC_ICON}"
-        )
-    elseif(WIN32)
-        qm_add_win_rc(${_target}
-            NAME "${_name}"
+            NAME ${_target}
             DESCRIPTION "${_description}"
             COPYRIGHT "${HELLOUTAU_RC_COPYRIGHT}"
         )
