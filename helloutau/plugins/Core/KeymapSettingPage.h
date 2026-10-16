@@ -23,7 +23,6 @@ class QPushButton;
 class QTreeWidget;
 class QTreeWidgetItem;
 class QTabWidget;
-class QScrollArea;
 
 namespace QAK {
     class ActionRegistry;
@@ -45,9 +44,10 @@ namespace hello::daw {
     /// conflicts with the shortcut of another command of the same kind of window alone.
     ///
     /// Below the commands, each scheme of keyboard modifiers of the kind of window has a group
-    /// of boxes, one for each role. The boxes ignore the wheel, which scrolls the area of the
-    /// groups instead, so that a scroll does not change a binding. Reset Modifiers restores
-    /// every modifier binding and keeps the shortcuts.
+    /// of boxes, one for each role. The commands and the groups keep their full heights, so
+    /// that the settings dialog scrolls the page if it is lower. The boxes ignore the wheel,
+    /// which scrolls the page instead, so that a scroll does not change a binding. Reset
+    /// Modifiers restores every modifier binding and keeps the shortcuts.
     class COREPLUGIN_EXPORT KeymapSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -112,7 +112,7 @@ namespace hello::daw {
 
         QPointer<QTreeWidget> m_tree;
         QPointer<QTabWidget> m_tabs;
-        QPointer<QScrollArea> m_modifierScroll;
+        QPointer<QWidget> m_modifierArea;
         // The tree of each kind of window, deleted with the widget
         QPointer<QTreeWidget> m_trees[std::size(Editor::windowKinds)];
         QPointer<QLineEdit> m_search;

@@ -12,6 +12,7 @@
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFormLayout>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QKeySequenceEdit>
@@ -21,8 +22,6 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QGroupBox>
-#include <QtWidgets/QScrollArea>
-#include <QtWidgets/QSplitter>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
@@ -82,8 +81,12 @@ namespace hello::daw {
         // The data of the option that turns a role off, which no combination of modifiers has
         constexpr int offData = -1;
 
-        // A box of modifiers that ignores the wheel, which then scrolls the area of the boxes, so
-        // that a scroll over the area does not change a binding
+        // The least height of the tabs of the commands, which keeps the tree tall above the
+        // modifiers
+        constexpr int commandListHeight = 400;
+
+        // A box of modifiers that ignores the wheel, which then scrolls the page, so that a
+        // scroll over the boxes does not change a binding
         class WheelIgnoringComboBox : public QComboBox {
         public:
             using QComboBox::QComboBox;
@@ -594,58 +597,58 @@ namespace hello::daw {
                 [this] { resetKeyboardModifiers(); });
         auto resetAllButton = new QPushButton(tr("Restore &Defaults"));
         resetAllButton->setObjectName(QStringLiteral("resetAll"));
-        auto buttonColumn = new QVBoxLayout();
-        buttonColumn->addWidget(m_add);
-        buttonColumn->addWidget(m_remove);
-        buttonColumn->addWidget(m_reset);
-        buttonColumn->addWidget(m_resetModifiers);
-        buttonColumn->addStretch();
-        buttonColumn->addWidget(resetAllButton);
+        // The buttons of the shortcuts beside the commands, and Reset Modifiers beside the
+        // modifiers, level with their top. Restore Defaults is at the bottom.
+        auto shortcutButtons = new QVBoxLayout();
+        shortcutButtons->addWidget(m_add);
+        shortcutButtons->addWidget(m_remove);
+        shortcutButtons->addWidget(m_reset);
+        shortcutButtons->addStretch();
+        auto modifierButtons = new QVBoxLayout();
+        modifierButtons->addWidget(m_resetModifiers);
+        modifierButtons->addStretch();
+        modifierButtons->addWidget(resetAllButton);
 
         auto layout = new QVBoxLayout(widget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addLayout(searchRow);
 
-        auto upper = new QWidget();
-        auto upperLayout = new QVBoxLayout(upper);
-        upperLayout->setContentsMargins(0, 0, 0, 0);
-        upperLayout->addWidget(m_tabs, 1);
-
         // The modifier panel of each kind of window, shown with its tab
         auto modifiers = new QWidget();
         auto modifierLayout = new QVBoxLayout(modifiers);
+        modifierLayout->setContentsMargins(0, 0, 0, 0);
         m_modifierBoxes.clear();
         for (const auto kind : Editor::windowKinds) {
             m_modifierPanels[kind] = createKeyboardModifierPanel(kind);
             modifierLayout->addWidget(m_modifierPanels[kind]);
         }
-        m_modifierScroll = new QScrollArea();
-        m_modifierScroll->setObjectName(QStringLiteral("modifierScroll"));
-        m_modifierScroll->setWidgetResizable(true);
-        m_modifierScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        m_modifierScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-        m_modifierScroll->setWidget(modifiers);
-        const auto showModifiers = [this](int index) {
+        m_modifierArea = modifiers;
+        m_modifierArea->setObjectName(QStringLiteral("modifierArea"));
+
+        // The commands and the modifiers at their full heights, which the settings dialog
+        // scrolls if it is lower, rather than an area of the modifiers that scrolls apart. The
+        // commands take the rest of the height.
+        m_tabs->setMinimumHeight(commandListHeight);
+        auto content = new QGridLayout();
+        content->addLayout(shortcutButtons, 0, 1);
+        content->addWidget(m_modifierArea, 1, 0);
+        content->addLayout(modifierButtons, 1, 1);
+        content->setRowStretch(0, 1);
+        content->setColumnStretch(0, 1);
+        layout->addLayout(content, 1);
+
+        // The commands span the row of the modifiers if the kind of window has none, so that no
+        // blank lies beside the buttons below them.
+        const auto showModifiers = [this, content](int index) {
             for (const auto kind : Editor::windowKinds) {
                 m_modifierPanels[kind]->setVisible(kind == index);
             }
-            m_modifierScroll->setVisible(!m_modifiers[index].isEmpty());
+            const bool shown = !m_modifiers[index].isEmpty();
+            m_modifierArea->setVisible(shown);
+            content->removeWidget(m_tabs);
+            content->addWidget(m_tabs, 0, 0, shown ? 1 : 2, 1);
         };
         showModifiers(m_tabs->currentIndex());
-
-        auto verticalSplitter = new QSplitter(Qt::Vertical);
-        verticalSplitter->setObjectName(QStringLiteral("keymapSplitter"));
-        verticalSplitter->addWidget(upper);
-        verticalSplitter->addWidget(m_modifierScroll);
-        verticalSplitter->setStretchFactor(0, 3);
-        verticalSplitter->setStretchFactor(1, 2);
-        verticalSplitter->setSizes({400, 220});
-
-        auto content = new QHBoxLayout();
-        content->setContentsMargins(0, 0, 0, 0);
-        content->addWidget(verticalSplitter, 1);
-        content->addLayout(buttonColumn);
-        layout->addLayout(content, 1);
 
         fillTree();
         updateKeyboardModifierWidgets();

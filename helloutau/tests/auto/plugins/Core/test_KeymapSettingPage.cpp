@@ -14,6 +14,7 @@
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QKeySequenceEdit>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QLayout>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTabWidget>
@@ -263,6 +264,52 @@ private Q_SLOTS:
             }
         }
         QVERIFY(named > 0);
+    }
+
+    // At its preferred size the page shows every box of modifiers of the current tab, without an
+    // area of its own that scrolls them. No blank lies below the commands or the modifiers.
+    void the_page_shows_the_modifiers_at_their_full_height() {
+        QTemporaryDir dir;
+        const auto e = std::make_unique<Editor>(
+            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
+        new BuiltinActions(e.get());
+        e->setWatchesDisk(false);
+        KeymapSettingPage page(e.get());
+        const auto widget = page.widget();
+        widget->resize(widget->sizeHint());
+        widget->show();
+        QVERIFY(QTest::qWaitForWindowExposed(widget));
+        int shown = 0;
+        for (const auto box : widget->findChildren<QComboBox *>()) {
+            if (box->objectName().startsWith(QStringLiteral("projectWindow/"))) {
+                QVERIFY2(!box->visibleRegion().isEmpty(), qPrintable(box->objectName()));
+                ++shown;
+            }
+        }
+        QVERIFY(shown > 0);
+        // Reset Modifiers and Restore Defaults lie beside the modifiers.
+        const auto top = [widget](QWidget *child) { return child->mapTo(widget, QPoint()).y(); };
+        const auto bottom = [top](QWidget *child) { return top(child) + child->height(); };
+        const auto resetModifiers =
+            widget->findChild<QPushButton *>(QStringLiteral("resetModifiers"));
+        const auto resetAll = widget->findChild<QPushButton *>(QStringLiteral("resetAll"));
+        const auto modifiers = widget->findChild<QWidget *>(QStringLiteral("modifierArea"));
+        const auto tabs = widget->findChild<QTabWidget *>(QStringLiteral("windows"));
+        QVERIFY(resetModifiers && resetAll && modifiers && tabs);
+        QCOMPARE(top(resetModifiers), top(modifiers));
+        QVERIFY(bottom(resetAll) <= bottom(modifiers));
+        // The commands of a kind of window without modifiers reach the bottom of the buttons.
+        int without = 0;
+        for (int i = 0; i < tabs->count(); ++i) {
+            tabs->setCurrentIndex(i);
+            widget->layout()->activate();
+            if (!modifiers->isHidden()) {
+                continue;
+            }
+            QVERIFY(bottom(tabs) >= bottom(resetAll));
+            ++without;
+        }
+        QVERIFY(without > 0);
     }
 
     // Reset Modifiers restores every modifier binding and keeps the shortcuts. It is enabled
