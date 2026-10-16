@@ -212,6 +212,7 @@ private Q_SLOTS:
 #else
         const auto script = dir.filePath(QStringLiteral("temp.sh"));
 #endif
+        // Without execute permission, as ClassicSynthRunner writes the script
         {
             QFile file(script);
             QVERIFY(file.open(QIODevice::WriteOnly));
@@ -220,7 +221,6 @@ private Q_SLOTS:
                                 QLatin1String(writeLater), started, marker)
                            .toUtf8());
         }
-        QFile::setPermissions(script, QFile::permissions(script) | QFile::ExeOwner);
 
         // Canceled once the synth tool runs, or after five seconds without it
         QElapsedTimer elapsed;

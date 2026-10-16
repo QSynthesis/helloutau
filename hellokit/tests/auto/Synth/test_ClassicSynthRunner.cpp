@@ -550,8 +550,8 @@ private Q_SLOTS:
         const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
-        const QString call =
-            batch ? QStringLiteral("@call \"%helper%\" ") : QStringLiteral("\"${helper}\" ");
+        const QString call = batch ? QStringLiteral("@call \"%helper%\" ")
+                                   : QStringLiteral("/bin/sh \"${helper}\" ");
         QString line;
         for (const auto &l :
              written->first.split(batch ? QStringLiteral("\r\n") : QStringLiteral("\n"))) {
@@ -629,7 +629,8 @@ private Q_SLOTS:
         QVERIFY(script.contains(QLatin1String("export tool='")));
         QVERIFY(script.contains(QLatin1String("export cachedir='")));
         QVERIFY(script.contains(QLatin1String("mkdir -p \"${cachedir}\"")));
-        QVERIFY(script.contains(QLatin1String("\"${helper}\"")));
+        // Through the shell, because the helper has no execute permission
+        QVERIFY(script.contains(QLatin1String("/bin/sh \"${helper}\"")));
 
         // cat instead of copy, the only command in the footer.
         QVERIFY(script.contains(

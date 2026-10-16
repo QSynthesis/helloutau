@@ -320,11 +320,17 @@ namespace hello::kit {
         SynthToolRun result;
 
         stdc::Popen process;
+#ifdef _WIN32
         // The argument vector applies here as well. shell() quotes each element for the
-        // platform shell rather than accepting a command line, so the script path remains a
+        // command processor rather than accepting a command line, so the script path remains a
         // single argument regardless of its content.
         process.shell(true);
         process.args({script.u8string()});
+#else
+        // The script as an argument of the shell, because the script is written without execute
+        // permission, and a temporary directory may be mounted with noexec
+        process.args({"/bin/sh", script.u8string()});
+#endif
         if (!workingDirectory.empty()) {
             process.cwd(workingDirectory);
         }

@@ -144,7 +144,8 @@ namespace hello::kit {
         /// Returns the timestamped output collected by this process's log.
         QString outputLog() const;
 
-        /// Executes \a script with the command processor, in a visible console.
+        /// Executes \a script with the command processor, in a visible console, or with
+        /// \c /bin/sh on other systems. The script requires no execute permission.
         ///
         /// The only function in this library that executes a command line, because a batch file
         /// is one. It resides here rather than in a separate class so that time limits and

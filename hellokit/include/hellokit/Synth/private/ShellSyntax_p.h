@@ -204,11 +204,12 @@ namespace hello::kit {
                    QStringLiteral("(%1/%2)").arg(done).arg(total);
         }
 
-        /// Invocation of the helper with the nine arguments of a note.
+        /// Invocation of the helper with the nine arguments of a note. A shell script runs the
+        /// helper through \c /bin/sh , because the helper has no execute permission.
         QString callHelper(const QString &arguments) const {
             const auto helper = QLatin1Char('"') + expand("helper") + QLatin1Char('"');
             return m_batch ? QLatin1String("@call ") + helper + QLatin1Char(' ') + arguments
-                           : helper + QLatin1Char(' ') + arguments;
+                           : QLatin1String("/bin/sh ") + helper + QLatin1Char(' ') + arguments;
         }
 
         /// Direct invocation of one synth tool, as required for a rest.
