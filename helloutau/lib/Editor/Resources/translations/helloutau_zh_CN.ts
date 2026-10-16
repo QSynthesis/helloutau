@@ -1522,7 +1522,7 @@
     </message>
     <message>
         <source>Drag Key Line: Set Key</source>
-        <translation>拖动基准频率线：设定基准频率</translation>
+        <translation>拖动基准频率线：设置基准频率</translation>
     </message>
 </context>
 <context>

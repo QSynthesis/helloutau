@@ -318,7 +318,7 @@
 - **命令**：「编辑」菜单的 Find（Ctrl+F）、Replace（Ctrl+H）、Find Next（F3）、Find Previous（Shift+F3），两个窗口相同。F3 / Shift+F3 在查找栏没有查询时打开查找栏。
 - **移动**：从当前位置（工程窗口为第一个选中的音符，音源窗口为当前行）向后或向前找到下一个匹配并选中、滚动到可见处，越过末尾后从头继续。输入查询或改变开关时，当前位置本身若匹配则保留，否则移到其后的第一个匹配，同 VS Code 的边输入边查找。
 - **替换**：「Replace」在当前选中的项匹配时替换其中的全部匹配，然后移到下一个匹配；不匹配时只移到下一个匹配。「Replace All」替换全部匹配。二者各为一个撤销步骤，全部替换后选中改动过的项，状态栏报告个数。
-- **高亮**：查找栏显示期间标出匹配的字符，关闭查找栏后消失。卷帘同浏览器的查找，以不透明的黄色为底，匹配的字符改用黑色（`PianoRoll::setLyricSearch()`，颜色为可由主题设定的 `findMatchColor` 与 `findMatchTextColor`）：半透明的颜色与蓝色的音符混合后不再是醒目的颜色，白色的歌词在黄色上也难以辨认（作者 2026-10-01 决定用黄色）。匹配的字符以裁剪到匹配范围的方式重画整段歌词，因此与其余字符的位置一致。条目表以 VS Code 的 `editor.findMatchHighlightBackground`（半透明橙色，深浅主题相同）标出，其委托在样式绘制单元格之后叠加绘制，位置按 `QCommonStyle` 的文字布局计算，Windows 11 样式与 Fusion 样式绘制文字时同样采用这一布局：别名范围标在别名中，空别名按文件名主干匹配，因此标在文件名中，文件名范围标在文件名中。条目表因此不再折行，过长的名称在一行内以省略号截断，省略号之后的匹配不绘制。
+- **高亮**：查找栏显示期间标出匹配的字符，关闭查找栏后消失。卷帘同浏览器的查找，以不透明的黄色为底，匹配的字符改用黑色（`PianoRoll::setLyricSearch()`，颜色为可由主题设置的 `findMatchColor` 与 `findMatchTextColor`）：半透明的颜色与蓝色的音符混合后不再是醒目的颜色，白色的歌词在黄色上也难以辨认（作者 2026-10-01 决定用黄色）。匹配的字符以裁剪到匹配范围的方式重画整段歌词，因此与其余字符的位置一致。条目表以 VS Code 的 `editor.findMatchHighlightBackground`（半透明橙色，深浅主题相同）标出，其委托在样式绘制单元格之后叠加绘制，位置按 `QCommonStyle` 的文字布局计算，Windows 11 样式与 Fusion 样式绘制文字时同样采用这一布局：别名范围标在别名中，空别名按文件名主干匹配，因此标在文件名中，文件名范围标在文件名中。条目表因此不再折行，过长的名称在一行内以省略号截断，省略号之后的匹配不绘制。
 - **工程窗口**：查找所有音符的歌词，休止符（R）也在其中。替换经 `ProjectEdits::setNoteProperties` 在同一个事务中完成。
 - **音源窗口**：查找栏前有范围选择「Aliases」「File Names」。别名范围中，空别名按其表示的文件名主干匹配（同批量改名），没有条目的音频文件不参与；文件名范围只查不替换，替换行不可用。只查找条目表当前显示的行，即当前文件夹与过滤框留下的行，顺序为表中的顺序。替换前按 `VoiceAliasRule::check()` 检查，与批量改名相同：新别名为空，或与同一音频文件的另一条目同名时，整批拒绝并列出问题。
 
@@ -330,8 +330,8 @@
 - **量化**：由工具栏中的下拉框设置，该控件由 QActionKit 的控件工厂创建，与卷帘双向同步，换文档后保留。工具栏隐藏时以「选择 → Decrease Quantization Interval」（Ctrl+[）与「Increase Quantization Interval」（Ctrl+]）逐档切换，「Off」算最细的一档，到两端为止。
 - **音源窗口**（`helloutau.voiceBank.sampleToolBar`）：波形上方采样区的一行改为工具栏：播放音频、从左空白播放到右空白、试合成与停止，试合成的音高与长度，F0 的格式。三个下拉框由控件工厂创建，QActionKit 重建工具栏时会重新创建，因此其值由窗口保存。
 - **图标**：取自 IntelliJ Community 的新界面图标（Apache 2.0，来源与改动见 `lib/Editor/Resources/icons/intellij/README.md`），由 `ThemeIcon` 按控件的文字颜色绘制，同一文件适用于深浅两种主题。IntelliJ 中没有可用图形的命令，图标由本项目绘制，见 `lib/Editor/Resources/icons/helloutau/README.md`。Mode2 转为 Mode1 与试合成在 IntelliJ 中没有含义相同的图标，按含义相近选用雪花与闪电。图标也显示在菜单中。
-- **勾选的按钮**：Windows 11 样式以强调色填充勾选的工具按钮，并以「强调色上的文字色」绘制其文字。`ThemeIcon` 的颜色与按钮无关，始终为窗口文字色，在深色主题的强调色上无法辨认。工具按钮因此使用单独的调色板（`followToolBarPalette()`）：Accent 为窗口底色混入 15% 的窗口文字色，ButtonText 为窗口文字色，只设活动与非活动两组，禁用状态仍由样式决定。窗口的样式表在 polish 按钮时设定按钮的调色板，设在工具栏上的调色板不会传递到按钮，因此该调色板在每个按钮 polish 之后（`QEvent::ChildPolished`）单独设定，QActionKit 重建工具栏时新建的按钮同样适用。勾选的按钮因此是浅灰色背景配原色图标，与 JetBrains IDE 工具栏中处于开启状态的开关一致。菜单在自身的背景色上绘制勾选项的图标，沿用应用程序的调色板。系统切换深浅模式时重新计算。
-- **图标的状态**：`ThemeStates::setValue()` 只设定一个状态，其余状态仅在 `read()` 中回退，图标引擎按状态读取文件时，未设定的状态没有文件。命令的图标因此以填满所有状态的构造函数指定文件（`addEditorIcons()`），否则勾选、禁用与悬停状态下的图标是透明的。
+- **勾选的按钮**：Windows 11 样式以强调色填充勾选的工具按钮，并以「强调色上的文字色」绘制其文字。`ThemeIcon` 的颜色与按钮无关，始终为窗口文字色，在深色主题的强调色上无法辨认。工具按钮因此使用单独的调色板（`followToolBarPalette()`）：Accent 为窗口底色混入 15% 的窗口文字色，ButtonText 为窗口文字色，只设活动与非活动两组，禁用状态仍由样式决定。窗口的样式表在 polish 按钮时设置按钮的调色板，设在工具栏上的调色板不会传递到按钮，因此该调色板在每个按钮 polish 之后（`QEvent::ChildPolished`）单独设置，QActionKit 重建工具栏时新建的按钮同样适用。勾选的按钮因此是浅灰色背景配原色图标，与 JetBrains IDE 工具栏中处于开启状态的开关一致。菜单在自身的背景色上绘制勾选项的图标，沿用应用程序的调色板。系统切换深浅模式时重新计算。
+- **图标的状态**：`ThemeStates::setValue()` 只设置一个状态，其余状态仅在 `read()` 中回退，图标引擎按状态读取文件时，未设置的状态没有文件。命令的图标因此以填满所有状态的构造函数指定文件（`addEditorIcons()`），否则勾选、禁用与悬停状态下的图标是透明的。
 
 ### 设置对话框
 
@@ -361,7 +361,7 @@
 **Keymap 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Keymap）：
 
 - **每种窗口一个 action registry**（作者 2026-10-01 定）：QActionKit 默认一个应用只有一种窗口，这种窗口对应一个 registry，它的每个实例是一个 context。HelloUtau 有三种窗口：工程窗口、音源窗口，以及编辑频率表的对话框（作者 2026-10-15 决定，见 [`FrequencyMaps.md`](FrequencyMaps.md)「编辑」）。`Editor::actionRegistry(WindowKind)` 为每种各给一个 registry，各有自己的清单（`ProjectActions.xml`、`VoiceBankActions.xml`、`FrequencyMapEditorActions.xml`）、布局、快捷键与用户改动。几种窗口共有的命令（新建、打开、撤销、查找、设置等）在各自的清单中各声明一次，其快捷键因此各自独立（作者决定）。插件的 `ActionContribution::extension()` 按窗口种类的名称（`Editor::projectWindowName`、`Editor::voiceBankWindowName`、`Editor::frequencyMapEditorName`）为每种窗口给出各自的扩展，ClassicPluginHost 与 Interchange 只给工程窗口。
-- 每种窗口各占一个标签页「Project Window」「Voice Bank Window」「Frequency Map Editor」（作者 2026-10-10 接受），每个标签页是该窗口的一棵命令树。搜索栏在标签页之上，各种窗口共用，右侧的按钮作用于当前标签页的命令。命令树按该窗口的菜单栏逐级列出命令，组（group）的命令直接列在其菜单下，最后是该窗口自己的「Other」，列出它不在菜单中的命令（如工程窗口的 Classic Plugins at Pointer，N 键）。几种窗口共有的命令在各自的标签页中各出现一次，分别设定。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
+- 每种窗口各占一个标签页「Project Window」「Voice Bank Window」「Frequency Map Editor」（作者 2026-10-10 接受），每个标签页是该窗口的一棵命令树。搜索栏在标签页之上，各种窗口共用，右侧的按钮作用于当前标签页的命令。命令树按该窗口的菜单栏逐级列出命令，组（group）的命令直接列在其菜单下，最后是该窗口自己的「Other」，列出它不在菜单中的命令（如工程窗口的 Classic Plugins at Pointer，N 键）。几种窗口共有的命令在各自的标签页中各出现一次，分别设置。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
 - 顶部可按名称搜索（译文与英文原文都参与匹配），也可在「Shortcut」框中按下快捷键，只留有该快捷键的命令。
 - 「Add Shortcut...」（双击也可）打开录键对话框，按下的键已分给其他命令时当场列出它们，确定后询问「Remove」从它们移除或「Leave」保留二者。「Remove Shortcut」删除快捷键，有多个时从菜单中选。「Reset Shortcuts」恢复该命令清单中的快捷键（与右键菜单同名），「Restore Defaults」恢复全部命令的快捷键与全部修饰键。右键菜单有同样的操作。
 - 冲突只在同一种窗口的命令之间判断，即同一个 registry 之内，与菜单布局无关。不同种类的窗口各自使用的键（如空格、Ins）因此不算冲突。
