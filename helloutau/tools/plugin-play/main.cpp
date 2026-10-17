@@ -496,7 +496,8 @@ namespace {
     // Shows the error text in a message box, or on the standard error if no message box can be
     // shown, because the plugin usually discards the output of this program.
     void showError(const char *text) {
-        if (!kit::NativeMessageBox::show("playinplugin", text, kit::NativeMessageBox::Critical)) {
+        if (kit::NativeMessageBox::show("playinplugin", text, kit::NativeMessageBox::Critical) ==
+            kit::NativeMessageBox::NoButton) {
             std::fputs(text, stderr);
             std::fputc('\n', stderr);
         }

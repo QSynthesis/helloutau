@@ -6,7 +6,7 @@ project(HelloKitNativeSystem
 # The facilities of the system without Qt: the native string with its conversion from and to
 # UTF-8, the current process and the processes that it starts, and a message box. The application
 # uses them before its windows, and hello-updater and hello-plugin-play use them throughout.
-set(_src NativeString.cpp)
+set(_src NativeString.cpp NativeMessageBox.cpp)
 
 if(WIN32)
     list(APPEND _src NativeMessageBox_win.cpp NativeProcess_win.cpp)

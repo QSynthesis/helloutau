@@ -270,7 +270,8 @@ namespace {
         const auto text = information == Information::Help ? usage : version;
 #ifdef _WIN32
         if (!outputRedirected() && kit::NativeMessageBox::show(
-                                       "hello-updater", text, kit::NativeMessageBox::Information)) {
+                                       "hello-updater", text, kit::NativeMessageBox::Information) !=
+                                       kit::NativeMessageBox::NoButton) {
             return;
         }
 #endif
@@ -283,7 +284,8 @@ namespace {
     // for the exit is not blocked.
     void showUsageError(bool showErrors) {
         if (showErrors &&
-            kit::NativeMessageBox::show("hello-updater", usage, kit::NativeMessageBox::Critical)) {
+            kit::NativeMessageBox::show("hello-updater", usage, kit::NativeMessageBox::Critical) !=
+                kit::NativeMessageBox::NoButton) {
             return;
         }
         std::fputs(usage, stderr);
