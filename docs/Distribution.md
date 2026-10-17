@@ -58,7 +58,7 @@ CI 构建、运行全部测试并打包，作者 2026-10-16 提出要求，结�
 | `.github/workflows/deploy.yml` | 推送 `main`、推送 `v` 开头的 tag、手动 | 编译、测试与打包，tag 时发布 |
 | `.github/workflows/sync-gitee-release.yml` | release 发布后由 `deploy.yml` 启动、手动 | 同步到 Gitee |
 
-- **系统**：两个工作流以 matrix 列出各系统，目前只有 `x86_64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（triplet、vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分，因此增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
+- **系统**：两个工作流以 matrix 列出各系统，目前只有 `x86_64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分。matrix 中的 triplet 只是 job 的名称，其后的步骤不使用它：组合 action 在配置后从 `CMakeCache.txt` 读出 `HELLO_TRIPLET`，作为输出 `triplet` 交给工作流命名 artifact，因此与程序、打包脚本所用的值必然一致，matrix 中写错或将来增加 mingw 等构建时也不会混淆（作者 2026-10-17 要求）。增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
 - **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
 - **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
 - **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。

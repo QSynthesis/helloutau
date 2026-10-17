@@ -12,15 +12,19 @@ inputs:
   channel:
     description: The value of HELLO_BUILD_CHANNEL, release for the tag of a version and ci otherwise.
     required: true
-  triplet:
-    description: The triplet of HelloUtau, such as x86_64-windows-msvc, which names the summary.
-    required: true
   vcpkg-triplet:
     description: The triplet of vcpkg in the overlay, such as x64-windows.
     required: true
   qt-arch:
     description: The architecture of Qt for aqt, such as win64_msvc2022_64.
     required: true
+
+# The triplet is the one that cmake/DetectTriplet.cmake detects, read from the cache of the build,
+# so that the workflows do not repeat it.
+outputs:
+  triplet:
+    description: The triplet of HelloUtau, such as x86_64-windows-msvc, which names the assets.
+    value: ${{ steps.configure.outputs.triplet }}
 
 runs:
   using: composite
@@ -116,6 +120,7 @@ runs:
 
     # The packages are found through the toolchain of vcpkg, see third-party/Dependencies.cmake.
     - name: Configure
+      id: configure
       shell: bash
       run: |
         set -euo pipefail
@@ -132,6 +137,12 @@ runs:
           "-DPython3_EXECUTABLE=$python" \
           -DHELLO_BUILD_TESTS=ON \
           "-DHELLO_BUILD_CHANNEL=${{ inputs.channel }}"
+        triplet="$(sed -n 's/^HELLO_TRIPLET:[A-Z]*=//p' build/Release/CMakeCache.txt | tr -d '\r')"
+        if [ -z "$triplet" ]; then
+          echo "HELLO_TRIPLET is missing from the cache of the build."
+          exit 1
+        fi
+        echo "triplet=$triplet" >> "$GITHUB_OUTPUT"
 
     - name: Build
       shell: bash
@@ -201,7 +212,7 @@ runs:
         esac
         totals="$(grep -m1 'tests passed' build/ctest.log 2>/dev/null || true)"
         {
-          echo "## ${{ inputs.triplet }}"
+          echo "## ${{ steps.configure.outputs.triplet || runner.os }}"
           echo
           echo "| | |"
           echo "|---|---|"

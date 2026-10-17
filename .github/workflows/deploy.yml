@@ -33,6 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The name of the job only. The steps take the triplet from the output of the
+          # action, which reads the triplet of the build.
           - triplet: x86_64-windows-msvc
             os: windows-latest
             vcpkg-triplet: x64-windows
@@ -45,10 +47,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: ./.github/actions/build-and-test
+      - id: build
+        uses: ./.github/actions/build-and-test
         with:
           channel: ${{ env.CHANNEL }}
-          triplet: ${{ matrix.triplet }}
           vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
           qt-arch: ${{ matrix.qt-arch }}
 
@@ -84,7 +86,7 @@ jobs:
       # working. The file names carry the channel and the commit.
       - uses: actions/upload-artifact@v4
         with:
-          name: helloutau-${{ matrix.triplet }}
+          name: helloutau-${{ steps.build.outputs.triplet }}
           path: |
             build/package/*.zip
             build/package/*-setup.exe
