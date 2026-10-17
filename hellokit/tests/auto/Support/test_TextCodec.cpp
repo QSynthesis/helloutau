@@ -286,8 +286,9 @@ private Q_SLOTS:
         QTest::newRow("UTF-8") << QStringLiteral("UTF-8") << 4;
     }
 
-    // A replaced system encoding applies to the default codec and to the candidates, which
-    // append it if it is none of the four, and an empty name restores the encoding of the system.
+    // A replaced system encoding applies to the default codec and to the candidates, which append
+    // it if it is none of UTF-8, Shift_JIS, GBK and Big5. An empty name restores the system
+    // encoding.
     void the_system_encoding_of_another_region_is_offered() {
         QFETCH(QString, system);
         QFETCH(int, count);

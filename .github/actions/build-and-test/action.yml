@@ -5,7 +5,7 @@ description: >-
 
 # The steps that ci.yml and deploy.yml share, for every system. The system enters through the
 # inputs and through runner.os, so that a further system is one more entry of the matrices of the
-# workflows. The build is in build/Release, where the packaging scripts expect it. See the workflow
+# workflows. The build is in build/Release, where the packaging scripts read it. See the workflow
 # in docs/Distribution.md.
 
 inputs:
@@ -115,8 +115,8 @@ runs:
           qmsetup stdcorelib stdcorelib-plugin stdutau substate "qactionkit[core,widgets]" \
           winacp wolf-midi r8brain-free-src libzip zlib
 
-    # Saved as soon as the dependencies are installed. A cache of the same key cannot be saved
-    # again, so the save is skipped after an exact hit.
+    # The cache is saved as soon as the dependencies are installed.
+    # A cache of the same key cannot be saved again, so the save is skipped after an exact hit.
     - if: steps.vcpkg-cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
@@ -173,11 +173,11 @@ runs:
         printf '%s' "$status" > build/ctest.status
         exit "$status"
 
-    # Each failed test once more, through ctest with its environment and then as the program
-    # itself with its exit status. A test that ends without flushing its output, such as on an
-    # uncaught exception, shows nothing in the step Test, and the exit status tells the cause. -v2
-    # prints the location of every check, so that the last line of a test that blocks is the check
-    # it blocks in.
+    # Each failed test runs once more as the program itself with its exit status and the environment
+    # that ctest gives it, or through ctest if the program is not found. A test that ends without
+    # flushing its output, such as on an uncaught exception, shows nothing in the step Test, and
+    # the exit status indicates the cause. -v2 prints the location of every check, so that the
+    # last line of a test that blocks is the check it blocks in.
     - name: Failed tests
       if: failure() && hashFiles('build/Release/Testing/Temporary/LastTestsFailed.log') != ''
       shell: bash
@@ -200,8 +200,8 @@ runs:
           program="$(find build/Release/out -type f \( -name "${name}.exe" -o -name "$name" \) |
             head -1)"
           if [ -n "$program" ]; then
-            # Every check with -v2, into a file, whose end shows the check that blocks if the
-            # test is ended by the timeout
+            # Every check is written with -v2 into a file, whose end shows the check that blocks
+            # if the test is ended by the timeout
             timeout 120 "$program" -v2 -o "build/$name.txt,txt"
             echo "$name exited with status $?"
             tail -60 "build/$name.txt"

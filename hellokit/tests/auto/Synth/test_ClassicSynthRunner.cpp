@@ -629,7 +629,7 @@ private Q_SLOTS:
         QVERIFY(script.contains(QLatin1String("export tool='")));
         QVERIFY(script.contains(QLatin1String("export cachedir='")));
         QVERIFY(script.contains(QLatin1String("mkdir -p \"${cachedir}\"")));
-        // Through the shell, because the helper has no execute permission
+        // The helper is run through the shell, because the helper has no execute permission.
         QVERIFY(script.contains(QLatin1String("/bin/sh \"${helper}\"")));
 
         // cat instead of copy, the only command in the footer.

@@ -172,8 +172,8 @@ namespace hello::daw {
             impl.settings.emplace(settingsFile);
         }
         impl.readPluginSettings();
-        // The plugins of the user after those of the application, which the user directory of
-        // the settings determines
+        // The plugins of the user follow those of the application, in Extensions/plugins of the
+        // user directory of the settings
         impl.pluginPaths.insert(1, extensionPath() + QStringLiteral("/plugins"));
 
         impl.translations.emplace(
@@ -193,8 +193,8 @@ namespace hello::daw {
     bool AppLoader::showStartMessages() const {
         stdc_impl_t;
         const auto title = QCoreApplication::applicationName();
-        // A message box of the system, or the stream if none can be shown, in which case the
-        // result is NoButton
+        // Shows a message box of the system, or writes to the stream if none can be shown, in
+        // which case the result is NoButton
         const auto show =
             [&title](
                 const QString &text, kit::NativeMessageBox::Icon icon, FILE *stream,

@@ -10,9 +10,9 @@ project(hello-updater
 # The application runs a copy outside the installation directory, where no library of the
 # application is available. The program therefore links neither Qt nor any shared library of
 # this repository, and links the C++ runtime statically. Its libraries of this repository are
-# static: HelloKitNativeSystem-static-crt, which links the same runtime, and, on Windows, HelloKitWinMain,
-# which requires no particular runtime. It is a GUI program on Windows, so that no console window
-# appears.
+# static: HelloKitNativeSystem-static-crt, which links the same runtime, and, on Windows,
+# HelloKitWinMain, which requires no particular runtime. It is a GUI program on Windows, so that
+# no console window appears.
 hellokit_add_executable(${PROJECT_NAME}
     SOURCES main.cpp
     WINDOWS

@@ -212,7 +212,7 @@ private Q_SLOTS:
 #else
         const auto script = dir.filePath(QStringLiteral("temp.sh"));
 #endif
-        // Without execute permission, as ClassicSynthRunner writes the script
+        // The script is written without execute permission, as ClassicSynthRunner does.
         {
             QFile file(script);
             QVERIFY(file.open(QIODevice::WriteOnly));

@@ -10,8 +10,8 @@ project(hello-plugin-play
 # The program runs in the folder of a plugin, where no library of the application is available.
 # It therefore links neither Qt nor any shared library of this repository, and links the C++
 # runtime statically, as hello-updater does. Its libraries of this repository are static:
-# HelloKitNativeSystem-static-crt, which links the same runtime, and, on Windows, HelloKitWinMain, which
-# requires no particular runtime. It is a GUI program on Windows, so that no console window
+# HelloKitNativeSystem-static-crt, which links the same runtime, and, on Windows, HelloKitWinMain,
+# which requires no particular runtime. It is a GUI program on Windows, so that no console window
 # appears.
 helloutau_add_executable(${PROJECT_NAME}
     SOURCES main.cpp

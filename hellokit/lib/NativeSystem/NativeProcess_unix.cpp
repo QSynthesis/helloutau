@@ -25,7 +25,8 @@ namespace hello::kit {
             pointers.push_back(nullptr);
             // The working directory of the child, set by changing that of this process around the
             // call, because posix_spawn_file_actions_addchdir is not available on every system
-            // that this project supports. The programs that use the library run one thread.
+            // that this project supports. The programs that start a process through the library
+            // run one thread.
             std::error_code error;
             const auto previous = std::filesystem::current_path(error);
             if (!workingDirectory.empty()) {

@@ -18,8 +18,8 @@
 
 // A stand-in for the original playinplugin in test_plugin_play.py. Appends the command line and
 // the working directory in UTF-8 to the file that the environment variable PLUGIN_PLAY_STUB_LOG
-// names, one per line, and exits with the status 7. The command line is that of the process on
-// Windows, and the arguments separated by tabs elsewhere.
+// names, one per line, and exits with the status 7. The first line is the command line of the
+// process on Windows, and the arguments separated by tabs elsewhere.
 
 namespace kit = hello::kit;
 

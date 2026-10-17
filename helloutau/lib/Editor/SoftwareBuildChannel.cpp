@@ -14,7 +14,7 @@ namespace hello::daw {
         constexpr std::string_view channel = HELLOKIT_BUILD_CHANNEL;
         constexpr bool release = channel == "release";
 
-        // The channel as the name of the build spells it
+        // The channel as spelled in the name of the build
         constexpr const char *channelName = channel == "ci" ? "CI" : HELLOKIT_BUILD_CHANNEL;
 
         constexpr int abbreviatedCommitLength = 7;

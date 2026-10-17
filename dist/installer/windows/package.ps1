@@ -49,8 +49,8 @@ $BuildDir = (Resolve-Path $BuildDir).Path
 if (-not $OutputDir) {
     $OutputDir = Join-Path $BuildDir "package"
 }
-# Absolute, because ISCC resolves a relative path against the directory of setup.iss. The
-# directory need not exist yet.
+# The path is made absolute, because ISCC resolves a relative path against the directory of
+# setup.iss. The directory need not exist yet.
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
 
 function Invoke-Step([string]$name, [scriptblock]$step) {

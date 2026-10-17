@@ -49,7 +49,7 @@ CMake 缓存项 `HELLO_BUILD_CHANNEL` 区分三种构建，正式版与 CI 的�
 
 ## 持续集成
 
-CI 构建、运行全部测试并打包，作者 2026-10-16 提出要求，结构参照 lorelei：
+CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），结构参照 lorelei：
 
 | 文件 | 触发 | 内容 |
 |---|---|---|
@@ -88,7 +88,7 @@ CI 构建、运行全部测试并打包，作者 2026-10-16 提出要求，结�
 - 音源目录名为 `Singers`，不使用 `voice`。
 - 文档目录下的第一层目录名采用首字母大写的单词（`Singers`、`ClassicPlugins`），面向用户。原生插件的目录沿用安装目录的小写写法（`plugins`，对应安装目录的 `lib/helloutau/plugins`），因此以 `Extensions` 一层与第一层隔开（作者 2026-10-11 决定）。以后用户安装的其他扩展内容，例如主题与翻译，同样放在 `Extensions` 下，按安装目录的写法命名。
 - 文档目录取 `QStandardPaths::DocumentsLocation`。用户把「文档」重定向到其他位置时，路径随之改变。
-- 其他平台的应用数据目录：macOS 为 `~/Library/Application Support/OpenVPI/HelloUtau`，Linux 为 `~/.local/share/OpenVPI/HelloUtau`，与 ds-editor-lite（`fd38fb09`，`SingleInstanceIdentity::defaultDataDirectory()`）相同（作者 2026-10-16 决定）。DiffScope 在 macOS 与 Linux 上用 `~/.config`，未采用。音源与插件在这些平台上同样放在文稿目录。
+- 其他平台的应用数据目录：macOS 为 `~/Library/Application Support/OpenVPI/HelloUtau`，Linux 为 `~/.local/share/OpenVPI/HelloUtau`，与 ds-editor-lite（`fd38fb09`，`SingleInstanceIdentity::defaultDataDirectory()`）相同（作者 2026-10-16 决定）。DiffScope 在 macOS 与 Linux 上用 `~/.config`，未采用。音源与插件在这些平台上同样放在文档目录。
 
 ### 临时目录管理器
 

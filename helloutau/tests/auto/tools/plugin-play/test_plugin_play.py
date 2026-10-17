@@ -147,7 +147,7 @@ class Host:
         return True
 
     def read(self):
-        """Returns the next bytes, or an empty string at the end of the connection."""
+        """Returns the next bytes, or an empty bytes object at the end of the connection."""
         try:
             if WINDOWS:
                 chunk, _ = _winapi.ReadFile(self.pipe, 4096)
@@ -319,7 +319,7 @@ def test_the_original_runs_without_a_host():
     cwd = folder()
     program = os.path.join(cwd, "playinplugin" + SUFFIX)
     original = os.path.join(cwd, "playinplugin-original" + SUFFIX)
-    # With the permissions, which include the execute permission on other systems
+    # The copy keeps the permissions, which include the execute permission on other systems.
     shutil.copy(PROGRAM, program)
     shutil.copy(STUB, original)
     log = os.path.join(cwd, "stub.log")

@@ -19,7 +19,7 @@ namespace hello::kit {
             Critical,    ///< an error icon
         };
 
-        /// The buttons, as in QMessageBox, which can be combined with the bitwise OR. The box
+        /// The buttons, as in QMessageBox, can be combined with the bitwise OR. The box
         /// shows them from left to right in the order of the values.
         enum StandardButton {
             NoButton = 0x00, ///< no button

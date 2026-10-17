@@ -245,8 +245,8 @@ namespace hello::daw {
         process = new QProcess();
         const auto program = QString::fromStdU16String(plugin.program.u16string());
         if (plugin.shell) {
-            // A script of the shell, which requires no execute permission, as a plugin packed on
-            // Windows has none
+            // The program is run as a shell script, which requires no execute permission, as a
+            // plugin packed on Windows has none.
             process->setProgram(QStringLiteral("/bin/sh"));
             process->setArguments({program, file});
         } else {

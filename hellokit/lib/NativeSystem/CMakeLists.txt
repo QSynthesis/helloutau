@@ -18,12 +18,12 @@ else()
     message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} is not a system this project runs on.")
 endif()
 
-# One library for each C runtime of the MSVC ABI, because the objects use the standard library,
-# which requires the runtime of the program. HelloKitNativeSystem has the runtime in a DLL, as the
-# application and the plugins have it. HelloKitNativeSystem-static-crt has the static runtime, as
-# hello-updater and hello-plugin-play link it, and is neither installed nor exported, because only
-# these programs link it. Compilers of other ABIs ignore the property, and the libraries are alike
-# there.
+# There is one library for each C runtime of the MSVC ABI, because the objects use the standard
+# library, which requires the runtime of the program. HelloKitNativeSystem has the runtime in a
+# DLL, as the application and the plugins have it. HelloKitNativeSystem-static-crt has the static
+# runtime, as hello-updater and hello-plugin-play link it, and is neither installed nor exported,
+# because only these programs link it. Compilers of other ABIs ignore the property, and the
+# libraries are alike there.
 foreach(_variant dll static-crt)
     if(_variant STREQUAL "dll")
         set(_target ${PROJECT_NAME})

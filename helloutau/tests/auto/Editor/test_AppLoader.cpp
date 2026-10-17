@@ -203,7 +203,7 @@ private Q_SLOTS:
     }
 
     // The translations of the application are in the data directory of qmsetup, and those of Qt
-    // in Qt/translations of the shared directory, ahead of those of Qt itself. The tests run
+    // in Qt/translations of the share directory, ahead of those of Qt itself. The tests run
     // outside a macOS bundle.
     void the_translations_are_found_beside_the_program() {
         QTemporaryDir dir;

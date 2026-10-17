@@ -8,9 +8,9 @@
 # Microsoft Store placeholder on PATH.
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-# The stand-in for the original playinplugin. On Windows a GUI program as the original, so that no
-# console window appears. The test copies it into a folder of its own, and it therefore links the
-# C++ runtime statically.
+# The stand-in for the original playinplugin. On Windows it is a GUI program as the original, so
+# that no console window appears. The test copies it into a folder of its own, and it therefore
+# links the C++ runtime statically.
 add_executable(plugin-play-original-stub original_stub.cpp)
 target_compile_features(plugin-play-original-stub PRIVATE cxx_std_17)
 target_link_libraries(plugin-play-original-stub PRIVATE HelloKitNativeSystem-static-crt)

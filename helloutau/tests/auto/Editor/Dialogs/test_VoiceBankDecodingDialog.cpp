@@ -65,8 +65,8 @@ private:
     }
 
 private Q_SLOTS:
-    // The misdecoded names are those of a machine in mainland China, whichever machine runs the
-    // test.
+    // The names are misdecoded in the system encoding of mainland China, whichever machine runs
+    // the test.
     void init() {
         kit::TextCodec::setSystemName(QStringLiteral("GBK"));
     }

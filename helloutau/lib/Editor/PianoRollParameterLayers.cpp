@@ -126,9 +126,9 @@ namespace hello::daw {
                 continue;
             }
             const auto outline = outlineOf(i);
-            // Between the end of the attack and the start of the release, by the distance on the
-            // screen to the line. The vertical distance missed a steep line, as the time axis
-            // makes it once it is zoomed out.
+            // Between the end of the attack and the start of the release, a double click near the
+            // line on the screen inserts the middle anchor. The vertical distance missed a steep
+            // line, which is nearly vertical once the time axis is zoomed out.
             const QLineF line(outline[2], outline[3]);
             const QPointF along = line.p2() - line.p1();
             const double squared = QPointF::dotProduct(along, along);

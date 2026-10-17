@@ -327,8 +327,8 @@ namespace hello::kit {
         process.shell(true);
         process.args({script.u8string()});
 #else
-        // The script as an argument of the shell, because the script is written without execute
-        // permission, and a temporary directory may be mounted with noexec
+        // The script is passed as an argument of the shell, because the script is written
+        // without execute permission, and a temporary directory may be mounted with noexec.
         process.args({"/bin/sh", script.u8string()});
 #endif
         if (!workingDirectory.empty()) {

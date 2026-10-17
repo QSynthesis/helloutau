@@ -2101,7 +2101,7 @@ private Q_SLOTS:
 
     // A double click beside a steep line between the attack and the release inserts the middle
     // anchor. Zoomed out twenty times, the line from 200 at 455 ms to 0 at 590 ms spans about 7
-    // pixels, and two pixels left of its middle the line at the same time is far lower.
+    // pixels, and two pixels left of its middle, the line at the same time is far higher.
     void the_middle_anchor_is_inserted_beside_a_steep_line() {
         auto project = envelopedNote();
         project.tracks[0].notes[1].envelope = kit::Envelope::fromTimeOrder({
@@ -2634,8 +2634,8 @@ private Q_SLOTS:
         QVERIFY(!roll.lyricEditor()->isVisible());
     }
 
-    // A middle click changes the shape of a point to the next one in the order of the menu, one
-    // step of undo each, and leaves the first point, which has no shape.
+    // A middle click changes the shape of a point to the next one in the order of the menu, and
+    // is one step of undo. The first point has no shape, and a middle click leaves it unchanged.
     void a_middle_click_changes_the_shape_of_a_point() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);

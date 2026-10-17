@@ -14,7 +14,7 @@ class test_SoftwareBuildChannel : public QObject {
 
 private Q_SLOTS:
     // The name of the build follows the channel of the configuration: the version of a release,
-    // or otherwise the channel and the first seven digits of the commit.
+    // or otherwise the channel and the first seven digits of the commit hash.
     void the_build_name_follows_the_channel() {
         const QString channel = QStringLiteral(HELLOKIT_BUILD_CHANNEL);
         QCOMPARE(SoftwareBuildChannel::isRelease(), channel == QLatin1String("release"));
