@@ -193,13 +193,22 @@ namespace hello::daw {
     bool AppLoader::showStartMessages() const {
         stdc_impl_t;
         const auto title = QCoreApplication::applicationName();
-        // A message box of the system, or the stream if none can be shown
-        const auto show = [&title](const QString &text, kit::NativeMessageBox::Icon icon,
-                                   FILE *stream) {
-            if (!kit::NativeMessageBox::show(title.toStdString(), text.toStdString(), icon)) {
-                stdc::console::u8fprintf(stream, "%s\n", text.toStdString().c_str());
-            }
-        };
+        // A message box of the system, or the stream if none can be shown, in which case the
+        // result is NoButton
+        const auto show =
+            [&title](
+                const QString &text, kit::NativeMessageBox::Icon icon, FILE *stream,
+                int buttons = kit::NativeMessageBox::Ok,
+                kit::NativeMessageBox::StandardButton defaultButton =
+                    kit::NativeMessageBox::NoButton,
+                const std::map<kit::NativeMessageBox::StandardButton, std::string> &texts = {}) {
+                const auto chosen = kit::NativeMessageBox::show(
+                    title.toStdString(), text.toStdString(), icon, buttons, defaultButton, texts);
+                if (chosen == kit::NativeMessageBox::NoButton) {
+                    stdc::console::u8fprintf(stream, "%s\n", text.toStdString().c_str());
+                }
+                return chosen;
+            };
         if (impl.showsHelp) {
             show(tr("Usage: %1 [options] [files]\n\n"
                     "Starts %2 and opens the files.\n\n"
@@ -234,7 +243,16 @@ namespace hello::daw {
                    "Start %1 as a normal user. The option --allow-root suppresses this "
                    "warning.");
 #endif
-            show(text.arg(title), kit::NativeMessageBox::Warning, stderr);
+            // Quit at first, so that pressing Enter does not start with the privileges
+            const auto chosen =
+                show(text.arg(title), kit::NativeMessageBox::Warning, stderr,
+                     kit::NativeMessageBox::Continue | kit::NativeMessageBox::Quit,
+                     kit::NativeMessageBox::Quit,
+                     {
+                         {kit::NativeMessageBox::Continue, tr("Continue").toStdString()},
+                         {kit::NativeMessageBox::Quit,     tr("Quit").toStdString()    },
+            });
+            return chosen != kit::NativeMessageBox::Quit;
         }
         return true;
     }

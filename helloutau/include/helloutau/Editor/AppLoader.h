@@ -67,12 +67,14 @@ namespace hello::daw {
         /// - with \c --help, the usage of the command line;
         /// - without \c --allow-root, a warning if the process has the privileges of the
         ///   administrator (kit::NativeProcess::isElevated()), because the synth tools and the
-        ///   plugins that a project runs would have them as well.
+        ///   plugins that a project runs would have them as well. The warning has the buttons
+        ///   Continue and Quit, of which Quit is selected at first.
         ///
         /// The texts are in the language of the settings. The program calls the function after
         /// the constructor and before run().
         ///
-        /// \return whether the program continues, which it does not after the usage
+        /// \return whether the program continues, which it does not after the usage or if the
+        ///         user quits at the warning
         bool showStartMessages() const;
 
         /// Shuts the plugins down if they are still loaded.

@@ -860,6 +860,14 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
         <source>The application cannot start: %1</source>
         <translation>应用程序无法启动：%1</translation>
     </message>
+    <message>
+        <source>Continue</source>
+        <translation>继续</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>退出</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::AppearanceAndBehaviorCategory</name>
