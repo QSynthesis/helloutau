@@ -1043,6 +1043,9 @@ namespace hello::daw {
         for (int i = first; i < last; ++i) {
             around.push_back(refs.at(i).toNote());
         }
+        // The distance is that on the screen to the curve, sampled at every pixel within
+        // curveGrip on either side of position. The vertical distance at the tick of position
+        // missed a steep curve, which is nearly vertical once the time axis is zoomed out.
         std::optional<std::pair<int, double>> nearest;
         double distance = curveGrip;
         for (int index = std::max(0, at - 1); index < last; ++index) {
@@ -1051,15 +1054,39 @@ namespace hello::daw {
                 continue;
             }
             const kit::PitchCurve curve(around, index - first, timeline->tempoMap().tempo(index));
-            const double local = tick - double(note.start);
             const auto [start, stop] = curve.ownSpan();
-            if (local < start || local > stop) {
+            const double origin = double(note.start);
+            const double from = std::max(start, time.toTick(position.x() - curveGrip) - origin);
+            const double to = std::min(stop, time.toTick(position.x() + curveGrip) - origin);
+            if (from > to) {
                 continue;
             }
-            const double y = keys.toY(note.key + 0.5 + curve.ownPortamentoAt(local) / 100);
-            if (const double d = std::abs(y - position.y()); d <= distance) {
-                distance = d;
-                nearest = std::pair{index, local};
+            const auto pointAt = [&](double local) {
+                return QPointF(time.toX(origin + local),
+                               keys.toY(note.key + 0.5 + curve.ownPortamentoAt(local) / 100));
+            };
+            const int steps =
+                std::max(1, int(std::ceil(time.toX(origin + to) - time.toX(origin + from))));
+            double previousLocal = from;
+            QPointF previous = pointAt(from);
+            for (int step = 1; step <= steps; ++step) {
+                const double nextLocal = from + (to - from) * step / steps;
+                const QPointF next = pointAt(nextLocal);
+                // The nearest point of the segment from previous to next
+                const QPointF along = next - previous;
+                const double squared = QPointF::dotProduct(along, along);
+                const double share =
+                    squared > 0
+                        ? std::clamp(QPointF::dotProduct(position - previous, along) / squared, 0.0,
+                                     1.0)
+                        : 0.0;
+                const QPointF offset = previous + along * share - position;
+                if (const double d = std::hypot(offset.x(), offset.y()); d <= distance) {
+                    distance = d;
+                    nearest = std::pair{index, previousLocal + (nextLocal - previousLocal) * share};
+                }
+                previousLocal = nextLocal;
+                previous = next;
             }
         }
         return nearest;

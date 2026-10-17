@@ -126,21 +126,28 @@ namespace hello::daw {
                 continue;
             }
             const auto outline = outlineOf(i);
-            // Between the end of the attack and the start of the release
+            // Between the end of the attack and the start of the release, by the distance on the
+            // screen to the line. The vertical distance missed a steep line, as the time axis
+            // makes it once it is zoomed out.
             const QLineF line(outline[2], outline[3]);
-            if (position.x() <= line.x1() || position.x() >= line.x2()) {
+            const QPointF along = line.p2() - line.p1();
+            const double squared = QPointF::dotProduct(along, along);
+            if (squared <= 0) {
                 continue;
             }
-            const double share = (position.x() - line.x1()) / (line.x2() - line.x1());
+            const double share = QPointF::dotProduct(position - line.p1(), along) / squared;
+            if (share <= 0 || share >= 1) {
+                continue;
+            }
             const auto on = line.pointAt(share);
-            if (std::abs(on.y() - position.y()) > m_state->curveGrip) {
+            if (const auto offset = on - position;
+                std::hypot(offset.x(), offset.y()) > m_state->curveGrip) {
                 continue;
             }
             const auto [start, length] = m_state->fragmentOf(i);
             const auto times = anchorTimes(envelope, length);
             const double at =
-                m_state->timeline->tempoMap().timeOf(view()->timeAxis().toTick(position.x())) -
-                start;
+                m_state->timeline->tempoMap().timeOf(view()->timeAxis().toTick(on.x())) - start;
             envelope.hasMiddle = true;
             envelope.anchors[2].x = std::round((at - times[1]) * 10) / 10;
             envelope.anchors[2].y = std::round(view()->keyAxis().toKey(on.y()));

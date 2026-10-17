@@ -2099,6 +2099,36 @@ private Q_SLOTS:
         QCOMPARE(envelope.anchors[3].x, 35.0);
     }
 
+    // A double click beside a steep line between the attack and the release inserts the middle
+    // anchor. Zoomed out twenty times, the line from 200 at 455 ms to 0 at 590 ms spans about 7
+    // pixels, and two pixels left of its middle the line at the same time is far lower.
+    void the_middle_anchor_is_inserted_beside_a_steep_line() {
+        auto project = envelopedNote();
+        project.tracks[0].notes[1].envelope = kit::Envelope::fromTimeOrder({
+            {0,  0  },
+            {5,  200},
+            {35, 0  },
+            {0,  0  }
+        });
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        showExactly(roll);
+        auto time = roll.view()->timeAxis();
+        time.pixelsPerTick /= 20;
+        roll.view()->setTimeAxis(time);
+
+        const auto view = roll.parameterView();
+        const auto at = [view](double milliseconds, double volume) {
+            return QPointF(view->timeAxis().toX(milliseconds * 0.96), view->keyAxis().toY(volume));
+        };
+        const auto middle = (at(455, 200) + at(590, 0)) / 2;
+        QTest::mouseDClick(view->viewport(), Qt::LeftButton, {},
+                           (middle - QPointF(2, 0)).toPoint());
+        const auto envelope = envelopeOfLa(session);
+        QVERIFY(envelope.hasMiddle);
+        QVERIFY(envelope.anchors[2].x > 0 && envelope.anchors[2].x < 135);
+    }
+
     // la, li and lu overlapping by 20, 30 and 10 ms, and li with a middle anchor
     static kit::Project overlappingNotes() {
         kit::Project project;
@@ -2582,6 +2612,26 @@ private Q_SLOTS:
         choose(PianoRoll::tr("Delete Point"));
         QTest::mouseClick(viewport, Qt::RightButton, {}, pointOfLi(roll, 0, 100));
         QCOMPARE(pointsOfLi(session).size(), 2);
+    }
+
+    // A double click beside a steep curve inserts a point. Zoomed out ten times, the rise of li
+    // from -60 to 0 ms spans 6 pixels. Two pixels left of its middle, the curve at the same tick
+    // is about 10 pixels lower, but the curve on the screen is less than a pixel away.
+    void a_point_is_inserted_beside_a_steep_curve() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+        auto time = roll.view()->timeAxis();
+        time.pixelsPerTick /= 10;
+        roll.view()->setTimeAxis(time);
+
+        const QPointF middle(time.toX(480 - 30 * 0.96), roll.view()->keyAxis().toY(63.0));
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {},
+                           (middle - QPointF(2, 0)).toPoint());
+        const auto points = pointsOfLi(session);
+        QCOMPARE(points.size(), 4);
+        QVERIFY(points[1].x > -60 && points[1].x < 0);
+        QVERIFY(!roll.lyricEditor()->isVisible());
     }
 
     // A middle click changes the shape of a point to the next one in the order of the menu, one

@@ -468,9 +468,10 @@ namespace hello::daw {
         double pointGrip() const;
         void setPointGrip(double pixels);
 
-        /// The distance in pixels above and below the portamento within which a double click
-        /// inserts a point, 5 by default. Elsewhere on a note a double click edits its lyric,
-        /// as F2 does. See the questions in docs/Tuning.md.
+        /// The distance in pixels on the screen from the portamento within which a double click
+        /// inserts a point, 5 by default, which also applies to the line of an envelope between
+        /// the attack and the release. Elsewhere on a note a double click edits its lyric, as F2
+        /// does. See the questions in docs/Tuning.md.
         double curveGrip() const;
         void setCurveGrip(double pixels);
 
