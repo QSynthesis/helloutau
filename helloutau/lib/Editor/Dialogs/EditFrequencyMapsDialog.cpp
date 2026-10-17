@@ -461,6 +461,17 @@ namespace hello::daw {
             if (const auto left = openedOf(current);
                 left && current != index && !left->buffer->canUndo() && !left->buffer->canRedo() &&
                 left->corrections.empty()) {
+                // The view reads the frames of its buffer until setBuffer() below, and reading
+                // the destroyed buffer crashed a Release build. The view is detached first,
+                // because detaching it can refresh the panel, which sets listed. listed is then
+                // cleared, because a new buffer at the address of the destroyed one would
+                // otherwise pass for the listed buffer.
+                if (view->buffer() == left->buffer.get()) {
+                    view->setBuffer(nullptr);
+                }
+                if (listed == left->buffer.get()) {
+                    listed = nullptr;
+                }
                 opened.erase(current);
             }
             if (current != index) {
