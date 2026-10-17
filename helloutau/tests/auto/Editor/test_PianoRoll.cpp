@@ -2863,10 +2863,13 @@ private Q_SLOTS:
         const auto view = roll.view();
         const double middle = view->viewport()->width() / 2;
         const auto xOf = [view](double tick) { return view->timeAxis().toX(tick); };
-        // Verifies that the playhead at tick is off the center at first and eases to it.
+        // Verifies that the playhead at tick is off the center at first and eases to it. The
+        // easing reaches the center exactly only when it ends, so the comparison waits for the end
+        // of the easing. A tolerance of 0.01 pixels once returned while the easing still ran on
+        // a slow machine, and the next step of the playhead was then eased as well.
         const auto verifyEased = [&](double tick) {
             QVERIFY(qAbs(xOf(tick) - middle) > 1);
-            QTRY_VERIFY(qAbs(xOf(tick) - middle) < 0.01);
+            QTRY_COMPARE(xOf(tick), middle);
         };
 
         roll.setPlayheadFollow(PianoRoll::SmoothFollow);
