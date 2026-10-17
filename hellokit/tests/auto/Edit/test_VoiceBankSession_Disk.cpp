@@ -28,6 +28,8 @@ class test_VoiceBankSession_Disk : public QObject {
 private:
     std::unique_ptr<QTemporaryDir> m_dir;
     std::unique_ptr<VoiceBankSession> m_session;
+    // The number of files written by write(), which dates each write a second later
+    int m_writes = 0;
 
     QString pathOf(const QString &relative) const {
         return m_dir->path() + QLatin1Char('/') + relative;
@@ -35,10 +37,12 @@ private:
 
     void write(const QString &relative, const QByteArray &bytes) {
         QVERIFY(writeSampleFile(m_dir->path(), relative, bytes));
-        // Dated back, so that the stamp alone shows the change.
+        // Dated back, so that the stamp alone shows the change, and a second later for each
+        // write. A rewrite of the same size within the same millisecond as the first write
+        // once had the same stamp, and the change was not seen on a fast machine.
         QFile file(pathOf(relative));
         QVERIFY(file.open(QIODevice::ReadWrite));
-        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-3600),
+        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-3600 + m_writes++),
                                  QFileDevice::FileModificationTime));
     }
 
