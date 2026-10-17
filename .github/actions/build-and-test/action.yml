@@ -5,10 +5,17 @@ description: >-
 
 # The steps that ci.yml and deploy.yml share, for every system. The system enters through the
 # inputs and through runner.os, so that a further system is one more entry of the matrices of the
-# workflows. The build is in build/Release, where the packaging scripts read it. See the workflow
-# in docs/Distribution.md.
+# workflows. The build is in build/Release for the variant release, where the packaging scripts
+# read it, and in build/Debug or build/asan for the other variants. See the workflow in
+# docs/Distribution.md.
 
 inputs:
+  variant:
+    description: >-
+      release, the build of the assets, debug, with the assertions and the checks of the debug
+      runtime, or asan, with AddressSanitizer.
+    required: false
+    default: release
   channel:
     description: The value of HELLO_BUILD_CHANNEL, release for the tag of a version and ci otherwise.
     required: true
@@ -30,10 +37,33 @@ outputs:
   triplet:
     description: The triplet of HelloUtau, such as x86_64-windows-msvc, which names the assets.
     value: ${{ steps.configure.outputs.triplet }}
+  build-directory:
+    description: The build directory of the variant, such as build/Release.
+    value: ${{ steps.variant.outputs.directory }}
 
 runs:
   using: composite
   steps:
+    # The build directory and the configuration of the variant. asan is built as RelWithDebInfo,
+    # which runs the tests faster than Debug and keeps the symbols for the reports.
+    - id: variant
+      shell: bash
+      run: |
+        set -euo pipefail
+        case "${{ inputs.variant }}" in
+          release) directory=build/Release; type=Release; asan=OFF ;;
+          debug) directory=build/Debug; type=Debug; asan=OFF ;;
+          asan) directory=build/asan; type=RelWithDebInfo; asan=ON ;;
+          *) echo "::error::The variant ${{ inputs.variant }} is none of release, debug and asan."
+             exit 1 ;;
+        esac
+        {
+          echo "BUILD_DIR=$directory"
+          echo "BUILD_TYPE=$type"
+          echo "BUILD_ASAN=$asan"
+        } >> "$GITHUB_ENV"
+        echo "directory=$directory" >> "$GITHUB_OUTPUT"
+
     # The protocol tests of the programs are Python scripts, see CLAUDE.md.
     - uses: actions/setup-python@v5
       with:
@@ -134,15 +164,16 @@ runs:
         else
           python="$pythonLocation/bin/python3"
         fi
-        cmake -G Ninja -S . -B build/Release \
-          -DCMAKE_BUILD_TYPE=Release \
+        cmake -G Ninja -S . -B "$BUILD_DIR" \
+          "-DCMAKE_BUILD_TYPE=$BUILD_TYPE" \
+          "-DHELLO_ENABLE_ADDRESS_SANITIZER=$BUILD_ASAN" \
           "-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
           "-DVCPKG_TARGET_TRIPLET=${{ inputs.vcpkg-triplet }}" \
           "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR" \
           "-DPython3_EXECUTABLE=$python" \
           -DHELLO_BUILD_TESTS=ON \
           "-DHELLO_BUILD_CHANNEL=${{ inputs.channel }}"
-        triplet="$(sed -n 's/^HELLO_TRIPLET:[A-Z]*=//p' build/Release/CMakeCache.txt | tr -d '\r')"
+        triplet="$(sed -n 's/^HELLO_TRIPLET:[A-Z]*=//p' $BUILD_DIR/CMakeCache.txt | tr -d '\r')"
         if [ -z "$triplet" ]; then
           echo "HELLO_TRIPLET is missing from the cache of the build."
           exit 1
@@ -158,7 +189,7 @@ runs:
 
     - name: Build
       shell: bash
-      run: cmake --build build/Release
+      run: cmake --build "$BUILD_DIR"
 
     # --no-tests=error, because ctest succeeds if it finds no test. The widget tests need no
     # display with the offscreen platform. The exit status is recorded in a file for the summary,
@@ -169,7 +200,7 @@ runs:
         QT_QPA_PLATFORM: offscreen
       run: |
         set +e
-        ctest --test-dir build/Release --output-on-failure --no-tests=error 2>&1 | tee build/ctest.log
+        ctest --test-dir "$BUILD_DIR" --output-on-failure --no-tests=error 2>&1 | tee build/ctest.log
         status=${PIPESTATUS[0]}
         printf '%s' "$status" > build/ctest.status
         exit "$status"
@@ -180,7 +211,9 @@ runs:
     # the exit status indicates the cause. -v2 prints the location of every check, so that the
     # last line of a test that blocks is the check it blocks in.
     - name: Failed tests
-      if: failure() && hashFiles('build/Release/Testing/Temporary/LastTestsFailed.log') != ''
+      if: >-
+        failure() &&
+        hashFiles(format('{0}/Testing/Temporary/LastTestsFailed.log', env.BUILD_DIR)) != ''
       shell: bash
       env:
         QT_QPA_PLATFORM: offscreen
@@ -191,14 +224,14 @@ runs:
         if [ -n "${QT_ROOT_DIR:-}" ]; then
           PATH="$(cygpath -u "$QT_ROOT_DIR")/bin:$PATH"
         fi
-        for directory in "$PWD"/build/Release/out/lib/helloutau/plugins/*/; do
+        for directory in "$PWD/$BUILD_DIR"/out/lib/helloutau/plugins/*/; do
           PATH="$directory:$PATH"
         done
         # The lines of the list end with CR LF on Windows, and the CR would be part of the name.
-        for name in $(tr -d '\r' < build/Release/Testing/Temporary/LastTestsFailed.log |
+        for name in $(tr -d '\r' < "$BUILD_DIR/Testing/Temporary/LastTestsFailed.log" |
                       cut -d: -f2); do
           echo "::group::$name"
-          program="$(find build/Release/out -type f \( -name "${name}.exe" -o -name "$name" \) |
+          program="$(find "$BUILD_DIR/out" -type f \( -name "${name}.exe" -o -name "$name" \) |
             head -1)"
           if [ -n "$program" ]; then
             # Every check is written with -v2 into a file, whose end shows the check that blocks
@@ -207,7 +240,7 @@ runs:
             echo "$name exited with status $?"
             tail -60 "build/$name.txt"
           else
-            ctest --test-dir build/Release -R "^${name}\$" -V --timeout 120
+            ctest --test-dir "$BUILD_DIR" -R "^${name}\$" -V --timeout 120
           fi
           echo "::endgroup::"
         done
@@ -224,7 +257,7 @@ runs:
         esac
         totals="$(grep -m1 'tests passed' build/ctest.log 2>/dev/null || true)"
         {
-          echo "## ${{ steps.configure.outputs.triplet || runner.os }}"
+          echo "## ${{ steps.configure.outputs.triplet || runner.os }}, ${{ inputs.variant }}"
           echo
           echo "| | |"
           echo "|---|---|"

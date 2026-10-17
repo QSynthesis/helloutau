@@ -2,7 +2,7 @@ name: ci
 run-name: ci (${{ github.head_ref || github.ref_name }})
 
 # Compiles and runs every test, on a pull request to main and on manual dispatch, once for each
-# system of the matrix. A push to main runs deploy.yml instead, which runs the same tests before
+# system of the matrix and each variant of the build: release, debug and asan. A push to main runs deploy.yml instead, which runs the same tests before
 # packaging, so that a push is not built twice. Development happens on dev, and git promote moves
 # main. See the workflow in docs/Distribution.md.
 on:
@@ -20,14 +20,17 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.triplet }}
+    name: ${{ matrix.triplet }} ${{ matrix.variant }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
+        # The triplet names the job, and the action checks it against the triplet of the build.
+        # Each variant of the action runs for each system.
+        triplet: [ x86_64-windows-msvc ]
+        variant: [ release, debug, asan ]
         include:
-          # The name of the job, which the action checks against the triplet of the build.
           - triplet: x86_64-windows-msvc
             os: windows-latest
             vcpkg-triplet: x64-windows
@@ -41,6 +44,7 @@ jobs:
       - id: build
         uses: ./.github/actions/build-and-test
         with:
+          variant: ${{ matrix.variant }}
           channel: ci
           triplet: ${{ matrix.triplet }}
           vcpkg-triplet: ${{ matrix.vcpkg-triplet }}

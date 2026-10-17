@@ -5,8 +5,11 @@ run-name: deploy (${{ github.ref_name }})
 # once for each system of the matrix. Development happens on dev, and git promote moves main, so a
 # push to main is the integration checkpoint. A tag v<HELLO_VERSION> builds the channel release
 # and publishes the release, and every other run builds the channel ci, whose assets carry the
-# commit in their names. Both channels run the same steps. See the build channels and the workflow
-# in docs/Distribution.md.
+# commit in their names. Both channels run the same steps. The job package builds the variant
+# release, tests and packages it, and the job test builds and tests the variants debug and asan
+# alongside. The assets of a run are packaged whatever the job test reports, and a release is
+# published only if both jobs pass. See the build channels and the workflow in
+# docs/Distribution.md.
 on:
   push:
     branches: [ main ]
@@ -50,6 +53,7 @@ jobs:
       - id: build
         uses: ./.github/actions/build-and-test
         with:
+          variant: release
           channel: ${{ env.CHANNEL }}
           triplet: ${{ matrix.triplet }}
           vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
@@ -105,12 +109,41 @@ jobs:
             sed 's/^[0-9a-f]*  /- `/; s/$/`/' build/package/SHA256SUMS
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # The variants debug and asan, which only build and test
+  test:
+    name: ${{ matrix.triplet }} ${{ matrix.variant }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # As in the job package, for each variant
+        triplet: [ x86_64-windows-msvc ]
+        variant: [ debug, asan ]
+        include:
+          - triplet: x86_64-windows-msvc
+            os: windows-latest
+            vcpkg-triplet: x64-windows
+            qt-arch: win64_msvc2022_64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/build-and-test
+        with:
+          variant: ${{ matrix.variant }}
+          channel: ${{ env.CHANNEL }}
+          triplet: ${{ matrix.triplet }}
+          vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
+          qt-arch: ${{ matrix.qt-arch }}
+
   # The release of a tag, with the assets of every system and the notes of
   # docs/changelog/<version>.md, which Unreleased.md becomes on the release. The digests of the
   # systems are joined into one SHA256SUMS, which the update reads.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: package
+    needs: [ package, test ]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

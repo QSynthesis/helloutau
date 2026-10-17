@@ -23,6 +23,9 @@ option(HELLO_DEVEL "Install the files for development" OFF)
 # installation for users carries neither these libraries nor Qt Test.
 option(HELLO_INSTALL_TESTING "Install the helper libraries of the tests" OFF)
 option(HELLO_INSTALL_MSVC_RUNTIME "Install MSVC runtime" OFF)
+# Builds the code of this repository with AddressSanitizer, for the tests. The workflow builds it
+# as RelWithDebInfo. See the workflow in docs/Distribution.md.
+option(HELLO_ENABLE_ADDRESS_SANITIZER "Build with AddressSanitizer" OFF)
 
 # ----------------------------------
 # Build Variables
@@ -52,6 +55,36 @@ elseif(NOT WIN32)
     # Windows has no position-independent code option, and CMake sets MSVC and MINGW to false for
     # clang targeting Windows, so this condition must test the platform rather than the compiler.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
+# The packages are installed in the configurations Release and Debug. An imported target without
+# a configuration RelWithDebInfo takes the first configuration that it lists unless a mapping
+# is given, which can be Debug, whose runtime does not match.
+if(NOT DEFINED CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO)
+    set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO RelWithDebInfo Release)
+endif()
+
+if(HELLO_ENABLE_ADDRESS_SANITIZER)
+    # The spelling of the flags follows the front end of the compiler, not the platform: cl takes
+    # /fsanitize=address, and clang with the GNU front end takes -fsanitize=address on every
+    # system. MSVC supports neither incremental linking nor /RTC with AddressSanitizer.
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        add_compile_options(/fsanitize=address)
+        add_link_options(/INCREMENTAL:NO)
+        string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    else()
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=address)
+    endif()
+
+    # The libraries from vcpkg are built without AddressSanitizer. A container of the standard
+    # library of MSVC that is annotated on one side of such a library and not on the other is
+    # reported as overflowing, and a static library with other annotations fails to link, so the
+    # annotations are turned off. Overflows into the reserved capacity of std::vector and
+    # std::string are therefore not detected.
+    if(WIN32)
+        add_compile_definitions(_DISABLE_VECTOR_ANNOTATION _DISABLE_STRING_ANNOTATION)
+    endif()
 endif()
 
 if(HELLO_INSTALL)

@@ -53,15 +53,20 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 
 | 文件 | 触发 | 内容 |
 |---|---|---|
-| `.github/actions/build-and-test/action.yml` | 由下面两个工作流调用 | 安装依赖、配置、编译、运行全部测试，写入运行的摘要 |
-| `.github/workflows/ci.yml` | 向 `main` 发起的 pull request、手动 | 编译与测试 |
-| `.github/workflows/deploy.yml` | 推送 `main`、推送 `v` 开头的 tag、手动 | 编译、测试与打包，tag 时发布 |
+| `.github/actions/build-and-test/action.yml` | 由下面两个工作流调用 | 按变体安装依赖、配置、编译、运行全部测试，写入运行的摘要 |
+| `.github/workflows/ci.yml` | 向 `main` 发起的 pull request、手动 | 三种变体的编译与测试 |
+| `.github/workflows/deploy.yml` | 推送 `main`、推送 `v` 开头的 tag、手动 | release 变体的编译、测试与打包，debug 与 asan 变体的编译与测试，tag 时发布 |
 | `.github/workflows/sync-gitee-release.yml` | release 发布后由 `deploy.yml` 启动、手动 | 同步到 Gitee |
 
 - **系统**：两个工作流以 matrix 列出各系统，目前只有 `x86_64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分。matrix 中的 triplet 是 job 的名称，组合 action 检查它与构建的 triplet 相同，不同即失败，其后的步骤不使用它：组合 action 在配置后从 `CMakeCache.txt` 读出 `HELLO_TRIPLET`，作为输出 `triplet` 交给工作流命名 artifact，因此与程序、打包脚本所用的值必然一致，将来增加 mingw 等构建时也不会混淆（作者 2026-10-17 要求）。增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
 - **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
+- **变体**：组合 action 的输入 `variant` 选择构建的变体，每种变体在自己的构建目录中（作者 2026-10-17 决定）。
+  - `release`：Release，即发布的构建，位于 `build/Release`，打包脚本读取这里。
+  - `debug`：Debug，带断言与 Debug 运行库的检查，位于 `build/Debug`。
+  - `asan`：RelWithDebInfo 加 `HELLO_ENABLE_ADDRESS_SANITIZER`，以 AddressSanitizer 检测释放后的访问、堆与栈的越界，位于 `build/asan`。依赖取自 vcpkg，未经插桩，因此关闭了 MSVC 标准库容器的注解，`std::vector` 与 `std::string` 在预留容量内的越界不能发现，见根目录 `CMakeLists.txt`。Release 下崩溃而 Debug 下不崩溃的释放后访问（编辑频率表对话框，`407c21a2`）即是这一变体所针对的问题。
+  - `deploy.yml` 的 job `package` 构建 release 并打包，job `test` 同时构建 debug 与 asan。打包不等 `test` 的结果，因此每次推送都产出 CI 的安装包，`test` 失败时整次运行标为失败。tag 的 release 在两个 job 都通过后才创建。`ci.yml` 构建全部三种变体，不打包。
 - **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip、zlib 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
-- **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
+- **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。release 变体的任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
 - **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包与 `SHA256SUMS`。artifact 按系统命名为 `helloutau-<triplet>`，每次运行相同，渠道与提交只写在文件名中，同 lorelei。
 - **发布**：推送 `v` 开头的 tag 时渠道为 `release`。tag 须与 `HELLO_VERSION` 一致，否则构建失败。各系统都通过后创建 GitHub 的 release，附上各系统的附件与合并后的一份 `SHA256SUMS`，标题为 `HelloUtau <version>`，说明取自 tag 所在提交的 `docs/changelog/<version>.md`，该文件不存在时不创建 release。以工作流的令牌创建的 release 不触发其他工作流，因此随后以 `gh workflow run` 启动 `sync-gitee-release.yml`。
 
