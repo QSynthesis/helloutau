@@ -44,8 +44,10 @@ outputs:
 runs:
   using: composite
   steps:
-    # The build directory and the configuration of the variant. asan is built as RelWithDebInfo,
-    # which runs the tests faster than Debug and keeps the symbols for the reports.
+    # The build directory and the configuration of the variant. Release carries the debug
+    # information (cmake/ConfigureBuildTypes.cmake), so that the symbols of release are published
+    # beside the assets for the analysis of crash dumps, and the reports of asan, which runs the
+    # tests faster than Debug, name the functions and the lines.
     - id: variant
       shell: bash
       run: |
@@ -54,7 +56,7 @@ runs:
         case "${{ inputs.variant }}" in
           release) directory=build/Release; type=Release; asan=OFF ;;
           debug) directory=build/Debug; type=Debug; asan=OFF ;;
-          asan) directory=build/asan; type=RelWithDebInfo; asan=ON; compiler=clang++ ;;
+          asan) directory=build/asan; type=Release; asan=ON; compiler=clang++ ;;
           *) echo "::error::The variant ${{ inputs.variant }} is none of release, debug and asan."
              exit 1 ;;
         esac

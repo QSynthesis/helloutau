@@ -86,17 +86,42 @@ jobs:
         shell: pwsh
         run: ./dist/installer/windows/package.ps1 -BuildDir build/Release -OutputDir build/package -Iscc $env:ISCC
 
-      # The assets without the staging folder HelloUtau of the packaging script. The name of the
-      # artifact stays the same for every run, so that gh run download -n helloutau-<triplet> keeps
-      # working. The file names of a build of another channel than release carry the
-      # channel and the commit.
-      - uses: actions/upload-artifact@v4
+      # The paths of the three assets. The portable package is the archive that is not the symbols.
+      - name: Assets
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd build/package
+          symbols="$(ls -- *-symbols.zip)"
+          setup="$(ls -- *-setup.exe)"
+          portable="$(ls -- *.zip | grep -v -- '-symbols\.zip$')"
+          {
+            echo "portable=build/package/$portable"
+            echo "setup=build/package/$setup"
+            echo "symbols=build/package/$symbols"
+          } >> "$GITHUB_OUTPUT"
+
+      # Each asset is an artifact of its own and is not zipped again (archive: false), so that it
+      # downloads as the file itself, as from the release. The artifact is named after the file,
+      # whose name carries the channel and the commit for a build of another channel than release.
+      # The digests are in the summary of the run, and the job release computes SHA256SUMS.
+      - uses: actions/upload-artifact@v7
         with:
-          name: helloutau-${{ steps.build.outputs.triplet }}
-          path: |
-            build/package/*.zip
-            build/package/*-setup.exe
-            build/package/SHA256SUMS
+          path: ${{ steps.assets.outputs.portable }}
+          archive: false
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.assets.outputs.setup }}
+          archive: false
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.assets.outputs.symbols }}
+          archive: false
           if-no-files-found: error
 
       - name: Summary
@@ -139,8 +164,9 @@ jobs:
           qt-arch: ${{ matrix.qt-arch }}
 
   # The release of a tag, with the assets of every system and the notes of
-  # docs/changelog/<version>.md, which Unreleased.md becomes on the release. The digests of the
-  # systems are joined into one SHA256SUMS, which the update reads.
+  # docs/changelog/<version>.md, which Unreleased.md becomes on the release. One SHA256SUMS for
+  # the assets of every system, which the update reads, is computed from the downloaded files.
+  # The symbols are attached as well, because the artifacts of a run expire.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [ package, test ]
@@ -154,10 +180,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
+      # Each artifact is a single file uploaded without archive, which download-artifact 8
+      # writes as the file itself.
+      - uses: actions/download-artifact@v8
         with:
           pattern: helloutau-*
-          path: artifacts
+          path: assets
+          merge-multiple: true
 
       - name: Create the release
         run: |
@@ -168,9 +197,8 @@ jobs:
             echo "The notes $notes are missing from the commit of the tag."
             exit 1
           fi
-          mkdir assets
-          find artifacts -type f ! -name SHA256SUMS -exec cp {} assets/ \;
-          cat artifacts/*/SHA256SUMS > assets/SHA256SUMS
+          (cd assets && sha256sum -- * > SHA256SUMS)
+          cat assets/SHA256SUMS
           gh release create "$GITHUB_REF_NAME" assets/* --verify-tag \
             --title "HelloUtau ${version}" --notes-file "$notes"
 

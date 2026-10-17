@@ -10,7 +10,10 @@ param(
 #
 #     helloutau-<version>-<triplet>.zip         the portable package, a folder HelloUtau
 #     helloutau-<version>-<triplet>-setup.exe   the installer, compiled from setup.iss
-#     SHA256SUMS                                the digests of both, as sha256sum writes them
+#     helloutau-<version>-<triplet>-symbols.zip the PDBs of the binaries, in the layout of the
+#                                               package, if the build records them
+#     SHA256SUMS                                the digests of the files above, as sha256sum
+#                                               writes them
 #
 # A build of another channel than release (HELLO_BUILD_CHANNEL) appends -<channel>-<commit> to
 # the base name, such as helloutau-<version>-<triplet>-ci-1a2b3c4.zip.
@@ -176,6 +179,44 @@ foreach ($dll in Get-ChildItem -LiteralPath $crt.FullName -Filter *.dll) {
     Write-Output "  $($dll.Name)"
 }
 
+# The debug symbols of the binaries of the package, in the layout of the package, for the analysis
+# of crash dumps. dumpbin reports the PDB that each binary records, found at the recorded path,
+# beside the binary or in the alternative symbol path, here the binaries of vcpkg, whose ports are
+# built as Release with their PDBs, as this build is (cmake/ConfigureBuildTypes.cmake). A build
+# that records no PDB gets no archive of symbols. Qt is published without PDBs.
+Write-Output "== Collect the debug symbols"
+$dumpbin = (Get-Command dumpbin.exe -ErrorAction SilentlyContinue).Source
+if (-not $dumpbin) {
+    $dumpbin = Get-ChildItem (Join-Path $visualStudio "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe") `
+        -ErrorAction SilentlyContinue | Select-Object -Last 1 | ForEach-Object { $_.FullName }
+}
+if (-not $dumpbin) {
+    throw "dumpbin.exe of Visual Studio was not found in $visualStudio."
+}
+$vcpkgInstalled = Get-Value $cache "_VCPKG_INSTALLED_DIR" ":[A-Z]+="
+$vcpkgTriplet = Get-Value $cache "VCPKG_TARGET_TRIPLET" ":[A-Z]+="
+if ($vcpkgInstalled -and $vcpkgTriplet) {
+    $env:_NT_ALT_SYMBOL_PATH = Join-Path $vcpkgInstalled "$vcpkgTriplet\bin"
+}
+$symbols = Join-Path $OutputDir "symbols"
+if (Test-Path -LiteralPath $symbols) {
+    Remove-Item -LiteralPath $symbols -Recurse -Force
+}
+$symbolCount = 0
+$packaged = Get-ChildItem -LiteralPath $staging -Recurse -File |
+    Where-Object { $_.Extension -in ".exe", ".dll" }
+foreach ($binary in $packaged) {
+    $report = & $dumpbin /NOLOGO /PDBPATH $binary.FullName | Out-String
+    if ($report -match "PDB file found at '([^']+)'") {
+        $relative = $binary.DirectoryName.Substring($staging.Length).TrimStart('\')
+        $target = Join-Path $symbols $relative
+        New-Item -ItemType Directory -Force $target | Out-Null
+        Copy-Item -LiteralPath $Matches[1] -Destination $target -Force
+        $symbolCount++
+    }
+}
+Write-Output "  $symbolCount of $($packaged.Count) binaries have symbols"
+
 $archive = Join-Path $OutputDir "$base.zip"
 if (Test-Path -LiteralPath $archive) {
     Remove-Item -LiteralPath $archive -Force
@@ -213,6 +254,17 @@ if (-not $NoInstaller) {
             (Join-Path $PSScriptRoot "setup.iss")
     }
     $assets += Join-Path $OutputDir "$base-setup.exe"
+}
+
+if ($symbolCount -gt 0) {
+    $symbolArchive = Join-Path $OutputDir "$base-symbols.zip"
+    if (Test-Path -LiteralPath $symbolArchive) {
+        Remove-Item -LiteralPath $symbolArchive -Force
+    }
+    Write-Output "== Create $symbolArchive"
+    Compress-Archive -Path (Join-Path $symbols "*") -DestinationPath $symbolArchive `
+        -CompressionLevel Optimal
+    $assets += $symbolArchive
 }
 
 # One line for each asset, the lowercase digest, two spaces and the file name, as sha256sum writes

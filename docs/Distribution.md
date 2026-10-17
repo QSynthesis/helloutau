@@ -26,13 +26,16 @@
 |---|---|
 | 免安装版 | `helloutau-<version>-<triplet>.zip` |
 | 安装包（仅 Windows） | `helloutau-<version>-<triplet>-setup.exe` |
+| 调试符号（目前仅 Windows 的 PDB） | `helloutau-<version>-<triplet>-symbols.zip` |
 | 校验文件 | `SHA256SUMS` |
+
+- 调试符号供分析崩溃转储使用，按安装目录的结构存放各个 exe 与 dll 的 PDB，包括 vcpkg 依赖的 PDB，Qt 的官方二进制不带 PDB（作者 2026-10-18 要求）。更新程序按完整的文件名挑选附件，不会选中它。其他系统的 `.debug` 以后随打包加入。
 
 - `<version>` 为 `HELLO_VERSION` 的四段版本号。
 - `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x86_64` 或 `arm64`，系统为 `windows`、`linux` 或 `mac`，ABI 为 `msvc`、`mingw`、`gcc` 或 `appleclang`，例如 `x86_64-windows-msvc`。其余编译器取 CMake 编译器 ID 的小写，macOS 上 Xcode 的编译器因此为 `appleclang`，与 vcpkg 沿用的 CMake 编译器 ID 一致，macOS 版为 `arm64-mac-appleclang`（作者 2026-10-16 决定）。vcpkg 的 triplet 本身不含 ABI 段，HelloUtau 仍然保留这一段。架构与系统取用户熟悉的名称，不沿用 vcpkg 的写法（作者 2026-10-17 决定，当时尚未发布过带 triplet 的版本，无须迁移）：架构用 `x86_64` 而不用 `x64`，因为 `x64` 是微软的叫法，`x86_64` 不偏向任何一方；`arm64` 是苹果的叫法，照用；系统用 `mac` 而不用 `osx`，因为不少用户不知道 `osx` 指什么。vcpkg 自己的 triplet（如 `x64-windows`、`arm64-osx`）照旧，只用于安装依赖。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入缓存项 `HELLO_TRIPLET`，可以 `-DHELLO_TRIPLET=` 覆盖。
 - 程序编译时由 CMake 写入自己的 triplet，更新时按它挑选附件，不在运行时推断。
 - `SHA256SUMS` 每行为一个附件的 SHA-256 摘要与文件名，格式同 `sha256sum` 的输出。更新前必须以它校验下载的附件。
-- 附件由本地脚本上传到 Gitee（`.cache/claude/tools/sync_gitee_assets.py`），可能晚于 release 本身出现。客户端只在当前 triplet 的附件与 `SHA256SUMS` 都已存在时，才把该源视为有新版本。
+- 附件由本地脚本上传到 Gitee（`.cache/claude/tools/sync_gitee_assets.py`），可能晚于 release 本身出现。客户端只在当前 triplet 的附件与 `SHA256SUMS` 都已存在时，才把该源视为有新版本。符号包只在 GitHub 上，不上传到 Gitee（作者 2026-10-18 决定），`SHA256SUMS` 中它的一行对更新没有影响，因为更新只读取所选附件的一行。
 
 ## 构建渠道
 
@@ -61,15 +64,15 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 - **系统**：两个工作流以 matrix 列出各系统，目前只有 `x86_64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分。matrix 中的 triplet 是 job 的名称，组合 action 检查它与构建的 triplet 相同，不同即失败，其后的步骤不使用它：组合 action 在配置后从 `CMakeCache.txt` 读出 `HELLO_TRIPLET`，作为输出 `triplet` 交给工作流命名 artifact，因此与程序、打包脚本所用的值必然一致，将来增加 mingw 等构建时也不会混淆（作者 2026-10-17 要求）。增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
 - **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
 - **变体**：组合 action 的输入 `variant` 选择构建的变体，每种变体在自己的构建目录中（作者 2026-10-17 决定）。
-  - `release`：Release，即发布的构建，位于 `build/Release`，打包脚本读取这里。
+  - `release`：Release，即发布的构建，位于 `build/Release`，打包脚本读取这里。Release 带调试信息，同 vcpkg 的 Release 构建（作者 2026-10-18 决定，见 `cmake/ConfigureBuildTypes.cmake`）：MSVC 编译时加 `/Z7`，把调试信息写入目标文件，链接时加 `/DEBUG /OPT:REF /OPT:ICF`，为每个二进制生成 PDB，其他编译器加 `-g`。优化与原来的 Release 相同，符号随附件发布。vcpkg 只构建 Debug 与 Release，`vcpkg_cmake_config_fixup` 只处理 `*-release.cmake`，因此不使用 RelWithDebInfo 这一配置（同 DiffScope 的 overlay triplet 的说明）。vcpkg 在 Windows 上的 Release 本来就以 `/Z7` 编译、以 `/DEBUG` 链接并安装 PDB。
   - `debug`：Debug，带断言与 Debug 运行库的检查，位于 `build/Debug`。
-  - `asan`：RelWithDebInfo 加 `HELLO_ENABLE_ADDRESS_SANITIZER`，以 AddressSanitizer 检测释放后的访问、堆与栈的越界，位于 `build/asan`。由 clang（GNU 前端，MSVC 的 ABI）构建，与本地相同（作者 2026-10-17 决定）。clang 与 MSVC 的运行库同名，测试的步骤把 clang 的运行库目录放在 `PATH` 的最前面。MSVC 14.51 的标准库除 `std::vector` 与 `std::string` 外还为 `std::optional` 加了注解，14.44 没有，因此只关闭前两者时，CI 上 cl 与 clang 的构建都报告 `use-after-poison`，本地都不报告。根目录的 `CMakeLists.txt` 改以 `_DISABLE_STL_ANNOTATION` 关闭全部注解。依赖取自 vcpkg，未经插桩，因此关闭了 MSVC 标准库容器的注解，`std::vector` 与 `std::string` 在预留容量内的越界不能发现，见根目录 `CMakeLists.txt`。Release 下崩溃而 Debug 下不崩溃的释放后访问（编辑频率表对话框，`407c21a2`）即是这一变体所针对的问题。
+  - `asan`：Release 加 `HELLO_ENABLE_ADDRESS_SANITIZER`，以 AddressSanitizer 检测释放后的访问、堆与栈的越界，位于 `build/asan`。Release 带调试信息，报告中有函数名与行号。由 clang（GNU 前端，MSVC 的 ABI）构建，与本地相同（作者 2026-10-17 决定）。clang 与 MSVC 的运行库同名，测试的步骤把 clang 的运行库目录放在 `PATH` 的最前面。MSVC 14.51 的标准库除 `std::vector` 与 `std::string` 外还为 `std::optional` 加了注解，14.44 没有，因此只关闭前两者时，CI 上 cl 与 clang 的构建都报告 `use-after-poison`，本地都不报告。`cmake/EnableAddressSanitizer.cmake` 改以 `_DISABLE_STL_ANNOTATION` 关闭全部注解。依赖取自 vcpkg，未经插桩，因此关闭了 MSVC 标准库容器的注解，`std::vector` 与 `std::string` 在预留容量内的越界不能发现，见该文件。Release 下崩溃而 Debug 下不崩溃的释放后访问（编辑频率表对话框，`407c21a2`）即是这一变体所针对的问题。
   - `deploy.yml` 的 job `package` 构建 release 并打包，job `test` 同时构建 debug 与 asan。打包不等 `test` 的结果，因此每次推送都产出 CI 的安装包，`test` 失败时整次运行标为失败。tag 的 release 在两个 job 都通过后才创建。`ci.yml` 构建全部三种变体，不打包。
 - **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip、zlib 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
 - **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。release 变体的任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
 - **编译缓存**：sccache（`mozilla-actions/sccache-action`），以 GitHub Actions 的缓存逐项保存（作者 2026-10-18 要求）。每次检出的源文件时间都是新的，只靠 Ninja 会全部重新编译，sccache 对预处理结果与选项未变的目标文件直接取用缓存。sccache 不能缓存 MSVC 把调试信息写入共享 PDB（`/Zi`）的目标文件，因此 CI 以 CMP0141 与 `CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded` 把调试信息写入目标文件（`/Z7`），链接时仍生成每个二进制的 PDB。`hellokit/BuildInfo.h` 随每次提交改变，只有包含它的少数源文件每次重新编译。运行的摘要附上 sccache 的统计。
-- **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包与 `SHA256SUMS`。artifact 按系统命名为 `helloutau-<triplet>`，每次运行相同，渠道与提交只写在文件名中，同 lorelei。
-- **发布**：推送 `v` 开头的 tag 时渠道为 `release`。tag 须与 `HELLO_VERSION` 一致，否则构建失败。各系统都通过后创建 GitHub 的 release，附上各系统的附件与合并后的一份 `SHA256SUMS`，标题为 `HelloUtau <version>`，说明取自 tag 所在提交的 `docs/changelog/<version>.md`，该文件不存在时不创建 release。以工作流的令牌创建的 release 不触发其他工作流，因此随后以 `gh workflow run` 启动 `sync-gitee-release.yml`。
+- **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包、符号包与 `SHA256SUMS`。每个附件是单独的 artifact，以 `actions/upload-artifact` 7 的 `archive: false` 原样上传，下载即是文件本身，与 release 的附件相同，artifact 名即文件名，渠道与提交写在文件名中。各附件的摘要写入运行的摘要。
+- **发布**：推送 `v` 开头的 tag 时渠道为 `release`。tag 须与 `HELLO_VERSION` 一致，否则构建失败。各系统都通过后创建 GitHub 的 release，附上各系统的附件（包括符号包，因为 artifact 会过期）与由下载的附件算出的一份 `SHA256SUMS`，标题为 `HelloUtau <version>`，说明取自 tag 所在提交的 `docs/changelog/<version>.md`，该文件不存在时不创建 release。以工作流的令牌创建的 release 不触发其他工作流，因此随后以 `gh workflow run` 启动 `sync-gitee-release.yml`。
 
 ## 目录
 
@@ -110,7 +113,7 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 
 Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中文、繁体中文与日语（7.0.2 起两种中文均为官方翻译）。脚本为 `dist/installer/windows/setup.iss`，是可以直接用 Inno Setup 打开和编译的普通脚本，提示文字与卸载页分别在同目录的 `messages.iss` 与 `uninstall.iss` 中。版本号、源目录与输出文件名由命令行的 `/D` 传入，不经 `configure_file()`（作者 2026-10-11 决定）。
 
-同目录的 `package.ps1` 打包一个已完成的 Release 构建：`cmake --install`，补上构建时复制到程序旁的依赖 DLL，以 windeployqt 部署 Qt（不带 Direct3D 的着色器编译器 `d3dcompiler_47.dll`、`dxcompiler.dll`、`dxil.dll` 与软件 OpenGL `opengl32sw.dll`，因为界面以光栅方式绘制，不使用 Qt Quick、OpenGL 控件与 RHI 控件，作者 2026-10-15 同意），删除只供开发者使用的文件，复制 C++ 运行库，生成 zip、安装包与 `SHA256SUMS`。它从构建目录的 `CMakeCache.txt` 读取版本号（`CMAKE_PROJECT_VERSION`）与 triplet（`HELLO_TRIPLET`）。脚本不负责构建，因为构建需要编译器的环境。
+同目录的 `package.ps1` 打包一个已完成的 Release 构建：`cmake --install`，补上构建时复制到程序旁的依赖 DLL，以 windeployqt 部署 Qt（不带 Direct3D 的着色器编译器 `d3dcompiler_47.dll`、`dxcompiler.dll`、`dxil.dll` 与软件 OpenGL `opengl32sw.dll`，因为界面以光栅方式绘制，不使用 Qt Quick、OpenGL 控件与 RHI 控件，作者 2026-10-15 同意），删除只供开发者使用的文件，复制 C++ 运行库，收集各个二进制的 PDB，生成 zip、安装包、符号包与 `SHA256SUMS`。它从构建目录的 `CMakeCache.txt` 读取版本号（`CMAKE_PROJECT_VERSION`）与 triplet（`HELLO_TRIPLET`）。脚本不负责构建，因为构建需要编译器的环境。
 
 ### 标识与安装模式
 
