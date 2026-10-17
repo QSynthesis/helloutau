@@ -24,8 +24,7 @@ namespace hello::daw {
     /// menu at the mouse pointer. That command is in no menu.
     ///
     /// The plugins are discovered when the menu first opens, on Refresh, and after the UTAU
-    /// folder in the settings has changed. The discovery covers the HelloUtau folder for UTAU
-    /// plugins, userDirectory(), and then the \c plugins folder of UTAU.
+    /// folder in the settings has changed. The discovery covers the folders of pluginFolders().
     class ClassicPluginContribution : public ActionContribution {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ClassicPluginContribution)
     public:
@@ -40,7 +39,8 @@ namespace hello::daw {
         /// separate from the \c plugins folder of UTAU and from the native plugins.
         static std::filesystem::path userDirectory(const AppSettings &settings);
 
-        /// Returns the plugin folders in the order of discovery: userDirectory(), and then the
+        /// Returns the plugin folders in the order of discovery: userDirectory(), the \c plugins
+        /// directory of UtauSettings::dataDirectory() if that is not empty, and then the
         /// \c plugins folder of the UTAU folder of \a settings if that is set.
         static QList<std::filesystem::path> pluginFolders(const AppSettings &settings);
 

@@ -81,11 +81,12 @@ namespace hello::daw {
         }
 
         // Returns the voiceDir value as UTAU writes it on save. An absolute path inside a voice
-        // folder of locations becomes a %VOICE% value. A %VOICE% value and a relative path are
-        // returned unchanged, see docs/claude/utau-voicedir-cachedir.md.
+        // folder or a data folder of locations becomes a %VOICE% or %DATA% value. A prefixed
+        // value and a relative path are returned unchanged, see
+        // docs/claude/utau-voicedir-cachedir.md.
         QString normalizedVoiceDir(const QString &value, const kit::VoiceLocations &locations) {
             const auto path = kit::Project::pathOf(value);
-            if (value.startsWith(kit::Track::voicePrefix) || !path.is_absolute()) {
+            if (kit::Track::hasPrefix(value) || !path.is_absolute()) {
                 return value;
             }
             return kit::Track::voiceDirOf(path, locations);
@@ -107,16 +108,16 @@ namespace hello::daw {
         m_outputFileInvalid->setToolTip(tr("The output file is not a valid file name."));
 
         // The items of the box are the voiceDir values themselves, so that a relative path and a
-        // %VOICE% value of the same name are distinct. The folders in the voice folders are listed
-        // by the value that UTAU writes for them. A folder hidden by a folder of the same name in a
-        // voice folder of higher priority is therefore listed by its absolute path. The
+        // prefixed value of the same name are distinct. The folders in the voice bank folders are
+        // listed by the value that UTAU writes for them. A folder hidden by a folder of the same
+        // name in a folder of higher priority is therefore listed by its absolute path. The
         // completer matches any part of an item, so that a voice bank is found by its name.
         m_voiceDir = new QComboBox();
         m_voiceDir->setEditable(true);
         m_voiceDir->setInsertPolicy(QComboBox::NoInsert);
         m_voiceDirInvalid = addInvalidMark(m_voiceDir->lineEdit(), warningIcon);
         const auto locations = m_settings.voiceBanks().locations();
-        for (const auto &root : locations.voiceFolders) {
+        for (const auto &root : locations.voiceBankFolders()) {
             const auto folders =
                 QDir(textOf(root)).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
             for (const auto &folder : folders) {
@@ -263,14 +264,14 @@ namespace hello::daw {
     }
 
     void ProjectPropertiesDialog::browseVoiceDir() {
-        // The file dialog starts in the current voice bank, or else in the first voice folder
-        // that exists, or else in the folder of this program.
+        // The file dialog starts in the current voice bank, or else in the first voice bank
+        // folder that exists, or else in the folder of this program.
         const auto locations = m_settings.voiceBanks().locations();
         std::error_code error;
         auto start = voiceDirectory();
         if (start.empty() || !fs::is_directory(start, error)) {
             start.clear();
-            for (const auto &folder : locations.voiceFolders) {
+            for (const auto &folder : locations.voiceBankFolders()) {
                 if (fs::is_directory(folder, error)) {
                     start = folder;
                     break;

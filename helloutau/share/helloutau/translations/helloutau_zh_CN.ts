@@ -3743,8 +3743,8 @@ Lyrics:
         <translation>UTAU 按自身所在的文件夹解析相对路径的音源。取消此选项，或 UTAU 文件夹不存在时，按 HelloUtau 所在的文件夹解析。</translation>
     </message>
     <message>
-        <source>The voice folders that %VOICE% denotes, in decreasing priority:</source>
-        <translation>%VOICE% 所指的音源文件夹，按优先级从高到低：</translation>
+        <source>The folders whose voice banks are listed, in decreasing priority:</source>
+        <translation>列出其中音源的文件夹，按优先级从高到低：</translation>
     </message>
 </context>
 <context>

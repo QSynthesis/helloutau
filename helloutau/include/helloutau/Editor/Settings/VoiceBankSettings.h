@@ -18,8 +18,8 @@ namespace hello::daw {
         ~VoiceBankSettings();
 
         /// Returns the voice folder of HelloUtau, the \c voice directory of
-        /// AppSettings::classicExtensionsDirectory(). The folder is the first voice folder of
-        /// locations(), and it is not created by this class.
+        /// AppSettings::classicExtensionsDirectory(). The folder is the first of the voice bank
+        /// folders of locations(), and it is not created by this class.
         std::filesystem::path folder() const;
 
         /// Returns whether a relative \c VoiceDir is resolved against UtauSettings::directory(),
@@ -28,9 +28,11 @@ namespace hello::daw {
         bool isRelativeToUtau() const;
         void setRelativeToUtau(bool relative);
 
-        /// Returns the locations against which a \c VoiceDir is resolved. The \c %VOICE% prefix
-        /// denotes folder() and then the \c voice directory of UtauSettings::directory(), and a
-        /// relative path is resolved as isRelativeToUtau() specifies.
+        /// Returns the locations against which a \c VoiceDir is resolved. The \c %DATA% prefix
+        /// denotes AppSettings::classicExtensionsDirectory() and then
+        /// UtauSettings::dataDirectory(), the \c %VOICE% prefix denotes the \c voice directory of
+        /// UtauSettings::directory() if that directory exists, and a relative path is resolved as
+        /// isRelativeToUtau() specifies.
         kit::VoiceLocations locations() const;
 
     private:

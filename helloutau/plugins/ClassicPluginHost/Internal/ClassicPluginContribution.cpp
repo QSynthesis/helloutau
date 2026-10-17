@@ -32,9 +32,11 @@ namespace hello::daw {
 
     QList<std::filesystem::path>
         ClassicPluginContribution::pluginFolders(const AppSettings &settings) {
-        // The plugin folder of HelloUtau precedes the plugins folder of UTAU, as with the voice
-        // folders of VoiceBankSettings::locations().
+        // In the order of the voice bank folders of VoiceBankSettings::locations()
         QList<std::filesystem::path> folders{userDirectory(settings)};
+        if (const auto data = UtauSettings::dataDirectory(); !data.empty()) {
+            folders.push_back(data / u"plugins");
+        }
         if (const auto utauPlugins = pluginsOf(settings.utau().directory()); !utauPlugins.empty()) {
             folders.push_back(utauPlugins);
         }

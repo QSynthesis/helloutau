@@ -132,17 +132,27 @@ namespace {
         return warned;
     }
 
-    // Creates Alpha and shared in the voice folder of settings, and beta and shared in the voice
-    // folder of a UTAU directory, which settings uses. Returns the UTAU directory.
+    // Creates Alpha and shared in the voice folder of settings, beta and shared in the voice
+    // folder of a UTAU directory, which settings uses, and gamma and shared in the voice folder
+    // of a data directory of UTAU in dir, which replaces that of the user. Returns the UTAU
+    // directory.
     fs::path voiceFoldersIn(const QTemporaryDir &dir, AppSettings &settings) {
+        const auto data = pathIn(dir, "appdata") / "UTAU";
+        UtauSettings::setDataDirectory(data);
         const auto utau = pathIn(dir, "utau");
         for (const auto &folder :
              {settings.voiceBanks().folder() / "Alpha", settings.voiceBanks().folder() / "shared",
-              utau / "voice" / "beta", utau / "voice" / "shared"}) {
+              utau / "voice" / "beta", utau / "voice" / "shared", data / "voice" / "gamma",
+              data / "voice" / "shared"}) {
             fs::create_directories(folder);
         }
         settings.utau().setDirectory(utau);
         return utau;
+    }
+
+    // Returns the %DATA% value of the voice bank name in the voice directory of a data folder
+    QString dataValueOf(const char *name) {
+        return QDir::toNativeSeparators(QStringLiteral("%DATA%/voice/") + QLatin1String(name));
     }
 
     // Returns the label of dialog that shows the resolved voice folder, the only label whose text
@@ -386,14 +396,14 @@ private Q_SLOTS:
         dialog.nameEdit()->setText(QStringLiteral("other"));
         const auto changes = dialog.changes();
         QCOMPARE(changes.name, std::optional(QStringLiteral("other")));
-        QCOMPARE(changes.voiceDir, std::optional(QStringLiteral("%VOICE%bank")));
+        QCOMPARE(changes.voiceDir, std::optional(dataValueOf("bank")));
         QCOMPARE(changes.wavtool, std::optional(QStringLiteral("tools\\wavtool.exe")));
         QCOMPARE(changes.resampler, std::optional(QStringLiteral("resampler.exe")));
         QVERIFY(!changes.tempo && !changes.flags && !changes.outputFile && !changes.mode2);
     }
 
     // A field whose normalized value equals the value of the project is left out of the changes.
-    // A %VOICE% value, a relative voice folder, a synth tool relative to the UTAU directory and
+    // A %DATA% value, a relative voice folder, a synth tool relative to the UTAU directory and
     // an absolute synth tool outside the UTAU directory are normalized.
     void normalized_values_are_left_out_of_the_changes() {
         QTemporaryDir dir;
@@ -405,7 +415,7 @@ private Q_SLOTS:
         project.tracks.push_back({});
         project.settings.wavtool = QStringLiteral("tools\\wavtool.exe");
         project.settings.resampler = textOf(outside);
-        for (const auto &voiceDir : {QStringLiteral("%VOICE%bank"), QStringLiteral("bank")}) {
+        for (const auto &voiceDir : {dataValueOf("bank"), QStringLiteral("bank")}) {
             project.tracks[0].voiceDir = voiceDir;
             ProjectPropertiesDialog dialog(project, settings);
             dialog.nameEdit()->setText(QStringLiteral("other"));
@@ -451,7 +461,7 @@ private Q_SLOTS:
             QCOMPARE(dialog.result(), int(QDialog::Accepted));
         }
 
-        project.tracks[0].voiceDir = QStringLiteral("%VOICE%bank");
+        project.tracks[0].voiceDir = dataValueOf("bank");
         project.settings.wavtool = QStringLiteral("tools\\wavtool.exe");
         project.settings.resampler = QStringLiteral("resampler.exe");
         ProjectPropertiesDialog dialog(project, settings);
@@ -477,7 +487,7 @@ private Q_SLOTS:
         utauWithSynthToolsIn(dir, settings);
         kit::Project project;
         project.tracks.push_back({});
-        project.tracks[0].voiceDir = QStringLiteral("%VOICE%bank");
+        project.tracks[0].voiceDir = dataValueOf("bank");
         project.settings.wavtool = QStringLiteral("tools\\wavtool.exe");
         project.settings.resampler = QStringLiteral("resampler.exe");
         project.settings.outputFile = QStringLiteral("con.wav");
@@ -502,13 +512,14 @@ private Q_SLOTS:
         QVERIFY(!mark->isVisible());
     }
 
-    // The items are the values that UTAU writes for the folders of the voice folders. A folder
-    // hidden by a folder of the same name in a voice folder of higher priority is an absolute
+    // The items are the values that UTAU writes for the folders of the voice bank folders: the
+    // folders of the data folders by %DATA%, and those of the UTAU directory by %VOICE%. A folder
+    // hidden by a folder of the same name in a data folder of higher priority is an absolute
     // path.
     void the_voice_folder_items_are_the_values_that_utau_writes() {
         QTemporaryDir dir;
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
-        const auto utau = voiceFoldersIn(dir, settings);
+        voiceFoldersIn(dir, settings);
         kit::Project project;
         project.tracks.push_back({});
         ProjectPropertiesDialog dialog(project, settings);
@@ -519,8 +530,9 @@ private Q_SLOTS:
             items.push_back(box->itemText(i));
         }
         QCOMPARE(items,
-                 (QStringList{QStringLiteral("%VOICE%Alpha"), QStringLiteral("%VOICE%shared"),
-                              QStringLiteral("%VOICE%beta"), textOf(utau / "voice" / "shared")}));
+                 (QStringList{dataValueOf("Alpha"), dataValueOf("shared"), dataValueOf("gamma"),
+                              textOf(UtauSettings::dataDirectory() / "voice" / "shared"),
+                              QStringLiteral("%VOICE%beta"), QStringLiteral("%VOICE%shared")}));
     }
 
     // A typed name is a relative voice folder, not a %VOICE% value.
@@ -549,7 +561,7 @@ private Q_SLOTS:
 
         completer->setCompletionPrefix(QStringLiteral("LPH"));
         QCOMPARE(completer->completionCount(), 1);
-        QCOMPARE(completer->currentCompletion(), QStringLiteral("%VOICE%Alpha"));
+        QCOMPARE(completer->currentCompletion(), dataValueOf("Alpha"));
     }
 
     // The resolved voice folder is shown below the box, and is hidden if the voice folder does
@@ -560,12 +572,15 @@ private Q_SLOTS:
         voiceFoldersIn(dir, settings);
         kit::Project project;
         project.tracks.push_back({});
-        project.tracks[0].voiceDir = QStringLiteral("%VOICE%shared");
+        project.tracks[0].voiceDir = dataValueOf("shared");
         ProjectPropertiesDialog dialog(project, settings);
         const auto label = resolvedLabelOf(dialog);
         QVERIFY(label);
         QVERIFY(label->isVisibleTo(&dialog));
         QVERIFY(label->text().endsWith(textOf(settings.voiceBanks().folder() / "shared")));
+
+        dialog.voiceDirEdit()->setText(QStringLiteral("%VOICE%shared"));
+        QVERIFY(label->text().endsWith(textOf(pathIn(dir, "utau") / "voice" / "shared")));
 
         dialog.voiceDirEdit()->setText(QStringLiteral("%VOICE%beta"));
         QVERIFY(label->isVisibleTo(&dialog));
@@ -579,6 +594,8 @@ private Q_SLOTS:
 int main(int argc, char *argv[]) {
     // Runs without a display
     qputenv("QT_QPA_PLATFORM", "offscreen");
+    // Without the voice banks that UTAU has installed for the user, which %DATA% also denotes
+    UtauSettings::setDataDirectory(fs::path());
     QApplication app(argc, argv);
     test_ProjectPropertiesDialog test;
     return QTest::qExec(&test, argc, argv);

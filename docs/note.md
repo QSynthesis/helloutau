@@ -187,13 +187,15 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它只表示该
 
 ## 音源文件夹
 
-工程的 `VoiceDir` 按以下规则解析（作者 2026-10-08 决定）。UTAU 自身的规则见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)：`%VOICE%` 与相对路径都以 `utau.exe` 所在目录为基准。
+工程的 `VoiceDir` 按以下规则解析（作者 2026-10-08 决定，`%DATA%` 为 2026-10-18 决定）。UTAU 自身的规则见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)：`%VOICE%` 与相对路径都以 `utau.exe` 所在目录为基准，`%DATA%` 表示其安装包所用的 `%AppData%\UTAU`。
 
-- **`%VOICE%` 前缀依次表示以下音源文件夹**，取第一个包含该音源的文件夹：一、HelloUtau 自己的音源文件夹，即文档目录下的 `OpenVPI/HelloUtau/ClassicExtensions/voice`（作者 2026-10-17 决定，见 [`Distribution.md`](Distribution.md)「用户目录」）；二、设置中 UTAU 文件夹的 `voice` 目录，仅在设置了 UTAU 文件夹时存在。不存在的音源文件夹视同未列出。
+- **`%VOICE%` 前缀表示设置中 UTAU 文件夹的 `voice` 目录**，与 UTAU 相同，仅在 UTAU 文件夹存在时有效。
+- **`%DATA%` 前缀依次表示以下数据文件夹**，取第一个包含该路径的文件夹：一、HelloUtau 的 `ClassicExtensions`，即文档目录下的 `OpenVPI/HelloUtau/ClassicExtensions`（见 [`Distribution.md`](Distribution.md)「用户目录」），其 `voice` 是 HelloUtau 自己的音源文件夹；二、UTAU 的数据文件夹，即应用数据文件夹下的 `UTAU`：Windows 上为 `%AppData%\UTAU`，UTAU 的安装包把音源装在其 `voice` 中。macOS 上为 `~/Library/Application Support/UTAU`，Linux 上为 `~/.local/share/UTAU`，这两个平台没有原生的 UTAU，该文件夹用于存放从 Windows 复制过来的音源与插件（作者 2026-10-18 决定）。不存在的文件夹视同未列出。`ClassicExtensions` 与 `%AppData%\UTAU` 的结构相同，因此同一个 `%DATA%\voice\名称` 在 HelloUtau 中先找前者，在 UTAU 中找后者。
 - **不带前缀的相对路径**：设置中的 UTAU 文件夹存在时，由用户选择按 UTAU 文件夹还是按 HelloUtau 程序所在目录解析，默认按 UTAU 文件夹，与 UTAU 一致；UTAU 文件夹未设置或不存在时，按 HelloUtau 程序所在目录解析。
-- **保存时**，位于某个音源文件夹内的绝对路径写为 `%VOICE%` 形式，但仅当该写法解析回同一目录时；被优先级更高的音源文件夹中的同名文件夹遮蔽时写绝对路径。HelloUtau 音源文件夹中的音源因此也写为 `%VOICE%名称`，用 UTAU 打开该工程时找不到，这一代价已经作者接受。
+- **保存时**，位于 UTAU 文件夹的 `voice` 内的绝对路径写为 `%VOICE%名称`，位于某个数据文件夹内的写为 `%DATA%\voice\名称`（前缀后带分隔符，同 UTAU），但仅当该写法解析回同一目录时；被优先级更高的文件夹中的同名文件夹遮蔽时写绝对路径。HelloUtau 音源文件夹中的音源因此写为 `%DATA%\voice\名称`，用 UTAU 打开该工程时到 `%AppData%\UTAU\voice` 中查找，音源不在那里时找不到，这一代价已经作者接受。
+- **列出音源与插件**：音源依次列出 `ClassicExtensions/voice`、UTAU 的数据文件夹的 `voice` 与 UTAU 文件夹的 `voice` 中的文件夹，UTAU 插件依次从三处同名的 `plugins` 中查找。
 
-**UTAU 文件夹的用途**：解析以相对路径出现的 `Tool1`、`Tool2`；在上述选项下解析以相对路径出现的音源；其 `voice` 目录作为第二个音源文件夹，其 `plugins` 目录作为 UTAU 插件的来源。
+**UTAU 文件夹的用途**：解析以相对路径出现的 `Tool1`、`Tool2`；在上述选项下解析以相对路径出现的音源；其 `voice` 目录即 `%VOICE%` 所指的音源文件夹，其 `plugins` 目录作为 UTAU 插件的来源之一。
 
 ## 缓存
 

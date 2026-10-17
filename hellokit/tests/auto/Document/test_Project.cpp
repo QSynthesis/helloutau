@@ -487,6 +487,56 @@ private Q_SLOTS:
         QCOMPARE(Track::voiceDirOf(first / u"bank", both), QStringLiteral("%VOICE%bank"));
     }
 
+    // %DATA% denotes the first data folder that contains the rest of the path, with or without a
+    // separator after the prefix, and is written with a separator, as UTAU writes
+    // %DATA%\voice\uta. %VOICE% does not reach the data folders.
+    void a_data_dir_resolves_against_the_data_folders() {
+        QTemporaryDir dir;
+        const auto root = fs::path(dir.path().toStdU16String());
+        const auto first = root / u"first";
+        const auto second = root / u"second";
+        const auto utau = root / u"utau";
+        fs::create_directories(first / u"voice" / u"bank");
+        fs::create_directories(second / u"voice" / u"bank");
+        fs::create_directories(second / u"voice" / u"only");
+        fs::create_directories(utau / u"voice" / u"bank");
+        const auto resolvedIn = [](QStringView voiceDir, const VoiceLocations &locations) {
+            Track track;
+            track.voiceDir = voiceDir.toString();
+            const auto path = track.voiceDirectory(locations);
+            return path.empty() ? QString() : textOf(path);
+        };
+
+        auto locations = VoiceLocations::ofUtau(utau, first);
+        locations.dataFolders.push_back(second);
+        QCOMPARE(locations.voiceBankFolders(),
+                 (std::vector<fs::path>{first / u"voice", second / u"voice", utau / u"voice"}));
+        QCOMPARE(resolvedIn(u"%DATA%\\voice\\bank", locations), textOf(first / u"voice" / u"bank"));
+        QCOMPARE(resolvedIn(u"%DATA%voice\\bank", locations), textOf(first / u"voice" / u"bank"));
+        QCOMPARE(resolvedIn(u"%DATA%\\voice\\only", locations),
+                 textOf(second / u"voice" / u"only"));
+        QCOMPARE(resolvedIn(u"%VOICE%bank", locations), textOf(utau / u"voice" / u"bank"));
+        QCOMPARE(resolvedIn(u"%VOICE%only", locations), textOf(utau / u"voice" / u"only"));
+        QCOMPARE(resolvedIn(u"%DATA%\\voice\\bank", VoiceLocations::ofUtau(utau)), QString());
+
+        const auto separator = QDir::separator();
+        QCOMPARE(Track::voiceDirOf(first / u"voice" / u"bank", locations),
+                 QStringLiteral("%DATA%") + separator + QStringLiteral("voice") + separator +
+                     QStringLiteral("bank"));
+        QCOMPARE(Track::voiceDirOf(second / u"voice" / u"only", locations),
+                 QStringLiteral("%DATA%") + separator + QStringLiteral("voice") + separator +
+                     QStringLiteral("only"));
+        // Hidden by the folder of the same name in the first data folder
+        QCOMPARE(Track::voiceDirOf(second / u"voice" / u"bank", locations),
+                 nativeOf(second / u"voice" / u"bank"));
+        QCOMPARE(Track::voiceDirOf(utau / u"voice" / u"bank", locations),
+                 QStringLiteral("%VOICE%bank"));
+
+        QVERIFY(Track::hasPrefix(u"%DATA%\\voice\\bank"));
+        QVERIFY(Track::hasPrefix(u"%VOICE%bank"));
+        QVERIFY(!Track::hasPrefix(u"bank"));
+    }
+
     // Each start is paired with the first end of the same name from its note on, or with the last
     // note if none follows.
     void regions_pair_each_start_with_the_next_end() {

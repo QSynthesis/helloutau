@@ -496,34 +496,50 @@ private Q_SLOTS:
         QCOMPARE(settings.voiceBanks().folder(), user / u"ClassicExtensions" / u"voice");
     }
 
-    // The voice folder of HelloUtau comes first, then the voice directory of UTAU if the UTAU
-    // folder exists. A relative VoiceDir is resolved against the UTAU folder only if the folder
-    // exists and the setting enables it, and against the directory of the program otherwise.
+    // %DATA% denotes the classic extensions directory of HelloUtau and then the data directory of
+    // UTAU, the UTAU directory of the application data folder. %VOICE% denotes the voice directory
+    // of UTAU if the UTAU folder exists. A relative VoiceDir is resolved against the UTAU folder
+    // only if the folder exists and the setting enables it, and against the directory of the
+    // program otherwise.
     void the_voice_locations_follow_the_utau_folder() {
+        UtauSettings::setDataDirectory(std::nullopt);
+        QCOMPARE(UtauSettings::dataDirectory().filename(), std::filesystem::path(u"UTAU"));
+
         QTemporaryDir dir;
+        const auto root = std::filesystem::path(dir.path().toStdU16String());
+        const auto appData = root / u"appdata" / u"UTAU";
+        UtauSettings::setDataDirectory(appData);
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
         const auto program =
             std::filesystem::path(QCoreApplication::applicationDirPath().toStdU16String());
-        const auto voice =
-            std::filesystem::path(dir.path().toStdU16String()) / u"ClassicExtensions" / u"voice";
-        QCOMPARE(settings.voiceBanks().folder(), voice);
+        const auto classic = root / u"ClassicExtensions";
+        QCOMPARE(settings.voiceBanks().folder(), classic / u"voice");
 
+        const std::vector<std::filesystem::path> data{classic, appData};
         auto locations = settings.voiceBanks().locations();
-        QCOMPARE(locations.voiceFolders, std::vector<std::filesystem::path>{voice});
+        QCOMPARE(locations.dataFolders, data);
+        QVERIFY(locations.voiceFolders.empty());
         QCOMPARE(locations.relativeBase, program);
+        QCOMPARE(locations.voiceBankFolders().front(), settings.voiceBanks().folder());
 
-        const auto utau = std::filesystem::path(dir.path().toStdU16String()) / u"utau";
+        UtauSettings::setDataDirectory(std::filesystem::path());
+        QCOMPARE(settings.voiceBanks().locations().dataFolders,
+                 std::vector<std::filesystem::path>{classic});
+        UtauSettings::setDataDirectory(appData);
+
+        const auto utau = root / u"utau";
         settings.utau().setDirectory(utau);
-        QCOMPARE(settings.voiceBanks().locations().voiceFolders.size(), size_t(1));
+        QVERIFY(settings.voiceBanks().locations().voiceFolders.empty());
 
         std::filesystem::create_directories(utau);
         locations = settings.voiceBanks().locations();
-        QCOMPARE(locations.voiceFolders,
-                 (std::vector<std::filesystem::path>{voice, utau / u"voice"}));
+        QCOMPARE(locations.dataFolders, data);
+        QCOMPARE(locations.voiceFolders, std::vector<std::filesystem::path>{utau / u"voice"});
         QCOMPARE(locations.relativeBase, utau);
 
         settings.voiceBanks().setRelativeToUtau(false);
         QCOMPARE(settings.voiceBanks().locations().relativeBase, program);
+        UtauSettings::setDataDirectory(std::nullopt);
     }
 
     // The portamento settings of Pitch Control are stored as a whole, and the vibrato with its

@@ -107,15 +107,31 @@ namespace hello::kit {
 
     }
 
-    VoiceLocations VoiceLocations::ofUtau(const std::filesystem::path &utauDirectory) {
-        if (utauDirectory.empty()) {
-            return {};
+    VoiceLocations VoiceLocations::ofUtau(const std::filesystem::path &utauDirectory,
+                                          const std::filesystem::path &dataDirectory) {
+        VoiceLocations locations;
+        if (!utauDirectory.empty()) {
+            locations.voiceFolders.push_back(utauDirectory / u"voice");
+            locations.relativeBase = utauDirectory;
         }
-        return {{utauDirectory / u"voice"}, utauDirectory};
+        if (!dataDirectory.empty()) {
+            locations.dataFolders.push_back(dataDirectory);
+        }
+        return locations;
+    }
+
+    std::vector<std::filesystem::path> VoiceLocations::voiceBankFolders() const {
+        std::vector<std::filesystem::path> folders;
+        for (const auto &folder : dataFolders) {
+            folders.push_back(folder / u"voice");
+        }
+        folders.insert(folders.end(), voiceFolders.begin(), voiceFolders.end());
+        return folders;
     }
 
     bool VoiceLocations::operator==(const VoiceLocations &other) const {
-        return voiceFolders == other.voiceFolders && relativeBase == other.relativeBase;
+        return voiceFolders == other.voiceFolders && relativeBase == other.relativeBase &&
+               dataFolders == other.dataFolders;
     }
 
     bool VoiceLocations::operator!=(const VoiceLocations &other) const {
@@ -146,19 +162,24 @@ namespace hello::kit {
         return TimeSignature{numerator, denominator};
     }
 
+    bool Track::hasPrefix(QStringView voiceDir) {
+        return voiceDir.startsWith(voicePrefix) || voiceDir.startsWith(dataPrefix);
+    }
+
     std::filesystem::path Track::voiceDirectory(const VoiceLocations &locations) const {
         if (voiceDir.isEmpty()) {
             return {};
         }
-        if (voiceDir.startsWith(voicePrefix)) {
+        const bool voice = voiceDir.startsWith(voicePrefix);
+        if (voice || voiceDir.startsWith(dataPrefix)) {
             // A separator after the prefix would otherwise make the rest an absolute path.
-            auto rest = voiceDir.mid(voicePrefix.size());
+            auto rest = voiceDir.mid((voice ? voicePrefix : dataPrefix).size());
             while (rest.startsWith(u'\\') || rest.startsWith(u'/')) {
                 rest.remove(0, 1);
             }
             const auto relative = Project::pathOf(rest);
             std::filesystem::path fallback;
-            for (const auto &folder : locations.voiceFolders) {
+            for (const auto &folder : voice ? locations.voiceFolders : locations.dataFolders) {
                 std::error_code error;
                 if (folder.empty() || !std::filesystem::is_directory(folder, error)) {
                     continue;
@@ -186,20 +207,26 @@ namespace hello::kit {
     QString Track::voiceDirOf(const std::filesystem::path &directory,
                               const VoiceLocations &locations) {
         const auto bank = directoryOf(directory);
-        for (const auto &folder : locations.voiceFolders) {
-            if (folder.empty()) {
-                continue;
-            }
-            const auto relative = bank.lexically_relative(directoryOf(folder));
-            if (relative.empty() || relative == u"." || *relative.begin() == u"..") {
-                continue;
-            }
-            Track track;
-            track.voiceDir =
-                voicePrefix.toString() +
-                QDir::toNativeSeparators(QString::fromStdU16String(relative.u16string()));
-            if (directoryOf(track.voiceDirectory(locations)) == bank) {
-                return track.voiceDir;
+        // UTAU writes a separator after %DATA% and none after %VOICE%.
+        const std::pair<const std::vector<std::filesystem::path> &, QString> prefixes[] = {
+            {locations.voiceFolders, voicePrefix.toString()                   },
+            {locations.dataFolders,  dataPrefix.toString() + QDir::separator()},
+        };
+        for (const auto &[folders, prefix] : prefixes) {
+            for (const auto &folder : folders) {
+                if (folder.empty()) {
+                    continue;
+                }
+                const auto relative = bank.lexically_relative(directoryOf(folder));
+                if (relative.empty() || relative == u"." || *relative.begin() == u"..") {
+                    continue;
+                }
+                Track track;
+                track.voiceDir = prefix + QDir::toNativeSeparators(
+                                              QString::fromStdU16String(relative.u16string()));
+                if (directoryOf(track.voiceDirectory(locations)) == bank) {
+                    return track.voiceDir;
+                }
             }
         }
         return QDir::toNativeSeparators(QString::fromStdU16String(bank.u16string()));

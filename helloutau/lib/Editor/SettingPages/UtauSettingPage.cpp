@@ -62,11 +62,15 @@ namespace hello::daw {
     }
 
     void UtauSettingPage::showVoiceFolders() {
-        // The folders are listed in the order that VoiceBankSettings::locations() returns them
-        // for the UTAU folder being edited
-        QStringList lines{tr("The voice folders that %VOICE% denotes, in decreasing priority:")};
+        // The folders are listed in the order of kit::VoiceLocations::voiceBankFolders() for the
+        // UTAU folder being edited
+        QStringList lines{tr("The folders whose voice banks are listed, in decreasing priority:")};
         lines.push_back(QDir::toNativeSeparators(
             QString::fromStdU16String(m_settings.voiceBanks().folder().u16string())));
+        if (const auto data = UtauSettings::dataDirectory(); !data.empty()) {
+            lines.push_back(
+                QDir::toNativeSeparators(QString::fromStdU16String((data / u"voice").u16string())));
+        }
         const auto utau = pathText(m_utauDirectory);
         if (!utau.isEmpty()) {
             lines.push_back(QDir::toNativeSeparators(utau + QStringLiteral("/voice")));

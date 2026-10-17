@@ -34,7 +34,10 @@ namespace hello::daw {
 
     kit::VoiceLocations VoiceBankSettings::locations() const {
         kit::VoiceLocations locations;
-        locations.voiceFolders.push_back(folder());
+        locations.dataFolders.push_back(m_settings.classicExtensionsDirectory());
+        if (const auto data = UtauSettings::dataDirectory(); !data.empty()) {
+            locations.dataFolders.push_back(data);
+        }
         const auto utau = m_settings.utau().directory();
         std::error_code error;
         const bool utauExists = !utau.empty() && std::filesystem::is_directory(utau, error);

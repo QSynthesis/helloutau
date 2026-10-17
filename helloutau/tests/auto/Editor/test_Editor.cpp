@@ -4764,13 +4764,13 @@ private Q_SLOTS:
         setVoiceDir(
             QString::fromStdU16String((voice / "read-other" / ".." / "read-once").u16string()));
         QCOMPARE(window->document()->voiceBank(), bank);
-        setVoiceDir(QStringLiteral("%VOICE%read-once"));
+        setVoiceDir(QStringLiteral("%DATA%\\voice\\read-once"));
         QCOMPARE(window->document()->voiceBank(), bank);
         session->undo();
         QCoreApplication::processEvents();
         QCOMPARE(window->document()->voiceBank(), bank);
 
-        setVoiceDir(QStringLiteral("%VOICE%read-other"));
+        setVoiceDir(QStringLiteral("%DATA%\\voice\\read-other"));
         QTRY_VERIFY(window->document()->voiceBank() != bank);
         QVERIFY(window->document()->voiceBank());
     }
@@ -4790,9 +4790,12 @@ private Q_SLOTS:
         QVERIFY(folder && relative);
         QVERIFY(relative->isChecked());
         QVERIFY(!page->isModified());
-        const auto voiceFoldersShown = [&page] {
+        // The label that lists the voice folder of HelloUtau
+        const auto own = QDir::toNativeSeparators(
+            QString::fromStdU16String(e->settings().voiceBanks().folder().u16string()));
+        const auto voiceFoldersShown = [&page, &own] {
             for (const auto label : page->widget()->findChildren<QLabel *>()) {
-                if (label->text().contains(QStringLiteral("%VOICE%"))) {
+                if (label->text().contains(own)) {
                     return label->text();
                 }
             }
@@ -5173,6 +5176,8 @@ private Q_SLOTS:
 int main(int argc, char *argv[]) {
     // Runs without a display
     qputenv("QT_QPA_PLATFORM", "offscreen");
+    // Without the voice banks and plugins that UTAU has installed for the user
+    UtauSettings::setDataDirectory(fs::path());
     QApplication app(argc, argv);
     test_Editor test;
     return QTest::qExec(&test, argc, argv);

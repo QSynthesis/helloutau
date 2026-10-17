@@ -28,14 +28,24 @@ namespace hello::kit {
         /// folder that does not exist is skipped.
         std::vector<std::filesystem::path> voiceFolders;
 
-        /// The directory against which a relative \c VoiceDir without the prefix is resolved,
-        /// or an empty path if none.
+        /// The directory against which a relative \c VoiceDir without a prefix is resolved, or an
+        /// empty path if none.
         std::filesystem::path relativeBase;
 
+        /// The data folders that the \c %DATA% prefix denotes, in decreasing priority. A folder
+        /// that does not exist is skipped. UTAU denotes by the prefix the folder into which its
+        /// installer puts voice banks and plugins, see docs/claude/utau-voicedir-cachedir.md.
+        std::vector<std::filesystem::path> dataFolders;
+
         /// Returns the locations as UTAU uses them: \c %VOICE% denotes the \c voice directory
-        /// in \a utauDirectory, and a relative path is relative to \a utauDirectory. Both are
-        /// empty if \a utauDirectory is empty.
-        static VoiceLocations ofUtau(const std::filesystem::path &utauDirectory);
+        /// in \a utauDirectory, a relative path is relative to \a utauDirectory, and \c %DATA%
+        /// denotes \a dataDirectory. Each is empty if its directory is empty.
+        static VoiceLocations ofUtau(const std::filesystem::path &utauDirectory,
+                                     const std::filesystem::path &dataDirectory = {});
+
+        /// Returns the folders whose subfolders are voice banks, in decreasing priority: the
+        /// \c voice directory of each data folder, and then the voice folders.
+        std::vector<std::filesystem::path> voiceBankFolders() const;
 
         bool operator==(const VoiceLocations &other) const;
         bool operator!=(const VoiceLocations &other) const;
@@ -78,27 +88,36 @@ namespace hello::kit {
         /// TODO: Move UTAU-specific path expansion and serialization to a compatibility class.
         static constexpr QStringView voicePrefix = u"%VOICE%";
 
+        /// The prefix of \c voiceDir that denotes a data folder. UTAU writes a separator after
+        /// it, as in <tt>%DATA%\\voice\\uta</tt>, and none after \c %VOICE%.
+        static constexpr QStringView dataPrefix = u"%DATA%";
+
+        /// Returns whether \a voiceDir begins with \c %VOICE% or \c %DATA%.
+        static bool hasPrefix(QStringView voiceDir);
+
         /// Returns the voice bank directory that \c voiceDir denotes.
         ///
         /// A \c %VOICE% prefix denotes the first voice folder of \a locations that contains the
-        /// remainder of the path. A relative path is relative to the \c relativeBase of
-        /// \a locations, not to the project file. UTAU resolves both against the directory of
+        /// remainder of the path, and a \c %DATA% prefix the first data folder that does. A
+        /// relative path is relative to the \c relativeBase of \a locations, not to the project
+        /// file. UTAU resolves both \c %VOICE% and a relative path against the directory of
         /// \c utau.exe, see docs/claude/utau-voicedir-cachedir.md.
         ///
-        /// \return the directory, which exists unless no voice folder contains it. If no voice
-        ///         folder contains a \c %VOICE% path, the path in the first existing voice folder
-        ///         is returned. An empty path is returned if \c voiceDir is empty, if no voice
-        ///         folder exists for a \c %VOICE% path, or if \c relativeBase is empty for a
-        ///         relative path.
+        /// \return the directory, which exists unless no folder of the prefix contains it. If no
+        ///         folder contains a prefixed path, the path in the first existing folder of the
+        ///         prefix is returned. An empty path is returned if \c voiceDir is empty, if no
+        ///         folder of the prefix exists, or if \c relativeBase is empty for a relative
+        ///         path.
         std::filesystem::path voiceDirectory(const VoiceLocations &locations) const;
 
         /// Returns the value of \c voiceDir for the voice bank in \a directory, as UTAU writes it
         /// on save: with the \c %VOICE% prefix if \a directory is inside a voice folder of
-        /// \a locations, and otherwise the absolute path.
+        /// \a locations, with the \c %DATA% prefix if it is inside a data folder, and otherwise
+        /// the absolute path.
         ///
-        /// The prefix is used only if it resolves to \a directory again. A folder of the same
-        /// name in a voice folder of higher priority would otherwise take its place, and the
-        /// absolute path is written instead.
+        /// A prefix is used only if it resolves to \a directory again. A folder of the same name
+        /// in a folder of higher priority would otherwise take its place, and the absolute path
+        /// is written instead.
         ///
         /// \param directory an absolute path
         static QString voiceDirOf(const std::filesystem::path &directory,
