@@ -33,7 +33,8 @@ macro(_hello_find_external _package _hint)
     # Not REQUIRED, so that a package that is not found is reported with the way to obtain it
     find_package(${_package} CONFIG COMPONENTS ${_HELLO_FIND_COMPONENTS})
     if(NOT ${_package}_FOUND)
-        message(FATAL_ERROR "${_package} was not found. ${_hint}")
+        message(FATAL_ERROR "${_package} was not found through CMAKE_PREFIX_PATH or the toolchain "
+            "of vcpkg. ${_hint}")
     endif()
 
     set(_hello_find_files)

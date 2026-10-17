@@ -13,11 +13,11 @@
 namespace hello::daw {
 
     /// The preview program of a classic plugin: hello-plugin-play, deployed in the folder of the
-    /// plugin under the name playinplugin.exe, which some plugins start for a preview. See the
-    /// section on deployment in docs/PluginPlay.md. The file names have no .exe on systems other
-    /// than Windows.
+    /// plugin under the name playinplugin(.exe), which some plugins start for a preview. See the
+    /// section on deployment in docs/PluginPlay.md. The suffix .exe in parentheses is that of
+    /// Windows, which the file names omit on other systems.
     ///
-    /// An installation keeps the playinplugin.exe of the plugin as playinplugin-original.exe,
+    /// An installation keeps the playinplugin(.exe) of the plugin as playinplugin-original(.exe),
     /// which hello-plugin-play runs if HelloUtau does not run the plugin. It is recorded at
     /// <tt>hostData/ClassicPluginHost/playinplugin</tt> of the plugin.json of the plugin
     /// (docs/note.md). A plugin with only a plugin.txt receives a plugin.json transcribed from
@@ -50,9 +50,9 @@ namespace hello::daw {
                              const std::filesystem::path &program);
 
         /// Returns whether the installation of \a program in \a folder is recommended, which the
-        /// button Install All installs. Only a plugin that comes with a playinplugin.exe starts
+        /// button Install All installs. Only a plugin that comes with a playinplugin(.exe) starts
         /// the program for a preview, so the recommendations are limited to these plugins:
-        /// - the installation, if the folder has a playinplugin.exe of the plugin and no
+        /// - the installation, if the folder has a playinplugin(.exe) of the plugin and no
         ///   installation;
         /// - the update, if the installation is Outdated and kept the program of the plugin.
         static bool isRecommended(const std::filesystem::path &folder,

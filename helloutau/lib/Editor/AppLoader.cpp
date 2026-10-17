@@ -210,31 +210,44 @@ namespace hello::daw {
                 return chosen;
             };
         if (impl.showsHelp) {
-            show(tr("Usage: %1 [options] [files]\n\n"
-                    "Starts %2 and opens the files.\n\n"
-                    "Options:\n"
-                    "  --settings <directory>\n"
-                    "      The directory of the settings, which also holds the voice banks and "
-                    "the plugins of the user.\n"
-                    "  --plugin-path <directory>\n"
-                    "      A further directory of native plugins.\n"
-                    "  --allow-root\n"
-                    "      Starts without the warning about the privileges of the "
-                    "administrator.\n"
-                    "  --help\n"
-                    "      Shows this text.")
-                     .arg(QFileInfo(QCoreApplication::applicationFilePath()).fileName(), title),
-                 kit::NativeMessageBox::Information, stdout);
+            // Each part is translated alone, so that the description of --allow-root, which
+            // differs between the systems, does not repeat the other parts in the translations.
+            const auto directory = tr("<directory>");
+            const auto option = [](const QString &name, const QString &description) {
+                return QStringLiteral("  %1\n      %2").arg(name, description);
+            };
+#ifdef Q_OS_WINDOWS
+            const auto allowRoot =
+                tr("Starts without the warning about the privileges of the administrator.");
+#else
+            const auto allowRoot = tr("Starts without the warning about the privileges of root.");
+#endif
+            const QStringList lines{
+                tr("Usage: %1 [options] [files]")
+                    .arg(QFileInfo(QCoreApplication::applicationFilePath()).fileName()),
+                {},
+                tr("Starts %1 and opens the files.").arg(title),
+                {},
+                tr("Options:"),
+                option(QLatin1String(settingsOption) + QLatin1Char(' ') + directory,
+                       tr("The directory of the settings, which also holds the voice banks and "
+                          "the plugins of the user.")),
+                option(QLatin1String(pluginPathOption) + QLatin1Char(' ') + directory,
+                       tr("A further directory of native plugins.")),
+                option(QLatin1String(allowRootOption), allowRoot),
+                option(QLatin1String(helpOption), tr("Shows this text.")),
+            };
+            show(lines.join(QLatin1Char('\n')), kit::NativeMessageBox::Information, stdout);
             return false;
         }
         if (!impl.allowsRoot && kit::NativeProcess::isElevated()) {
 #ifdef Q_OS_WINDOWS
-            const auto text =
-                tr("You are running %1 as the administrator. The synth tools and the plugins that "
-                   "a project runs then have the privileges of the administrator as well, and "
-                   "File Explorer cannot drop files into the windows of %1.\n\n"
-                   "Start %1 without Run as administrator. The option --allow-root suppresses "
-                   "this warning.");
+            const auto text = tr(
+                "You are running %1 as the administrator. The synth tools and the plugins that "
+                "a project runs then have the privileges of the administrator as well, and "
+                "File Explorer cannot drop files into the windows of %1.\n\n"
+                "Start %1 without using Run as administrator. The option --allow-root suppresses "
+                "this warning.");
 #else
             const auto text =
                 tr("You are running %1 as the user root. The synth tools and the plugins that a "
@@ -310,7 +323,7 @@ namespace hello::daw {
     }
 
     QString AppLoader::applicationTranslationPath(const QString &programDirectory) {
-        // The data directory of qmsetup, share/helloutau, or Contents/Resources of a bundle
+        // In the data directory of qmsetup, share/helloutau, or in Contents/Resources of a bundle
         const auto share = sharePath(programDirectory);
         return isBundle(programDirectory) ? share + QStringLiteral("/translations")
                                           : share + QStringLiteral("/helloutau/translations");

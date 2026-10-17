@@ -1,8 +1,9 @@
 # The triplet of the build, <architecture>-<system>-<ABI>, such as x86_64-windows-msvc, which names
 # the release assets and selects them for an update. See docs/Distribution.md.
 #
-# The names are those that users know rather than those of vcpkg: the architecture x86_64 rather
-# than x64, a name of Microsoft, and arm64 as Apple names it, and the system mac rather than osx.
+# The names are those that users know rather than those of vcpkg: x86_64 for the architecture
+# rather than x64, a name of Microsoft, arm64 as Apple names the architecture, and mac for the
+# system rather than osx.
 # The ABI rather than the compiler is named, because a build of clang for the MSVC ABI loads the
 # plugins of a build of MSVC.
 #

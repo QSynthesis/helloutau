@@ -19,8 +19,9 @@ namespace hello::kit {
             Critical,    ///< an error icon
         };
 
-        /// The buttons, as in QMessageBox, can be combined with the bitwise OR. The box
-        /// shows them from left to right in the order of the values.
+        /// The buttons, as in QMessageBox, can be combined with the bitwise OR. Layout::buttons
+        /// lists them in the order of the values, in which Windows shows them from left to
+        /// right. macOS and Linux place them by their roles, see show().
         enum StandardButton {
             NoButton = 0x00, ///< no button
             Ok = 0x01,       ///< OK
@@ -46,12 +47,13 @@ namespace hello::kit {
         ///
         /// The box is that of TaskDialogIndirect() on Windows, or that of MessageBoxW(), with
         /// the labels of the system, if the program does not use version 6 of the Common
-        /// Controls. On macOS it is that of CFUserNotificationDisplayAlert(), with the alert
-        /// level Plain, Note, Note, Caution, or Stop for the icons in order, and the default
-        /// button at the right. On Linux it is shown by zenity or, without zenity, by kdialog,
-        /// if either is installed and a display is available. zenity shows a question icon for
-        /// more than one button, and selects the escape button at first if it is the default
-        /// button, or the first other button otherwise. kdialog always selects the first button.
+        /// Controls or if the task dialog fails. On macOS it is that of
+        /// CFUserNotificationDisplayAlert(), with the alert level Plain, Note, Note, Caution, or
+        /// Stop for the icons in order, and the default button at the right. On Linux it is shown
+        /// by zenity or, without zenity, by kdialog, if either is installed and a display is
+        /// available. zenity shows a question icon for more than one button, and selects the escape
+        /// button at first if it is the default button, or the first other button otherwise.
+        /// kdialog always selects the first button other than the escape button.
         ///
         /// \return the button that the user chose, or \c NoButton if the box was not shown, so
         ///         that the caller can write \a text elsewhere

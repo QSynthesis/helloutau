@@ -84,7 +84,8 @@ jobs:
 
       # The assets without the staging folder HelloUtau of the packaging script. The name of the
       # artifact stays the same for every run, so that gh run download -n helloutau-<triplet> keeps
-      # working. The file names carry the channel and the commit.
+      # working. The file names of a build of another channel than release carry the
+      # channel and the commit.
       - uses: actions/upload-artifact@v4
         with:
           name: helloutau-${{ steps.build.outputs.triplet }}

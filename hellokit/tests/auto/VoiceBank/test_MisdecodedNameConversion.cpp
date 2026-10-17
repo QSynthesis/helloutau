@@ -100,7 +100,8 @@ private Q_SLOTS:
         const QStringList chinese{QString::fromUtf8("你好"), QString::fromUtf8("音源")};
         QTest::newRow("Japanese on GBK")
             << QStringLiteral("GBK") << QStringLiteral("Shift_JIS") << japanese;
-        // Big5 has no characters for the bytes of kana in Shift_JIS, from 0x81 to 0xa0.
+        // Big5 assigns no characters to the lead bytes 0x81 to 0xa0, among them the lead byte
+        // 0x82 of the kana in Shift_JIS, so that no row has Japanese names on Big5.
         QTest::newRow("Chinese on Big5")
             << QStringLiteral("Big5") << QStringLiteral("GBK") << chinese;
         QTest::newRow("Japanese on windows-1252")

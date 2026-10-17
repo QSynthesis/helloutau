@@ -60,7 +60,7 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 
 - **系统**：两个工作流以 matrix 列出各系统，目前只有 `x86_64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分。matrix 中的 triplet 是 job 的名称，组合 action 检查它与构建的 triplet 相同，不同即失败，其后的步骤不使用它：组合 action 在配置后从 `CMakeCache.txt` 读出 `HELLO_TRIPLET`，作为输出 `triplet` 交给工作流命名 artifact，因此与程序、打包脚本所用的值必然一致，将来增加 mingw 等构建时也不会混淆（作者 2026-10-17 要求）。增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
 - **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
-- **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
+- **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip、zlib 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
 - **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
 - **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包与 `SHA256SUMS`。artifact 按系统命名为 `helloutau-<triplet>`，每次运行相同，渠道与提交只写在文件名中，同 lorelei。
 - **发布**：推送 `v` 开头的 tag 时渠道为 `release`。tag 须与 `HELLO_VERSION` 一致，否则构建失败。各系统都通过后创建 GitHub 的 release，附上各系统的附件与合并后的一份 `SHA256SUMS`，标题为 `HelloUtau <version>`，说明取自 tag 所在提交的 `docs/changelog/<version>.md`，该文件不存在时不创建 release。以工作流的令牌创建的 release 不触发其他工作流，因此随后以 `gh workflow run` 启动 `sync-gitee-release.yml`。
@@ -261,7 +261,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
 2. 下载并校验 zip 后，程序在后台把它解压到安装目录旁的 `<安装目录>.new`。该目录必须与安装目录同级，因为只有同一卷上的改名是瞬间完成的。已有的 `<安装目录>.new` 先删除。解压遵守 `CLAUDE.md`「安全底线」第二条：拒绝绝对路径、盘符、`..` 路径分量与符号链接条目（拒绝整个压缩包而不是跳过条目），以 `weakly_canonical` 确认目标位于目标目录之内，并设大小与条目数上限。发布的 zip 中有一层顶层目录，所有条目都位于唯一的顶层目录下时去掉这一层。解压失败时报告原因，不安装。
 3. 用户选择安装时（或「自动更新」解压完成后），程序把更新程序从 `bin` 复制到临时文件总目录下的 `updates`，并在退出时（`kit::ExitLauncher`）从那里启动它，因为安装目录将被整体替换，更新程序不能运行在其中，也不能加载其中的动态库。更新程序只依赖标准库与系统接口，并静态链接运行库（作者 2026-10-11 决定）：MSVC 的 ABI 用 `/MT`，MinGW 用 `-static`，Linux 的 GCC 用 `-static-libgcc -static-libstdc++`（glibc 不宜完全静态链接），macOS 的运行库属于系统。因此只需复制这一个文件。参数为：`--pid` 等待退出的进程号，`--target` 安装目录，`--source` `<安装目录>.new`，`--launch` 完成后启动的程序（`--` 之后的参数传给它），`--log` 日志文件，`--show-errors`。它在 Windows 上是 GUI 程序，不弹出控制台窗口，`--help` 以消息框显示用法（作者 2026-10-11 决定）。
 4. 更新程序等待主程序退出，把安装目录改名为 `<安装目录>.old`，再把 `<安装目录>.new` 改名为安装目录，启动新版本（如有 `--launch`），最后删除 `<安装目录>.old`。改名失败时在 10 秒内重试，因为杀毒软件或资源管理器会短暂打开目录中的文件。仍然失败时恢复原安装目录，并照常启动程序，此时启动的是旧版本。
-   - 更新程序不显示进度，两次改名是瞬间完成的。错误写入日志，下次启动的程序在删除 `updates` 之前读取日志，报告更新失败的原因。唯一的例外是恢复也失败：安装目录已不存在，程序无法启动，因此带 `--show-errors` 时更新程序以消息框告知旧版本所在的目录（作者 2026-10-11 决定）。消息框由静态库 `HelloKitNativeSystem` 提供，不增加动态库的依赖：Windows 为 `MessageBoxW()`，macOS 为 CoreFoundation 的 `CFUserNotificationDisplayAlert()`，Linux 由 zenity 或 kdialog 显示，两者都没有或没有显示器时只写日志（作者 2026-10-16 决定）。
+   - 更新程序不显示进度，两次改名是瞬间完成的。错误写入日志，下次启动的程序在删除 `updates` 之前读取日志，报告更新失败的原因。唯一的例外是恢复也失败：安装目录已不存在，程序无法启动，因此带 `--show-errors` 时更新程序以消息框告知旧版本所在的目录（作者 2026-10-11 决定）。消息框由静态库 `HelloKitNativeSystem` 提供，不增加动态库的依赖：Windows 为任务对话框 `TaskDialogIndirect()`，程序未使用版本 6 的 Common Controls 或任务对话框失败时为 `MessageBoxW()`，macOS 为 CoreFoundation 的 `CFUserNotificationDisplayAlert()`，Linux 由 zenity 或 kdialog 显示，两者都没有或没有显示器时只写日志（作者 2026-10-16 决定）。
    - 参数无效时，带 `--show-errors` 则以消息框显示用法，否则写到标准错误，以免测试被消息框阻塞。
    - `--help` 显示用法，`--version` 显示版本（`HELLOKIT_VERSION`），退出码为 0。在 Windows 上，标准输出被重定向到文件或管道时写到标准输出，否则以消息框显示（作者 2026-10-15 要求，原先 `--help` 一律弹出消息框）。
 5. 「立即安装」时更新程序启动新版本后退出，「退出时安装」与「自动更新」时不启动。
@@ -282,7 +282,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
   - `SoftwareReleaseDownload`：下载附件并以 `SHA256SUMS` 校验，见「检查与下载」。只接受不含路径的文件名作为附件名。
 - `kit::ZipExtractor`（`HelloKitSupport`，私有依赖 libzip）：安全解压 zip，检查的规则见 `hellokit/Support/ZipExtractor.h`。由主程序使用，将来安装音源、插件压缩包时同样使用。放在 `HelloKitSupport` 中而不另设子库（作者 2026-10-11 决定）。不带 UTF-8 标志的非 ASCII 条目名由调用方提供的解码函数解码，未提供时拒绝整个压缩包。
 - 更新程序 `hello-updater`（`hellokit/tools/updater`）：免安装版的目录替换，参数全部来自命令行，不含任何 HelloUtau 特有的内容。它不拆出库，因为它只能依赖标准库与系统接口，库会成为它的依赖。测试在 `tests/auto/tools/updater` 中实际运行它，检查替换与回滚的结果。
-- 试听程序 `hello-plugin-play`（`helloutau/tools/plugin-play`，仅 Windows）：原版插件所用 playinplugin.exe 的兼容程序，与 `hello-updater` 一样只依赖标准库与系统接口，安装在 `bin` 中，由设置页复制到插件文件夹，见 [`PluginPlay.md`](PluginPlay.md)。
+- 试听程序 `hello-plugin-play`（`helloutau/tools/plugin-play`）：原版插件所用 playinplugin（Windows 上为 playinplugin.exe）的兼容程序，与 `hello-updater` 一样只依赖标准库与系统接口，安装在 `bin` 中，由设置页复制到插件文件夹，见 [`PluginPlay.md`](PluginPlay.md)。
 - `PortableUpdate`（helloutau，`HelloUtauEditor`）：免安装版更新中与界面无关的部分。在后台线程把 zip 解压到 `<安装目录>.new` 并检查程序存在，失败或取消时删除 `.new`。生成 `hello-updater` 的参数并把它复制到 `updates`。下次启动时读取更新程序的日志，删除残留的 `.new` 与 `.old`。
 - 临时目录管理器：`HelloKitSupport`。
 - 解压 zip 使用 libzip（BSD 许可证，vcpkg 有端口，作者 2026-10-11 决定），动态链接，与其他 vcpkg 依赖相同。不采用 Qt 的 `QZipReader`：它是私有接口，不带 UTF-8 标志的条目名按本机代码页解码而取不到原始字节，`extractAll()` 也不检查路径。

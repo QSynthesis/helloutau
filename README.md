@@ -55,7 +55,7 @@ Requirements:
 
 - CMake 3.19 or later and a C++17 compiler. MSVC 2022, GCC 11 and Apple Clang 14 are tested.
 - Qt 6. Qt 6.10 and 6.11 are tested.
-- The following packages, each built and installed separately and located through its `<name>_DIR` variable:
+- The following packages, each built and installed separately, or installed with the ports of [stdware/vcpkg-overlay](https://github.com/stdware/vcpkg-overlay) as the workflow does. Each is found through `CMAKE_PREFIX_PATH` or the toolchain of vcpkg, or otherwise at the directory that its `<name>_DIR` variable names:
 
 | Package | Source | Variable |
 |---|---|---|
@@ -75,10 +75,7 @@ The application also requires the Qt Multimedia and Qt SVG modules.
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-    -DCMAKE_PREFIX_PATH=<Qt> \
-    -DQActionKit_DIR=... -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdcorelib-plugin_DIR=... \
-    -Dstdutau_DIR=... -Dsubstate_DIR=... -Dwinacp_DIR=... -Dwolf-midi_DIR=... \
-    -Dunofficial-r8brain-free-src_DIR=... -Dlibzip_DIR=... -DZLIB_DIR=...
+    "-DCMAKE_PREFIX_PATH=<Qt>;<prefix of the packages>"
 cmake --build build
 ctest --test-dir build
 ```

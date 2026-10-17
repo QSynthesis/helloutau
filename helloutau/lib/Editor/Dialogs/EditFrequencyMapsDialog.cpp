@@ -463,7 +463,7 @@ namespace hello::daw {
                 left->corrections.empty()) {
                 // The view reads the frames of its buffer until setBuffer() below, and reading
                 // the destroyed buffer crashed a Release build. The view is detached first,
-                // because detaching it can refresh the panel, which sets listed. listed is then
+                // because detaching it can call refreshPanel(), which sets listed. listed is then
                 // cleared, because a new buffer at the address of the destroyed one would
                 // otherwise pass for the listed buffer.
                 if (view->buffer() == left->buffer.get()) {

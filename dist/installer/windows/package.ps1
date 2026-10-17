@@ -89,7 +89,8 @@ if (-not $Qt) {
 }
 # The channel of the build. A build of another channel than release is named by its channel and
 # its abbreviated commit, in the file names and in the name of the installer, so that it is not
-# taken for a release. The commit is that of hellokit/BuildInfo.h, which the About dialog shows.
+# taken for a release. The commit is the one that hellokit/BuildInfo.h records and the About
+# dialog shows.
 $channel = Get-Value $cache "HELLO_BUILD_CHANNEL" ":[A-Z]+="
 if ($channel -notin @("release", "ci", "dev")) {
     throw "HELLO_BUILD_CHANNEL is '$channel' in $cache, not release, ci or dev."

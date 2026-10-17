@@ -2614,9 +2614,11 @@ private Q_SLOTS:
         QCOMPARE(pointsOfLi(session).size(), 2);
     }
 
-    // A double click beside a steep curve inserts a point. Zoomed out ten times, the rise of li
-    // from -60 to 0 ms spans 6 pixels. Two pixels left of its middle, the curve at the same tick
-    // is about 10 pixels lower, but the curve on the screen is less than a pixel away.
+    // A double click beside a steep curve inserts a point. The rise of li goes from its first
+    // point at -60 ms, at the pitch of la 200 cents below, to 100 cents at 0 ms, with its middle
+    // at -50 cents. Zoomed out ten times, the rise spans 6 pixels. Two pixels left of its middle,
+    // the curve at the same tick is about 30 pixels lower, but the curve on the screen is about
+    // two pixels away.
     void a_point_is_inserted_beside_a_steep_curve() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -2625,7 +2627,7 @@ private Q_SLOTS:
         time.pixelsPerTick /= 10;
         roll.view()->setTimeAxis(time);
 
-        const QPointF middle(time.toX(480 - 30 * 0.96), roll.view()->keyAxis().toY(63.0));
+        const QPointF middle(time.toX(480 - 30 * 0.96), roll.view()->keyAxis().toY(62.5 - 0.5));
         QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {},
                            (middle - QPointF(2, 0)).toPoint());
         const auto points = pointsOfLi(session);
@@ -2652,10 +2654,17 @@ private Q_SLOTS:
         session.undo();
         QCOMPARE(pointsOfLi(session)[1].type, kit::PortamentoPoint::J);
 
+        // The first point is drawn at the pitch of la, 200 cents below li, and the click must hit
+        // it, because a click that hits nothing changes nothing either.
+        const auto first = pointOfLi(roll, -60, -200);
+        const auto hit = roll.view()->hitAt(first);
+        QVERIFY(hit && hit->part == PianoRoll::PitchPoint && hit->index == 0);
         const auto before = pointsOfLi(session);
-        QTest::mouseClick(viewport, Qt::MiddleButton, {}, pointOfLi(roll, -60, 0));
+        QTest::mouseClick(viewport, Qt::MiddleButton, {}, first);
         QCOMPARE(pointsOfLi(session)[0].type, before[0].type);
         QCOMPARE(pointsOfLi(session)[1].type, before[1].type);
+        // No step is committed, which would discard the step undone above.
+        QVERIFY(session.canRedo());
     }
 
     // Tab commits the lyric and edits the next note. Escape leaves the lyric as it was.

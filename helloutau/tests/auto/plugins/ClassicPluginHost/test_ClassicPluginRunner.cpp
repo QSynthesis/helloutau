@@ -151,7 +151,7 @@ private Q_SLOTS:
         QVERIFY(finished.wait(20000));
         QCOMPARE(runner.result(), QByteArray("[#0000]\r\nLyric=z\r\n"));
 #else
-        QSKIP("shell=use runs on Windows only");
+        QSKIP("The plugin of the test is a batch file of Windows.");
 #endif
     }
 

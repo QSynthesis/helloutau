@@ -43,7 +43,8 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE stdcorelib::stdcorelib)
 
-# The manifest of qmsetup, without the UTF-8 code page, so that GetACP() reports the ANSI one
+# The manifest of qmsetup, without the UTF-8 code page as that of the application. The program
+# uses only the wide-character API, so that the code page does not affect it.
 qm_add_win_manifest(${PROJECT_NAME})
 
 if(APPLE)

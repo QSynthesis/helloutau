@@ -22,8 +22,8 @@ endif()
 # library, which requires the runtime of the program. HelloKitNativeSystem has the runtime in a
 # DLL, as the application and the plugins have it. HelloKitNativeSystem-static-crt has the static
 # runtime, as hello-updater and hello-plugin-play link it, and is neither installed nor exported,
-# because only these programs link it. Compilers of other ABIs ignore the property, and the
-# libraries are alike there.
+# because only these programs and the stand-in of the test of hello-plugin-play link it. Compilers
+# of other ABIs ignore the property, and the libraries are alike there.
 foreach(_variant dll static-crt)
     if(_variant STREQUAL "dll")
         set(_target ${PROJECT_NAME})

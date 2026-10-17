@@ -28,7 +28,6 @@ jobs:
       matrix:
         include:
           # The name of the job, which the action checks against the triplet of the build.
-          # The steps take the triplet from the output of the action.
           - triplet: x86_64-windows-msvc
             os: windows-latest
             vcpkg-triplet: x64-windows

@@ -147,8 +147,9 @@ runs:
           echo "HELLO_TRIPLET is missing from the cache of the build."
           exit 1
         fi
-        # A matrix entry that names another triplet than the build is a wrong entry or a wrong
-        # compiler, which would otherwise produce assets under another name.
+        # A matrix entry that names another triplet than the build indicates a wrong entry or
+        # a wrong compiler. Without the check, the assets would be named by another triplet
+        # than the job.
         if [ "$triplet" != "${{ inputs.triplet }}" ]; then
           echo "::error::The build is $triplet, but the matrix names ${{ inputs.triplet }}."
           exit 1

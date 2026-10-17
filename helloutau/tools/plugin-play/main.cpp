@@ -88,8 +88,8 @@ namespace {
         NoHost = 1,
     };
 
-    // The text has no column alignment and unbroken paragraphs, because a message box shows the
-    // text in a proportional font and wraps the lines.
+    // The text has no column alignment and unbroken paragraphs, because a message box on Windows
+    // shows the text in a proportional font and wraps the lines.
     constexpr char usage[] =
         "Usage: playinplugin" PROGRAM_SUFFIX " <input> [/m:<file>] [/o:<file>] [/noplay] "
         "[/nodeletewav] [/nodeletecache] [/debug]\n"

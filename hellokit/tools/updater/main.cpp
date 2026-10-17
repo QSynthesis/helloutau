@@ -41,9 +41,9 @@
 // application is available. It has no console on Windows. Its messages go to the log file, which
 // the application reads at its next start. A failed restoration leaves no application to start,
 // and is therefore also shown in a message box of HelloKitNativeSystem if --show-errors is given,
-// as is the usage for invalid arguments. The texts of --help and --version are written to the
-// standard output, on Windows only if it is redirected to a file or a pipe, and appear in a
-// message box otherwise.
+// as is the usage for invalid arguments. The texts of --help and --version appear in a message
+// box on Windows unless the standard output is redirected to a file or a pipe, and on the
+// standard output otherwise, also if no message box can be shown.
 
 namespace fs = std::filesystem;
 namespace kit = hello::kit;
@@ -62,8 +62,8 @@ namespace {
         RestorationFailed = 4,
     };
 
-    // The text has no column alignment and unbroken paragraphs, because a message box on Windows
-    // shows the text in a proportional font and wraps the lines.
+    // The text has no column alignment and unbroken paragraphs, because a message box shows the
+    // text in a proportional font and wraps the lines.
     constexpr char usage[] =
         "Usage: hello-updater --target <dir> --source <dir> [options]\n"
         "\n"
@@ -264,8 +264,8 @@ namespace {
     }
 #endif
 
-    // Shows the text that information requests, on the standard output if it is redirected, and
-    // in a message box on Windows otherwise.
+    // Shows the text that information requests in a message box on Windows, and on the standard
+    // output if it is redirected, on other systems, or if no message box can be shown.
     void showInformation(Information information) {
         const auto text = information == Information::Help ? usage : version;
 #ifdef _WIN32
@@ -324,7 +324,8 @@ namespace {
         fs::current_path(target.parent_path(), ec);
 
         const auto finish = [&](int code) {
-            // In the directory of the program, so that it holds no directory that is replaced
+            // The program starts in its own directory rather than in the working directory of
+            // this program, which is the parent of the installation directory.
             if (!options.launch.empty() &&
                 !kit::NativeProcess::start(options.launch, options.launchArguments,
                                            options.launch.parent_path())) {

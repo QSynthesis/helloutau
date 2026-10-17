@@ -55,7 +55,7 @@ HelloUtau 读写 UTAU 的工程与音源，并运行 UTAU 的重采样器、合�
 
 - CMake 3.19 或更高版本，以及支持 C++17 的编译器。已测试 MSVC 2022、GCC 11 与 Apple Clang 14。
 - Qt 6。已测试 Qt 6.10 与 6.11。
-- 下列软件包，各自单独构建并安装，通过对应的 `<名称>_DIR` 变量指定位置：
+- 下列软件包，各自单独构建并安装，或者像工作流那样以 [stdware/vcpkg-overlay](https://github.com/stdware/vcpkg-overlay) 的 port 安装。每个软件包经由 `CMAKE_PREFIX_PATH` 或 vcpkg 的 toolchain 找到，找不到时取对应的 `<名称>_DIR` 变量所指的目录：
 
 | 软件包 | 来源 | 变量 |
 |---|---|---|
@@ -75,10 +75,7 @@ HelloUtau 读写 UTAU 的工程与音源，并运行 UTAU 的重采样器、合�
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-    -DCMAKE_PREFIX_PATH=<Qt> \
-    -DQActionKit_DIR=... -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdcorelib-plugin_DIR=... \
-    -Dstdutau_DIR=... -Dsubstate_DIR=... -Dwinacp_DIR=... -Dwolf-midi_DIR=... \
-    -Dunofficial-r8brain-free-src_DIR=... -Dlibzip_DIR=... -DZLIB_DIR=...
+    "-DCMAKE_PREFIX_PATH=<Qt>;<软件包的前缀>"
 cmake --build build
 ctest --test-dir build
 ```

@@ -48,6 +48,7 @@ namespace hello::kit {
         /// without any expansion: blanks separate the words, single quotes keep every character,
         /// double quotes keep every character except a backslash before \c $ , a backtick,
         /// \c " , \c \\ or a newline, and outside quotes a backslash keeps the next character.
+        /// A backslash before a newline joins the lines, in quotes and outside them.
         /// The first word becomes the name of the program in its arguments. No shell runs, so
         /// that \a commandLine cannot run a command.
         ///
