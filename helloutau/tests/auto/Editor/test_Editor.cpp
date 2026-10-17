@@ -3362,6 +3362,21 @@ private Q_SLOTS:
             };
             const auto recorder = std::make_shared<Recorder>();
             dialog->preview()->setSynthToolProcess(recorder);
+            // Without an output device, the synthesized copy does not play, and the failure is
+            // reported in a message box, which the test closes. The box would otherwise block
+            // QTRY_VERIFY until the test times out.
+            const bool playable = AudioEngine::instance()->sampleRate() > 0;
+            int reported = 0;
+            QTimer closer;
+            closer.setInterval(10);
+            QObject::connect(&closer, &QTimer::timeout, [&reported] {
+                if (const auto box =
+                        qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                    ++reported;
+                    box->close();
+                }
+            });
+            closer.start();
             dialog->playButton()->click();
             QTRY_VERIFY(dialog->preview()->state() != SamplePreview::Synthesizing);
             QVERIFY(recorder->recorded.size() > 2);
@@ -3377,6 +3392,8 @@ private Q_SLOTS:
             QTRY_VERIFY(dialog->preview()->state() != SamplePreview::Synthesizing);
             QCOMPARE(recorder->recorded.value(2), QStringLiteral("A3"));
             dialog->preview()->stop();
+            closer.stop();
+            QCOMPARE(reported, playable ? 0 : 2);
 
             // The waveform below the editing area shows the audio file. With $direct the command
             // plays the audio file as it is if the machine has an output device, and the stop
