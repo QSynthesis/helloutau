@@ -97,6 +97,14 @@ runs:
       with:
         arch: x64
 
+    # The compiler cache, kept in the cache of GitHub Actions entry by entry. A fresh checkout
+    # gives every source a new time, so that Ninja alone rebuilds everything, and sccache serves
+    # the objects whose preprocessed source and options did not change.
+    - uses: mozilla-actions/sccache-action@v0.0.11
+    - name: sccache
+      shell: bash
+      run: echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+
     # The official binaries of Qt, as for a local build. Multimedia is an add-on of aqt, and Svg
     # and the Linguist tools come with the base installation. aqtinstall 3.3.0, the latest release,
     # finds no Qt 6.11 for Windows. Its support arrived in miurahr/aqtinstall#1000, merged after
@@ -168,6 +176,9 @@ runs:
         key: vcpkg-${{ inputs.vcpkg-triplet }}-${{ env.VCPKG_COMMIT }}-${{ env.OVERLAY_COMMIT }}
 
     # The packages are found through the toolchain of vcpkg, see third-party/Dependencies.cmake.
+    # sccache cannot cache an object of MSVC whose debug information goes into a shared PDB (/Zi),
+    # so the debug information is embedded in the objects (/Z7) through CMP0141, which the
+    # minimum version of CMake leaves unset. The linker still writes the PDB of each binary.
     - name: Configure
       id: configure
       shell: bash
@@ -181,6 +192,8 @@ runs:
         cmake -G Ninja -S . -B "$BUILD_DIR" \
           "-DCMAKE_BUILD_TYPE=$BUILD_TYPE" \
           ${BUILD_COMPILER:+"-DCMAKE_CXX_COMPILER=$BUILD_COMPILER"} \
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_POLICY_DEFAULT_CMP0141=NEW -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded \
           "-DHELLO_ENABLE_ADDRESS_SANITIZER=$BUILD_ASAN" \
           "-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
           "-DVCPKG_TARGET_TRIPLET=${{ inputs.vcpkg-triplet }}" \
@@ -289,4 +302,10 @@ runs:
           echo "| Tests | $result |"
           echo
           echo "$totals"
+          if command -v sccache > /dev/null; then
+            echo
+            echo '```'
+            sccache --show-stats || true
+            echo '```'
+          fi
         } >> "$GITHUB_STEP_SUMMARY"
