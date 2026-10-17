@@ -768,6 +768,23 @@ namespace hello::daw {
             showMenu(index, hit.index, position);
             return nullptr;
         }
+        // The middle button changes the shape of the point to the next one in the order of the
+        // menu, which is that of the enumeration, as in QSynthesis. The first point has no shape.
+        if (button == Qt::MiddleButton) {
+            auto changed = m_state->pointsOf(index);
+            if (hit.index > 0 && hit.index < changed.size()) {
+                auto &type = changed[hit.index].type;
+                type = kit::PortamentoPoint::Type((int(type) + 1) % (kit::PortamentoPoint::J + 1));
+                kit::DiagnosticList diagnostics;
+                m_state->writePoints(PianoRoll::tr("Change Pitch Point"),
+                                     {
+                                         {index, changed}
+                },
+                                     diagnostics);
+                m_state->report(diagnostics);
+            }
+            return nullptr;
+        }
         if (button != Qt::LeftButton) {
             return nullptr;
         }

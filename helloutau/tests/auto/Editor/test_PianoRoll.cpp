@@ -2584,6 +2584,30 @@ private Q_SLOTS:
         QCOMPARE(pointsOfLi(session).size(), 2);
     }
 
+    // A middle click changes the shape of a point to the next one in the order of the menu, one
+    // step of undo each, and leaves the first point, which has no shape.
+    void a_middle_click_changes_the_shape_of_a_point() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+        const auto viewport = roll.view()->viewport();
+
+        QCOMPARE(pointsOfLi(session)[1].type, kit::PortamentoPoint::S);
+        for (const auto type : {kit::PortamentoPoint::Linear, kit::PortamentoPoint::R,
+                                kit::PortamentoPoint::J, kit::PortamentoPoint::S}) {
+            QTest::mouseClick(viewport, Qt::MiddleButton, {}, pointOfLi(roll, 0, 100));
+            QCOMPARE(pointsOfLi(session)[1].type, type);
+        }
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Change Pitch Point"));
+        session.undo();
+        QCOMPARE(pointsOfLi(session)[1].type, kit::PortamentoPoint::J);
+
+        const auto before = pointsOfLi(session);
+        QTest::mouseClick(viewport, Qt::MiddleButton, {}, pointOfLi(roll, -60, 0));
+        QCOMPARE(pointsOfLi(session)[0].type, before[0].type);
+        QCOMPARE(pointsOfLi(session)[1].type, before[1].type);
+    }
+
     // Tab commits the lyric and edits the next note. Escape leaves the lyric as it was.
     void a_lyric_is_edited_in_place() {
         kit::ProjectSession session(threeNotes());
