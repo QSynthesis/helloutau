@@ -1,4 +1,4 @@
-#include "ClassicPluginApproval.h"
+#include "ClassicPluginTrust.h"
 
 #include <algorithm>
 
@@ -31,7 +31,7 @@ namespace hello::daw {
         }
 
         // Returns the SHA-256 of the program content, so that a changed program requires
-        // approval again.
+        // trust again.
         std::string fingerprintOf(const ClassicPlugin &plugin) {
             QFile file(QString::fromStdU16String(plugin.program.u16string()));
             QCryptographicHash hash(QCryptographicHash::Sha256);
@@ -50,17 +50,17 @@ namespace hello::daw {
 
     }
 
-    ClassicPluginApproval::State ClassicPluginApproval::stateOf(const json::Array &records,
-                                                                const ClassicPlugin &plugin) {
+    ClassicPluginTrust::State ClassicPluginTrust::stateOf(const json::Array &records,
+                                                          const ClassicPlugin &plugin) {
         const auto found = std::find_if(records.begin(), records.end(), isRecordOf(plugin));
         if (found == records.end()) {
             return New;
         }
-        return (*found)[sha256Key].toString(std::string()) == fingerprintOf(plugin) ? Approved
+        return (*found)[sha256Key].toString(std::string()) == fingerprintOf(plugin) ? Trusted
                                                                                     : Changed;
     }
 
-    json::Array ClassicPluginApproval::approved(json::Array records, const ClassicPlugin &plugin) {
+    json::Array ClassicPluginTrust::trusted(json::Array records, const ClassicPlugin &plugin) {
         json::Object entry;
         entry.emplace(folderKey, json::Value(textOf(plugin.folder).toStdString()));
         entry.emplace(relativePathKey, json::Value(textOf(programInFolder(plugin)).toStdString()));

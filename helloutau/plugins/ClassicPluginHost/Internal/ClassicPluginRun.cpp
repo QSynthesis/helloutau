@@ -22,7 +22,7 @@
 #include <helloutau/Editor/ProjectWindow.h>
 
 #include <ClassicPluginHost/ClassicPlugin.h>
-#include <ClassicPluginHost/ClassicPluginApproval.h>
+#include <ClassicPluginHost/ClassicPluginTrust.h>
 #include <ClassicPluginHost/ClassicPluginExchange.h>
 #include <ClassicPluginHost/ClassicPluginRunner.h>
 
@@ -41,19 +41,19 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // Shows a message box in which the user approves a program that has not run before or has
-        // changed since its last run, and returns whether the program is approved. Without a
-        // loader, which stores the approvals, the message box is shown each time.
-        bool approve(QWidget *parent, const ClassicPlugin &plugin) {
+        // Shows a message box in which the user trusts a program that has not run before or has
+        // changed since its last run, and returns whether the program is trusted. Without a
+        // loader, which stores the trust records, the message box is shown each time.
+        bool askTrust(QWidget *parent, const ClassicPlugin &plugin) {
             namespace json = stdc::json;
-            using A = ClassicPluginApproval;
+            using A = ClassicPluginTrust;
             const auto loader = AppLoader::instance();
             const auto records = loader ? kit::JsonInterop::valueAt(
                                               loader->pluginSettings().userData(), A::userDataPath)
                                               .toArray(json::Array())
                                         : json::Array();
             const auto state = A::stateOf(records, plugin);
-            if (state == A::Approved) {
+            if (state == A::Trusted) {
                 return true;
             }
             const auto question =
@@ -74,7 +74,7 @@ namespace hello::daw {
             if (loader) {
                 loader->updatePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
                     kit::JsonInterop::insertAt(settings.userData(), A::userDataPath,
-                                               json::Value(A::approved(records, plugin)));
+                                               json::Value(A::trusted(records, plugin)));
                 });
             }
             return true;
@@ -137,7 +137,7 @@ namespace hello::daw {
             count = selected.last() - first + 1;
         }
 
-        if (!approve(window, plugin)) {
+        if (!askTrust(window, plugin)) {
             return;
         }
 
