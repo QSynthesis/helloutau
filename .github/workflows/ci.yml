@@ -27,8 +27,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The name of the job only. The steps take the triplet from the output of the
-          # action, which reads the triplet of the build.
+          # The name of the job, which the action checks against the triplet of the build.
+          # The steps take the triplet from the output of the action.
           - triplet: x86_64-windows-msvc
             os: windows-latest
             vcpkg-triplet: x64-windows
@@ -43,5 +43,6 @@ jobs:
         uses: ./.github/actions/build-and-test
         with:
           channel: ci
+          triplet: ${{ matrix.triplet }}
           vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
           qt-arch: ${{ matrix.qt-arch }}

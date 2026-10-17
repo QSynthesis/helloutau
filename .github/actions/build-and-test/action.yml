@@ -12,6 +12,11 @@ inputs:
   channel:
     description: The value of HELLO_BUILD_CHANNEL, release for the tag of a version and ci otherwise.
     required: true
+  triplet:
+    description: >-
+      The triplet of HelloUtau that the matrix names, such as x86_64-windows-msvc, which the build
+      must detect. It is checked, never used for a name.
+    required: true
   vcpkg-triplet:
     description: The triplet of vcpkg in the overlay, such as x64-windows.
     required: true
@@ -140,6 +145,12 @@ runs:
         triplet="$(sed -n 's/^HELLO_TRIPLET:[A-Z]*=//p' build/Release/CMakeCache.txt | tr -d '\r')"
         if [ -z "$triplet" ]; then
           echo "HELLO_TRIPLET is missing from the cache of the build."
+          exit 1
+        fi
+        # A matrix entry that names another triplet than the build is a wrong entry or a wrong
+        # compiler, which would otherwise produce assets under another name.
+        if [ "$triplet" != "${{ inputs.triplet }}" ]; then
+          echo "::error::The build is $triplet, but the matrix names ${{ inputs.triplet }}."
           exit 1
         fi
         echo "triplet=$triplet" >> "$GITHUB_OUTPUT"
