@@ -105,8 +105,7 @@ if ($channel -ne "release") {
         throw "The commit is missing from $buildInfo."
     }
     $base = "$base-$channel-$commit"
-    $label = if ($channel -eq "ci") { "CI" } else { $channel }
-    $appVerName = "HelloUtau $label $commit"
+    $appVerName = "HelloUtau $channel $commit"
 }
 Write-Output "Packaging $base from $BuildDir"
 

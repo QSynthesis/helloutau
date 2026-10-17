@@ -24,10 +24,9 @@ private Q_SLOTS:
             return;
         }
         const auto match =
-            QRegularExpression(QStringLiteral("^(CI|dev) ([0-9a-f]{7})$")).match(name);
+            QRegularExpression(QStringLiteral("^(ci|dev) ([0-9a-f]{7})$")).match(name);
         QVERIFY2(match.hasMatch(), qPrintable(name));
-        QCOMPARE(match.captured(1),
-                 channel == QLatin1String("ci") ? QStringLiteral("CI") : channel);
+        QCOMPARE(match.captured(1), channel);
         QVERIFY(QStringLiteral(HELLOKIT_GIT_LAST_COMMIT_HASH).startsWith(match.captured(2)));
     }
 

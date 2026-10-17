@@ -17,7 +17,7 @@ namespace hello::daw {
         static bool isRelease();
 
         /// Returns the name of the build: the version for a release, such as \c 0.1.8.0 , and
-        /// otherwise the channel and the abbreviated commit, such as <tt>CI 1a2b3c4</tt> or
+        /// otherwise the channel and the abbreviated commit, such as <tt>ci 1a2b3c4</tt> or
         /// <tt>dev 1a2b3c4</tt>. The channel is an identifier and is not translated.
         static QString buildName();
 

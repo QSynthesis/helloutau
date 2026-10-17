@@ -14,9 +14,6 @@ namespace hello::daw {
         constexpr std::string_view channel = HELLOKIT_BUILD_CHANNEL;
         constexpr bool release = channel == "release";
 
-        // The channel as spelled in the name of the build
-        constexpr const char *channelName = channel == "ci" ? "CI" : HELLOKIT_BUILD_CHANNEL;
-
         constexpr int abbreviatedCommitLength = 7;
 
     }
@@ -30,7 +27,7 @@ namespace hello::daw {
             return QStringLiteral(HELLOKIT_VERSION);
         }
         return QStringLiteral("%1 %2").arg(
-            QLatin1String(channelName),
+            QLatin1String(HELLOKIT_BUILD_CHANNEL),
             QStringLiteral(HELLOKIT_GIT_LAST_COMMIT_HASH).left(abbreviatedCommitLength));
     }
 
