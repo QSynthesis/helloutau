@@ -35,7 +35,7 @@ v0.4.19 修复的是 JVN#71404925 报告的两个漏洞：
 
 **qtmediate**（<https://github.com/stdware/qtmediate>）：同一作者的 Qt 扩展库，副本位于 `.cache/qtmediate`，原理说明见 `.cache/qsynthesis-docs` 的「3. 元类型」。**只作为主题系统的设计参考，不作为代码来源**：沿用其样式表自定义类型、按钮状态、可着色 SVG 图标与主题组织的思想，代码按本仓库规范重新编写。见 [`docs/Theme.md`](docs/Theme.md)。
 
-**dini**（<https://github.com/diffscope/dini>）：DiffScope 的实验性内存文档合成工具，副本位于 `.cache/dini`。**只作为编辑层的设计参考，不作为代码来源**（仓库没有许可证文件）。与 substate 解决同一类问题，但采用关系模型；可参考的是按事务的合并通知、不进入撤销栈的修改及其隐患、恢复数据的结构兼容。见 [`docs/Editing.md`](docs/Editing.md)「参考：dini」。
+**dini**（<https://github.com/diffscope/dini>）：DiffScope 的实验性内存文档引擎，副本位于 `.cache/dini`。**只作为编辑层的设计参考，不作为代码来源**（仓库没有许可证文件）。与 substate 解决同一类问题，但采用关系模型；可参考的是按事务的合并通知、不进入撤销栈的修改及其隐患、恢复数据的结构兼容。见 [`docs/Editing.md`](docs/Editing.md)「参考：dini」。
 
 **synthrt**（`D:\GitHub\synthrt`）与 **stdcorelib**（`D:\GitHub\stdcorelib`）：本仓库工程规范的来源。目录组织、命名、注释、头文件引用参照 synthrt 的 `docs/Development.md`；基础设施优先使用 stdcorelib。
 
