@@ -17,9 +17,9 @@ namespace hello::daw {
     public:
         ~VoiceBankSettings();
 
-        /// Returns the voice folder of HelloUtau, the \c Singers directory of
-        /// AppSettings::userDirectory(). The folder is the first voice folder of locations(),
-        /// and it is not created by this class.
+        /// Returns the voice folder of HelloUtau, the \c voice directory of
+        /// AppSettings::classicExtensionsDirectory(). The folder is the first voice folder of
+        /// locations(), and it is not created by this class.
         std::filesystem::path folder() const;
 
         /// Returns whether a relative \c VoiceDir is resolved against UtauSettings::directory(),

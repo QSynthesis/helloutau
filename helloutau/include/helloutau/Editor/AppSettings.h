@@ -69,6 +69,12 @@ namespace hello::daw {
         /// and the plugins. The directory is not created by this class.
         std::filesystem::path userDirectory() const;
 
+        /// Returns the directory of the voice banks and plugins of UTAU that the user adds for
+        /// HelloUtau, the \c ClassicExtensions directory of userDirectory(). Its \c voice and
+        /// \c plugins directories mirror those into which the installer of UTAU puts voice banks
+        /// and plugins. The directory is not created by this class.
+        std::filesystem::path classicExtensionsDirectory() const;
+
         /// Writes the pending changes immediately.
         void sync();
 

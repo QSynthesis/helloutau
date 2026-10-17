@@ -493,7 +493,7 @@ private Q_SLOTS:
         const auto user = directory / u"user";
         const AppSettings settings(settingsFile, QString::fromStdU16String(user.u16string()));
         QCOMPARE(settings.userDirectory(), user);
-        QCOMPARE(settings.voiceBanks().folder(), user / u"Singers");
+        QCOMPARE(settings.voiceBanks().folder(), user / u"ClassicExtensions" / u"voice");
     }
 
     // The voice folder of HelloUtau comes first, then the voice directory of UTAU if the UTAU
@@ -504,7 +504,8 @@ private Q_SLOTS:
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
         const auto program =
             std::filesystem::path(QCoreApplication::applicationDirPath().toStdU16String());
-        const auto voice = std::filesystem::path(dir.path().toStdU16String()) / u"Singers";
+        const auto voice =
+            std::filesystem::path(dir.path().toStdU16String()) / u"ClassicExtensions" / u"voice";
         QCOMPARE(settings.voiceBanks().folder(), voice);
 
         auto locations = settings.voiceBanks().locations();

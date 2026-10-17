@@ -21,7 +21,7 @@ namespace hello::daw {
     VoiceBankSettings::~VoiceBankSettings() = default;
 
     std::filesystem::path VoiceBankSettings::folder() const {
-        return m_settings.userDirectory() / u"Singers";
+        return m_settings.classicExtensionsDirectory() / u"voice";
     }
 
     bool VoiceBankSettings::isRelativeToUtau() const {

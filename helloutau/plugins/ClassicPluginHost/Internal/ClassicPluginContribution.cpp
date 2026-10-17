@@ -88,7 +88,7 @@ namespace hello::daw {
     }
 
     std::filesystem::path ClassicPluginContribution::userDirectory(const AppSettings &settings) {
-        return settings.userDirectory() / u"ClassicPlugins";
+        return settings.classicExtensionsDirectory() / u"plugins";
     }
 
     void ClassicPluginContribution::fill(QMenu *menu, ProjectWindow *window) {

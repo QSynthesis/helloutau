@@ -152,6 +152,10 @@ namespace hello::daw {
         return impl.userDirectory;
     }
 
+    std::filesystem::path AppSettings::classicExtensionsDirectory() const {
+        return userDirectory() / u"ClassicExtensions";
+    }
+
     void AppSettings::sync() {
         stdc_impl_t;
         impl.store.file.sync();

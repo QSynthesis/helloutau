@@ -23,7 +23,7 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 
 ## 范围
 
-- 音源与插件都安装（作者 2026-10-17 决定）。`install.txt` 的 `type` 为 `editplugin` 时装到用户的 UTAU 插件目录（`Documents/OpenVPI/HelloUtau/ClassicPlugins`，见 [`Distribution.md`](Distribution.md)），`voiceset` 按音源装到 `Documents/OpenVPI/HelloUtau/Singers`。没有 `install.txt` 的包与未知的 `type` 同 UTAU 拒绝安装（作者 2026-10-17 决定）。
+- 音源与插件都安装（作者 2026-10-17 决定）。`install.txt` 的 `type` 为 `editplugin` 时装到用户的 UTAU 插件目录（`Documents/OpenVPI/HelloUtau/ClassicExtensions/plugins`，见 [`Distribution.md`](Distribution.md)），`voiceset` 按音源装到 `Documents/OpenVPI/HelloUtau/ClassicExtensions/voice`，与 UTAU 装入 `%AppData%\UTAU` 下的同名目录相对应。没有 `install.txt` 的包与未知的 `type` 同 UTAU 拒绝安装（作者 2026-10-17 决定）。
 - 入口：把 `.uar` 或 `.zip` 拖到工程窗口或音源窗口，或者「文件 → Install Voice Bank or Plugin...」。拖入的 `.zip` 只在根上有 `install.txt` 时视为安装包，否则按原有的拖放处理。`.uar` 与从菜单选择的文件根上没有 `install.txt` 时拒绝安装并告知用户。
 - 不支持 rar、7z 与嵌套的压缩包。
 

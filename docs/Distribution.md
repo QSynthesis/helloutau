@@ -83,15 +83,15 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 | 内容 | 位置 | Windows 上的路径 |
 |---|---|---|
 | 设置、快捷键、菜单布局 | 应用数据目录（`QStandardPaths::AppDataLocation`） | `%APPDATA%\OpenVPI\HelloUtau` |
-| HelloUtau 自己的音源 | 文档目录下的 `OpenVPI/HelloUtau/Singers` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\Singers` |
-| 用户安装的 UTAU 插件 | 文档目录下的 `OpenVPI/HelloUtau/ClassicPlugins` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\ClassicPlugins` |
+| HelloUtau 自己的 UTAU 音源 | 文档目录下的 `OpenVPI/HelloUtau/ClassicExtensions/voice` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\ClassicExtensions\voice` |
+| 用户安装的 UTAU 插件 | 文档目录下的 `OpenVPI/HelloUtau/ClassicExtensions/plugins` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\ClassicExtensions\plugins` |
 | 用户安装的原生插件 | 文档目录下的 `OpenVPI/HelloUtau/Extensions/plugins` | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\Extensions\plugins` |
 | 用户安装的翻译 | 文档目录下的 `OpenVPI/HelloUtau/Extensions/translations`，先于程序自带的翻译 | `%USERPROFILE%\Documents\OpenVPI\HelloUtau\Extensions\translations` |
 | 临时文件 | 临时目录下的 `OpenVPI/HelloUtau` | `%TEMP%\OpenVPI\HelloUtau` |
 
 - 音源与插件放在文档目录而不是应用数据目录，同 Synthesizer V。这两类文件由用户自行复制、整理和备份，应用数据目录默认隐藏，不便于用户访问。
-- 音源目录名为 `Singers`，不使用 `voice`。
-- 文档目录下的第一层目录名采用首字母大写的单词（`Singers`、`ClassicPlugins`），面向用户。原生插件的目录沿用安装目录的小写写法（`plugins`，对应安装目录的 `lib/helloutau/plugins`），因此以 `Extensions` 一层与第一层隔开（作者 2026-10-11 决定）。以后用户安装的其他扩展内容，例如主题与翻译，同样放在 `Extensions` 下，按安装目录的写法命名。
+- UTAU 的音源与插件放在 `ClassicExtensions` 下的 `voice` 与 `plugins`，与 UTAU 的安装包装入的 `%AppData%\UTAU\voice`、`%AppData%\UTAU\plugins` 同名（作者 2026-10-17 决定，见 [`ArchiveInstall.md`](ArchiveInstall.md)「UTAU 的行为」），用户可以按 UTAU 的结构整个复制。0.1.7 所用的 `Singers` 与 `ClassicPlugins` 不再使用，不迁移（作者 2026-10-18 决定）。
+- 文档目录下的第一层目录名采用首字母大写的单词，面向用户。其下的目录沿用来源的写法：`ClassicExtensions` 下沿用 UTAU 的 `voice` 与 `plugins`，`Extensions` 下沿用安装目录的小写写法（`plugins` 对应安装目录的 `lib/helloutau/plugins`，作者 2026-10-11 决定）。以后用户安装的其他扩展内容，例如主题，同样放在 `Extensions` 下，按安装目录的写法命名。
 - 文档目录取 `QStandardPaths::DocumentsLocation`。用户把「文档」重定向到其他位置时，路径随之改变。
 - 其他平台的应用数据目录：macOS 为 `~/Library/Application Support/OpenVPI/HelloUtau`，Linux 为 `~/.local/share/OpenVPI/HelloUtau`，与 ds-editor-lite（`fd38fb09`，`SingleInstanceIdentity::defaultDataDirectory()`）相同（作者 2026-10-16 决定）。DiffScope 在 macOS 与 Linux 上用 `~/.config`，未采用。音源与插件在这些平台上同样放在文档目录。
 
