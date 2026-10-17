@@ -58,12 +58,9 @@ runs:
           *) echo "::error::The variant ${{ inputs.variant }} is none of release, debug and asan."
              exit 1 ;;
         esac
-        # asan is built by clang, whose AddressSanitizer runs every test without a report, as
-        # locally. That of cl 14.51 reported use-after-poison in num_put of MSVCP140, which reads
-        # back the digits that it has just written into its own stack frame: poison that an
-        # instrumented frame left on the stack, not an error of this code. cl 14.44 does not
-        # report it. The runtime of clang has the same name as that of MSVC, whose directory the
-        # environment of MSVC puts first, so the tests put its directory first again.
+        # asan is built by clang, as locally. The runtime of clang has the same name as that of
+        # MSVC, whose directory the environment of MSVC puts first, so the tests put its
+        # directory first again.
         runtime=
         if [ "$asan" = ON ] && [ "$RUNNER_OS" = "Windows" ]; then
           runtime="$(cygpath -u "$(clang++ -print-resource-dir)")/lib/windows"
