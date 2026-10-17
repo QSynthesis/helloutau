@@ -21,7 +21,7 @@ namespace hello::daw {
         class Messages {
             Q_DECLARE_TR_FUNCTIONS(hello::daw::SynthToolTrust)
         };
-        constexpr char Key[] = "synthToolTrust/approved";
+        constexpr char Key[] = "synthToolTrust/trusted";
 
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));

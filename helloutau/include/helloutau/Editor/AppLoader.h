@@ -161,7 +161,7 @@ namespace hello::daw {
         /// disabled plugins record the choices of the user, which load() applies, and its
         /// \c userData records the values of each plugin under the ID of the plugin. A plugin
         /// addresses a value with kit::JsonInterop::valueAt() and a path that starts with its ID,
-        /// such as <tt>org.helloutau.classicpluginhost/approved</tt>.
+        /// such as <tt>org.helloutau.classicpluginhost/trusted</tt>.
         /// @{
 
         /// Returns the settings of the plugins.

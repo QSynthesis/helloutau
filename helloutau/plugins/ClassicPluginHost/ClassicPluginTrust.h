@@ -19,14 +19,14 @@ namespace hello::daw {
     /// human readers, and the SHA-256 of the program. Only the SHA-256 is compared.
     ///
     /// \code
-    ///     "approved": [{"folder": "C:\\UTAU\\plugins\\Foo", "relativePath": "foo.exe",
-    ///                   "sha256": "<SHA-256>"}]
+    ///     "trusted": [{"folder": "C:\\UTAU\\plugins\\Foo", "relativePath": "foo.exe",
+    ///                  "sha256": "<SHA-256>"}]
     /// \endcode
     class CLASSICPLUGINHOST_EXPORT ClassicPluginTrust {
     public:
         /// The path of the records in the user data of the plugin settings, under the ID of
         /// this plugin.
-        static constexpr char userDataPath[] = "org.helloutau.classicpluginhost/approved";
+        static constexpr char userDataPath[] = "org.helloutau.classicpluginhost/trusted";
 
         enum State {
             Trusted,

@@ -37,7 +37,7 @@ class test_ClassicPluginTrust : public QObject {
 private Q_SLOTS:
     void the_records_are_written_under_the_id_of_the_plugin() {
         QCOMPARE(QLatin1String(ClassicPluginTrust::userDataPath),
-                 QLatin1String("org.helloutau.classicpluginhost/approved"));
+                 QLatin1String("org.helloutau.classicpluginhost/trusted"));
     }
 
     // A trusted program is recorded with its folder, its path relative to the folder and its
