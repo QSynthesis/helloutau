@@ -161,21 +161,30 @@ runs:
       shell: bash
       env:
         QT_QPA_PLATFORM: offscreen
+        QT_FORCE_STDERR_LOGGING: 1
       run: |
         set +e
+        # The directories that ctest prepends to PATH: Qt, and the plugins that tests load
+        if [ -n "${QT_ROOT_DIR:-}" ]; then
+          PATH="$(cygpath -u "$QT_ROOT_DIR")/bin:$PATH"
+        fi
+        for directory in "$PWD"/build/Release/out/lib/helloutau/plugins/*/; do
+          PATH="$directory:$PATH"
+        done
         # The lines of the list end with CR LF on Windows, and the CR would be part of the name.
         for name in $(tr -d '\r' < build/Release/Testing/Temporary/LastTestsFailed.log |
                       cut -d: -f2); do
           echo "::group::$name"
-          ctest --test-dir build/Release -R "^${name}\$" -V --timeout 120
           program="$(find build/Release/out -type f \( -name "${name}.exe" -o -name "$name" \) |
             head -1)"
           if [ -n "$program" ]; then
-            # The results also into a file, in case the standard output is lost, and the plugins
-            # that Qt loads, in case the platform plugin does not load
-            QT_DEBUG_PLUGINS=1 timeout 120 "$program" -v2 -o "build/$name.txt,txt" -o -,txt
+            # Every check with -v2, into a file, whose end shows the check that blocks if the
+            # test is ended by the timeout
+            timeout 120 "$program" -v2 -o "build/$name.txt,txt"
             echo "$name exited with status $?"
-            cat "build/$name.txt" 2>/dev/null | tail -40
+            tail -60 "build/$name.txt"
+          else
+            ctest --test-dir build/Release -R "^${name}\$" -V --timeout 120
           fi
           echo "::endgroup::"
         done
