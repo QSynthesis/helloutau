@@ -633,7 +633,11 @@ private Q_SLOTS:
         show(roll);
         roll.setFollowDuration(10);
         const double width = roll.view()->viewport()->width();
-        const auto marginAt = [&roll, width](double quarter) {
+        // Returns whether the page turn for a quarter note of the given pixels ends with the
+        // playhead at the margin expected. The easing reaches the margin only when it ends, so
+        // the test waits for the end. A fixed wait of 50 ms once returned while the easing still
+        // ran on a slow machine, and the easing then moved the next page as well.
+        const auto turnsTo = [&roll, width](double quarter, double expected) {
             auto axis = roll.view()->timeAxis();
             axis.pixelsPerTick = quarter / kit::ticksPerQuarter;
             axis.left = 0;
@@ -641,14 +645,14 @@ private Q_SLOTS:
             const auto &time = roll.view()->timeAxis();
             const double tick = time.left + width / time.pixelsPerTick * 1.01;
             roll.setPlayheadPosition(tick);
-            QTest::qWait(50);
-            const double x = time.toX(tick);
+            const bool ended =
+                QTest::qWaitFor([&] { return qAbs(time.toX(tick) - expected) < 1e-6; }, 5000);
             roll.setPlayheadPosition(std::nullopt);
-            return x;
+            return ended;
         };
-        QVERIFY(qAbs(marginAt(width * 0.04) - width * 0.04) < 0.01);
-        QVERIFY(qAbs(marginAt(width * 0.02) - width * 0.025) < 0.01);
-        QVERIFY(qAbs(marginAt(width * 0.2) - width * 0.05) < 0.01);
+        QVERIFY(turnsTo(width * 0.04, width * 0.04));
+        QVERIFY(turnsTo(width * 0.02, width * 0.025));
+        QVERIFY(turnsTo(width * 0.2, width * 0.05));
     }
 
     // The playhead at rest moves where the ruler is pressed or dragged, snapped to the
