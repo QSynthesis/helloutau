@@ -11,6 +11,9 @@
 | `%VOICE%<名称>` | `<utau.exe 所在目录>\voice\<名称>` |
 | 相对路径，如 `hp_rel` | `<utau.exe 所在目录>\hp_rel` |
 | 绝对路径 | 原样使用 |
+| `%DATA%\<路径>` | `%AppData%\UTAU\<路径>` |
+
+**`%DATA%` 表示 UTAU 安装包所用的数据目录 `%AppData%\UTAU`**（2026-10-18 作者以 UTAU 0.4.18 实测，探针位于 `.cache/utau-probe/install/`）。在工程属性中选择由安装包装入 `%AppData%\UTAU\voice\probe12` 的音源，另存后为 `VoiceDir=%DATA%\voice\probe12`，前缀后带反斜杠，与 `%VOICE%` 不同。`%VOICE%` 不查找该目录：`VoiceDir=%VOICE%probe12` 解析为 `<utau.exe 所在目录>\voice\probe12`，打开工程属性时报告「无效的声音音源设定」。指向 `%AppData%\UTAU` 内的绝对路径在保存时是否改写为 `%DATA%` 形式未测。
 
 **相对路径以 `utau.exe` 所在目录为基准**，既不是 UST 所在目录，也不是 `voice` 目录。探针在这三处各放一个同名的音源，UTAU 使用的是 `utau.exe` 旁边的那一个。工程是经由 UTAU 的「打开」对话框打开的，因此这一基准也不随打开文件时的当前目录变化。
 
