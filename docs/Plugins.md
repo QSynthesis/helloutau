@@ -120,7 +120,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 
 ### 编辑界面扩展：动作与命令
 
-作者 2026-09-30 要求插件能注册自己的动作（命令），这是「编辑界面扩展」扩展点的第一部分。
+作者 2026-09-30 要求插件能注册自己的动作（命令），这是「编辑界面扩展」扩展点的第一部分。第二部分是停靠面板，见 [`Docking.md`](Docking.md)「扩展点」（作者 2026-10-17 决定）。
 
 - **qactionkit 已有的部分**：多份清单合并，插件的清单以 `<insertions>` 插入宿主的菜单（`anchor`、`priority`）。为插件卸载补充了 `ActionRegistry::removeExtension()`（qactionkit `46bce9b`），移除后立即重新计算，registry 中不再有指向该清单的视图。
 - **`ActionContribution`**（HelloUtauWidgets）：每种窗口至多一份 AEC 编译的清单，由 `extension(const QString &windowKind)` 给出，编辑器把它登记到该种窗口的 registry（每种窗口一个 registry，见 [`Widgets.md`](Widgets.md)「Keymap 页」），加上为窗口创建动作的 `addActions(QWidget *, context)`。窗口种类以宿主定义的名称区分，编辑器的为 `Editor::projectWindowName`、`Editor::voiceBankWindowName` 与 `Editor::frequencyMapEditorName`，与快捷键、布局文件的分节名相同；需要某种窗口接口的贡献自行 `qobject_cast`，忽略其他种类（作者 2026-10-08 决定：动作与设置页的登记属于通用层，移入 HelloUtauWidgets，接口不含编辑器的类型，HelloUtauWidgets 因此私有链接 QActionKit）。登记所在的列表 `ActionContributionRegistry` 是公开的，由 `Editor` 持有，见「注册接口」。动作以窗口为父对象，贡献移除时由编辑器从 context 移除并删除。插进某种窗口菜单的条目若没有该窗口的动作，context 显示一个不做任何事的占位项。
