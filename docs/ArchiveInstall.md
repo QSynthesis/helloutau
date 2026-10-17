@@ -13,8 +13,10 @@
   - `contentsdir` 指向包里不存在的文件夹时提示「安装信息中有错误」。只写 `folder` 而文件夹同名时，`voiceset` 同样提示「安装信息中有错误」，`editplugin` 提示「插件信息并未找到。」，补上同名的 `contentsdir` 后可以安装。因此省略 `contentsdir` 时 UTAU 并不像规格所写的那样取 `folder`，是否改取包的根待实测。
   - `install.txt` 按系统 ANSI 代码页解码：Shift_JIS 的日文说明在 GBK 系统上显示为乱码。
   - 安装前的确认框显示音源的 `character.txt` 中的 `name` 与 `description`，插件则显示 `plugin.txt` 中的 `name`。
-  - 目标文件夹已存在时询问是否覆盖，同时显示文件夹名与已安装音源的名字。选「否」时改装到在文件夹名后加数字的新文件夹（`probe1-folder0`）。覆盖是替换还是合并待第二轮确认。
-  - 安装位置与条目名的解码待第二轮确认。
+  - 目标文件夹已存在时询问是否覆盖，同时显示文件夹名与已安装音源的名字。选「否」时改装到在文件夹名后加数字的新文件夹（`probe1-folder0`）。覆盖为合并：同名文件被替换，原有的其他文件保留。
+  - 音源装到 `%AppData%\UTAU\voice\<folder>`，插件装到 `%AppData%\UTAU\plugins\<folder>`，不是 UTAU 安装目录下的 `voice` 与 `plugins`。`install.txt` 不复制。
+  - 不带 UTF-8 标志的条目名按系统 ANSI 代码页解码：Shift_JIS 的 `あ.wav` 在 GBK 系统上装成 `偁.wav`，即 [`Editing.md`](Editing.md)「文件名编码错解的处理」所述的错解。带 UTF-8 标志的条目名按 UTF-8 解码，`你.wav` 这类 Shift_JIS 无法表示的名字也正确。
+  - 每个装好的音源文件夹中多出一个 `$read` 文件，内容为 28 个随机大写字母加 CRLF。UTAU 安装目录与手动放入的音源中也有这个文件，用途未查证，HelloUtau 不写它。
 - 实际的 `install.txt` 不一定是 Shift_JIS（2026-10-17 实测）：frqeditor 20160417 的 `install.txt` 是 Shift_JIS，作者本机 PitTrace 副本的 `install.txt` 只能按 GBK 解码，内容为「◆拡張ピッチエディタ Version 2.15」。后者是本机的副本，不能说明原始发布包的编码，但说明 `install.txt` 的编码同样须由用户选择。
 
 OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`）：条目名的编码由用户在向导中选择，默认 Shift_JIS，并预览解码结果。它不读 `install.txt`，只跳过根上的 `install.txt`。文件在根上时，它装进以压缩包名命名的文件夹。它唯一的路径检查是跳过名字含 `..` 的条目，其余照常安装。HelloUtau 不沿用这一检查，按安全底线拒绝整个压缩包。
@@ -29,13 +31,13 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 
 1. **读取条目。** 只读取中央目录，不解压。得到每个条目的原始名字、UTF-8 标志、声明的大小与类型。此时即进行与解压相同的全部检查（见「安全」），不通过时拒绝整个压缩包并告知用户，不进入下一步。
 2. **条目名的编码。** 条目名全为 ASCII 或都带 UTF-8 标志时不询问。否则在安装对话框中选择编码：候选为 `TextCodec::ustCandidates()`，默认值按 `TextCodec::ranked()` 选出，旁边以所选编码解码出的目录树预览。某个候选对某个名字是非法字节序列时，该候选不可选。不检测编码，见 [`note.md`](note.md)。
-3. **种类与目标文件夹。** 按根上的 `install.txt` 的 `type`、`folder` 与 `contentsdir` 确定：`contentsdir` 所指的文件夹装为 `folder`。省略 `contentsdir` 时的处理与 `install.txt` 是否复制以实测为准。
+3. **种类与目标文件夹。** 按根上的 `install.txt` 的 `type`、`folder` 与 `contentsdir` 确定：`contentsdir` 所指的文件夹装为 `folder`，同 UTAU 不复制 `install.txt`。省略 `contentsdir` 时的处理以实测为准。
 4. **文本编码。** 音源的 `character.txt`、`oto.ini` 等文本文件的编码在同一个对话框中选择，预览沿用 `VoiceBankDecodingDialog` 的文本预览。安装后为每个含 `oto.ini` 的文件夹写入 `hello-config.json`，记录文本编码与文件名编码（见第 5 步），打开该音源时不再询问。插件的 `plugin.txt` 照 UTAU 按系统 ANSI 代码页读取（[`note.md`](note.md)「插件」），不写 `plugin.json`。
 5. **名字写入磁盘的方式**（作者 2026-10-17 决定，默认第一种，用户可选第二种）：
    - **按所选编码还原**：磁盘上是正确的 Unicode 名字，`fileNameEncoding` 记为 `{}`。在 Windows 上，有名字无法以系统 ANSI 代码页表示时提示用户：官方 UTAU 在这台机器上无法使用这些文件。
    - **按本机代码页错解**：与 UTAU 在本机解压的结果相同，官方 UTAU 在这台机器上可以使用。`fileNameEncoding` 记为所选编码与系统 ANSI 代码页这一对，HelloUtau 按 [`Editing.md`](Editing.md)「文件名编码错解的处理」读取。有名字在系统 ANSI 代码页中是非法字节序列时，此项不可选，因为错解后的名字无法还原。所选编码与系统 ANSI 代码页相同时两种方式结果相同，不显示此选项。
-6. **同名文件夹。** 目标文件夹已存在时询问覆盖、另起名字或取消，不静默合并。覆盖时先删除原文件夹，再安装。
-7. **解压。** 先解压到目标位置的同一目录下的临时文件夹（`.<名字>.installing-<随机>`），全部成功后改名为目标文件夹。失败或取消时删除临时文件夹，目标位置不留下半装的内容。进度与取消沿用 `ZipExtractor` 的进度回调。
+6. **同名文件夹。** 目标文件夹已存在时同 UTAU 询问覆盖、装到新文件夹或取消。覆盖为合并，同名文件被替换，其他文件保留，因此用户生成的频率表与 `hello-config.json` 不会丢失。新文件夹在原名后加从 0 起第一个未被占用的数字。
+7. **解压。** 先解压到目标位置的同一目录下的临时文件夹（`.<名字>.installing-<随机>`），全部成功后改名为目标文件夹，覆盖时把各文件移入目标文件夹。解压失败或取消时删除临时文件夹，目标位置不受影响。进度与取消沿用 `ZipExtractor` 的进度回调。
 8. **完成。** 音源装好后可直接打开音源窗口，插件装好后由 ClassicPluginHost 的目录监视自动载入。
 
 ## 安全
