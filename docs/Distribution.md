@@ -63,7 +63,7 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 - **变体**：组合 action 的输入 `variant` 选择构建的变体，每种变体在自己的构建目录中（作者 2026-10-17 决定）。
   - `release`：Release，即发布的构建，位于 `build/Release`，打包脚本读取这里。
   - `debug`：Debug，带断言与 Debug 运行库的检查，位于 `build/Debug`。
-  - `asan`：RelWithDebInfo 加 `HELLO_ENABLE_ADDRESS_SANITIZER`，以 AddressSanitizer 检测释放后的访问、堆与栈的越界，位于 `build/asan`。依赖取自 vcpkg，未经插桩，因此关闭了 MSVC 标准库容器的注解，`std::vector` 与 `std::string` 在预留容量内的越界不能发现，见根目录 `CMakeLists.txt`。Release 下崩溃而 Debug 下不崩溃的释放后访问（编辑频率表对话框，`407c21a2`）即是这一变体所针对的问题。
+  - `asan`：RelWithDebInfo 加 `HELLO_ENABLE_ADDRESS_SANITIZER`，以 AddressSanitizer 检测释放后的访问、堆与栈的越界，位于 `build/asan`。由 clang（GNU 前端，MSVC 的 ABI）构建，与本地相同。cl 14.51 的 AddressSanitizer 在 MSVCP140 的 `num_put` 中报告 `use-after-poison`：它读回的是自己刚写入自身栈帧的数字，标记是此前插桩的栈帧在栈上留下的，不是本仓库的错误，本地的 cl 14.44 不报告，因此不采用 cl（作者 2026-10-17 决定）。clang 与 MSVC 的运行库同名，测试的步骤把 clang 的运行库目录放在 `PATH` 的最前面。依赖取自 vcpkg，未经插桩，因此关闭了 MSVC 标准库容器的注解，`std::vector` 与 `std::string` 在预留容量内的越界不能发现，见根目录 `CMakeLists.txt`。Release 下崩溃而 Debug 下不崩溃的释放后访问（编辑频率表对话框，`407c21a2`）即是这一变体所针对的问题。
   - `deploy.yml` 的 job `package` 构建 release 并打包，job `test` 同时构建 debug 与 asan。打包不等 `test` 的结果，因此每次推送都产出 CI 的安装包，`test` 失败时整次运行标为失败。tag 的 release 在两个 job 都通过后才创建。`ci.yml` 构建全部三种变体，不打包。
 - **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip、zlib 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
 - **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。release 变体的任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。

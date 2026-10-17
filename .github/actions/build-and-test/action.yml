@@ -50,17 +50,34 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        compiler=
         case "${{ inputs.variant }}" in
           release) directory=build/Release; type=Release; asan=OFF ;;
           debug) directory=build/Debug; type=Debug; asan=OFF ;;
-          asan) directory=build/asan; type=RelWithDebInfo; asan=ON ;;
+          asan) directory=build/asan; type=RelWithDebInfo; asan=ON; compiler=clang++ ;;
           *) echo "::error::The variant ${{ inputs.variant }} is none of release, debug and asan."
              exit 1 ;;
         esac
+        # asan is built by clang, whose AddressSanitizer runs every test without a report, as
+        # locally. That of cl 14.51 reported use-after-poison in num_put of MSVCP140, which reads
+        # back the digits that it has just written into its own stack frame: poison that an
+        # instrumented frame left on the stack, not an error of this code. cl 14.44 does not
+        # report it. The runtime of clang has the same name as that of MSVC, whose directory the
+        # environment of MSVC puts first, so the tests put its directory first again.
+        runtime=
+        if [ "$asan" = ON ] && [ "$RUNNER_OS" = "Windows" ]; then
+          runtime="$(cygpath -u "$(clang++ -print-resource-dir)")/lib/windows"
+          if [ ! -f "$runtime/clang_rt.asan_dynamic-x86_64.dll" ]; then
+            echo "::error::The runtime of AddressSanitizer is missing from $runtime."
+            exit 1
+          fi
+        fi
         {
           echo "BUILD_DIR=$directory"
           echo "BUILD_TYPE=$type"
           echo "BUILD_ASAN=$asan"
+          echo "BUILD_COMPILER=$compiler"
+          echo "ASAN_RUNTIME_DIR=$runtime"
         } >> "$GITHUB_ENV"
         echo "directory=$directory" >> "$GITHUB_OUTPUT"
 
@@ -166,6 +183,7 @@ runs:
         fi
         cmake -G Ninja -S . -B "$BUILD_DIR" \
           "-DCMAKE_BUILD_TYPE=$BUILD_TYPE" \
+          ${BUILD_COMPILER:+"-DCMAKE_CXX_COMPILER=$BUILD_COMPILER"} \
           "-DHELLO_ENABLE_ADDRESS_SANITIZER=$BUILD_ASAN" \
           "-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
           "-DVCPKG_TARGET_TRIPLET=${{ inputs.vcpkg-triplet }}" \
@@ -200,6 +218,9 @@ runs:
         QT_QPA_PLATFORM: offscreen
       run: |
         set +e
+        if [ -n "${ASAN_RUNTIME_DIR:-}" ]; then
+          PATH="$ASAN_RUNTIME_DIR:$PATH"
+        fi
         ctest --test-dir "$BUILD_DIR" --output-on-failure --no-tests=error 2>&1 | tee build/ctest.log
         status=${PIPESTATUS[0]}
         printf '%s' "$status" > build/ctest.status
@@ -220,6 +241,9 @@ runs:
         QT_FORCE_STDERR_LOGGING: 1
       run: |
         set +e
+        if [ -n "${ASAN_RUNTIME_DIR:-}" ]; then
+          PATH="$ASAN_RUNTIME_DIR:$PATH"
+        fi
         # The directories that ctest prepends to PATH: Qt, and the plugins that tests load
         if [ -n "${QT_ROOT_DIR:-}" ]; then
           PATH="$(cygpath -u "$QT_ROOT_DIR")/bin:$PATH"
