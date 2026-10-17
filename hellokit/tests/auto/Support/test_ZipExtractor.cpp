@@ -27,6 +27,8 @@ namespace {
         bool directory = false;
         std::optional<zip_uint32_t> unixMode;
         bool encrypted = false;
+        // An extra field in the local header and in the central directory
+        std::optional<std::pair<zip_uint16_t, QByteArray>> extraField;
     };
 
     TestEntry file(const QByteArray &name, const QByteArray &data = {}) {
@@ -67,7 +69,13 @@ namespace {
                  zip_file_set_external_attributes(zip, zip_uint64_t(index), 0, ZIP_OPSYS_UNIX,
                                                   *entry.unixMode << 16) != 0) ||
                 (entry.encrypted && zip_file_set_encryption(zip, zip_uint64_t(index),
-                                                            ZIP_EM_TRAD_PKWARE, "password") != 0)) {
+                                                            ZIP_EM_TRAD_PKWARE, "password") != 0) ||
+                (entry.extraField &&
+                 zip_file_extra_field_set(
+                     zip, zip_uint64_t(index), entry.extraField->first, ZIP_EXTRA_FIELD_NEW,
+                     reinterpret_cast<const zip_uint8_t *>(entry.extraField->second.constData()),
+                     zip_uint16_t(entry.extraField->second.size()),
+                     ZIP_FL_LOCAL | ZIP_FL_CENTRAL) != 0)) {
                 zip_discard(zip);
                 return false;
             }
@@ -125,6 +133,92 @@ namespace {
         }
         file.seek(0);
         return file.write(data) == data.size() ? int(localCount) : 0;
+    }
+
+    // Returns the CRC-32 of data, as the Info-ZIP Unicode Path field records that of the name
+    quint32 crc32Of(QByteArrayView data) {
+        quint32 crc = 0xFFFFFFFF;
+        for (const auto c : data) {
+            crc ^= quint8(c);
+            for (int bit = 0; bit < 8; ++bit) {
+                crc = (crc >> 1) ^ (0xEDB88320 & (0u - (crc & 1)));
+            }
+        }
+        return ~crc;
+    }
+
+    // Returns the payload of an Info-ZIP Unicode Path field (0x7075) that gives utf8 as the name
+    // of the entry whose name is original
+    QByteArray unicodePathOf(const QByteArray &original, const QByteArray &utf8) {
+        QByteArray payload(1, '\x01');
+        const auto crc = crc32Of(original);
+        for (int i = 0; i < 4; ++i) {
+            payload.append(char((crc >> (8 * i)) & 0xFF));
+        }
+        return payload + utf8;
+    }
+
+    // An extra field ID that libzip does not interpret. libzip refuses to write 0x7075, so the
+    // tests write this ID and replace it afterwards.
+    constexpr zip_uint16_t placeholderField = 0x7070;
+
+    // Replaces the ID of every extra field of placeholderField that holds payload with 0x7075, in
+    // the local headers and in the central directory. Returns the number of fields replaced.
+    int markUnicodePath(const QString &path, const QByteArray &payload) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadWrite)) {
+            return 0;
+        }
+        auto data = file.readAll();
+        QByteArray header("\x70\x70", 2);
+        header.append(char(payload.size() & 0xFF));
+        header.append(char(payload.size() >> 8));
+        header += payload;
+        int count = 0;
+        // The ID is little-endian, so 0x7075 is stored as 75 70.
+        for (auto i = data.indexOf(header); i >= 0; i = data.indexOf(header, i + 1)) {
+            data[i] = '\x75';
+            ++count;
+        }
+        file.seek(0);
+        return file.write(data) == data.size() ? count : 0;
+    }
+
+    // Replaces every occurrence of the name from by the name to of the same length, in the local
+    // headers and in the central directory, and returns the number of occurrences
+    int renameEntries(const QString &path, const QByteArray &from, const QByteArray &to) {
+        QFile file(path);
+        if (from.size() != to.size() || !file.open(QIODevice::ReadWrite)) {
+            return 0;
+        }
+        auto data = file.readAll();
+        const auto count = int(data.count(from));
+        data.replace(from, to);
+        file.seek(0);
+        return file.write(data) == data.size() ? count : 0;
+    }
+
+    // Sets the UTF-8 flag (bit 11) of every entry in its local header and in the central
+    // directory, and returns the number of entries changed
+    int markUtf8(const QString &path) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadWrite)) {
+            return 0;
+        }
+        auto data = file.readAll();
+        int count = 0;
+        const std::pair<QByteArrayView, int> headers[] = {
+            {QByteArrayView("PK\x03\x04", 4), 7},
+            {QByteArrayView("PK\x01\x02", 4), 9},
+        };
+        for (const auto &[signature, offset] : headers) {
+            for (auto i = data.indexOf(signature); i >= 0; i = data.indexOf(signature, i + 4)) {
+                data[i + offset] = char(data[i + offset] | 0x08);
+                ++count;
+            }
+        }
+        file.seek(0);
+        return file.write(data) == data.size() ? count / 2 : 0;
     }
 
 }
@@ -332,6 +426,170 @@ private Q_SLOTS:
         });
         QVERIFY(extract(extractor));
         QCOMPARE(listing(outPath()), QStringList({decoded}));
+    }
+
+    // libzip replaces the name of an entry by the name of its Info-ZIP Unicode Path field if
+    // the CRC-32 of the field matches the original name, so that the entry counts as marked as
+    // UTF-8. A field whose CRC-32 does not match is ignored.
+    void a_unicode_path_field_names_the_entry_in_utf8() {
+        // U+3042 in Shift_JIS and in UTF-8
+        const QByteArray original("\x82\xA0.txt");
+        const QByteArray utf8("\xE3\x81\x82.txt");
+        const auto payload = unicodePathOf(original, utf8);
+        auto entry = file(original, "a");
+        entry.encoding = ZIP_FL_ENC_CP437;
+        entry.extraField = std::pair(placeholderField, payload);
+        QVERIFY(writeArchive(archivePath(), {entry}));
+        QCOMPARE(markUnicodePath(archivePath(), payload), 2);
+
+        ZipExtractor extractor;
+        const auto entries = extractor.listEntries(pathOf(archivePath()));
+        QVERIFY(entries);
+        QCOMPARE(entries->size(), 1);
+        QCOMPARE(entries->front().name, utf8);
+        QVERIFY(entries->front().utf8);
+        QVERIFY(extract(extractor));
+        QCOMPARE(listing(outPath()), QStringList({QString(QChar(0x3042)) + u".txt"}));
+
+        const auto wrong = unicodePathOf(QByteArray("other.txt"), utf8);
+        entry.extraField = std::pair(placeholderField, wrong);
+        QVERIFY(writeArchive(archivePath(), {entry}));
+        QCOMPARE(markUnicodePath(archivePath(), wrong), 2);
+        const auto ignored = extractor.listEntries(pathOf(archivePath()));
+        QVERIFY(ignored);
+        QCOMPARE(ignored->front().name, original);
+        QVERIFY(!ignored->front().utf8);
+    }
+
+    // A name marked as UTF-8 that is not valid UTF-8 makes libzip reject the archive.
+    void an_invalid_name_marked_as_utf8_rejects_the_archive() {
+        auto entry = file("\x82\xA0.txt", "a");
+        entry.encoding = ZIP_FL_ENC_CP437;
+        QVERIFY(writeArchive(archivePath(), {entry}));
+        QCOMPARE(markUtf8(archivePath()), 1);
+        ZipExtractor extractor;
+        QVERIFY(!extract(extractor));
+        QCOMPARE(extractor.error(), ZipExtractor::OpenError);
+        QVERIFY(!extractor.listEntries(pathOf(archivePath())));
+        QVERIFY(!QFileInfo::exists(outPath()));
+    }
+
+    void names_equal_apart_from_case_reject_the_archive_data() {
+        QTest::addColumn<QByteArray>("first");
+        QTest::addColumn<QByteArray>("second");
+        QTest::newRow("same name") << QByteArray("a.txt") << QByteArray("a.txt");
+        QTest::newRow("other case") << QByteArray("a.txt") << QByteArray("A.TXT");
+        QTest::newRow("in a folder") << QByteArray("dir/a.txt") << QByteArray("Dir/A.txt");
+        QTest::newRow("file and folder") << QByteArray("name") << QByteArray("NAME/a.txt");
+        QTest::newRow("folder and file") << QByteArray("name/a.txt") << QByteArray("Name");
+    }
+
+    void names_equal_apart_from_case_reject_the_archive() {
+        QFETCH(QByteArray, first);
+        QFETCH(QByteArray, second);
+        if (first == second) {
+            // libzip refuses to add a name twice, so the second name is replaced afterwards.
+            QVERIFY(writeArchive(archivePath(), {file(first, "1"), file("b.txt", "2")}));
+            QCOMPARE(renameEntries(archivePath(), "b.txt", second), 2);
+        } else {
+            QVERIFY(writeArchive(archivePath(), {file(first, "1"), file(second, "2")}));
+        }
+        ZipExtractor extractor;
+        QVERIFY(!extract(extractor));
+        // libzip itself rejects an archive with a name twice when it opens the archive.
+        QCOMPARE(extractor.error(),
+                 first == second ? ZipExtractor::OpenError : ZipExtractor::DuplicateName);
+        QVERIFY(!QFileInfo::exists(outPath()));
+    }
+
+    // Folders of the same name apart from case are one folder, as on Windows.
+    void folders_equal_apart_from_case_are_accepted() {
+        QVERIFY(writeArchive(archivePath(),
+                             {directory("dir/"), file("DIR/a.txt", "a"), file("Dir/b.txt", "b")}));
+        ZipExtractor extractor;
+        QVERIFY(extractor.check(pathOf(archivePath()), pathOf(outPath())));
+    }
+
+    // The entries are listed with their raw names, before any check.
+    void the_entries_are_listed_raw() {
+        auto unmarked = file("\x82\xA0.txt", "aa");
+        unmarked.encoding = ZIP_FL_ENC_CP437;
+        auto marked = file("\xE3\x81\x82.txt", "bbb");
+        marked.encoding = ZIP_FL_ENC_UTF_8;
+        QVERIFY(writeArchive(archivePath(), {file("a.txt", "a"), directory("sub/"), unmarked,
+                                             marked, file("../evil.txt")}));
+        ZipExtractor extractor;
+        const auto entries = extractor.listEntries(pathOf(archivePath()));
+        QVERIFY(entries);
+        QCOMPARE(entries->size(), 5);
+        QCOMPARE(entries->at(0).name, QByteArray("a.txt"));
+        QVERIFY(entries->at(0).utf8);
+        QCOMPARE(entries->at(0).size, 1);
+        QVERIFY(entries->at(1).directory);
+        QCOMPARE(entries->at(2).name, QByteArray("\x82\xA0.txt"));
+        QVERIFY(!entries->at(2).utf8);
+        QCOMPARE(entries->at(2).size, 2);
+        QVERIFY(entries->at(3).utf8);
+        QCOMPARE(entries->at(4).name, QByteArray("../evil.txt"));
+        QCOMPARE(entries->at(4).index, 4);
+
+        extractor.setMaximumEntryCount(4);
+        QVERIFY(!extractor.listEntries(pathOf(archivePath())));
+        QCOMPARE(extractor.error(), ZipExtractor::TooManyEntries);
+    }
+
+    // An entry is read within a limit, and a forged declared size does not raise the limit.
+    void an_entry_is_read_within_a_limit() {
+        QVERIFY(writeArchive(archivePath(), {file("a.txt", "alpha"), file("b.txt", "beta")}));
+        ZipExtractor extractor;
+        QCOMPARE(extractor.readEntry(pathOf(archivePath()), 1, 4),
+                 std::optional(QByteArray("beta")));
+        QVERIFY(!extractor.readEntry(pathOf(archivePath()), 0, 4));
+        QCOMPARE(extractor.error(), ZipExtractor::TooLarge);
+        QVERIFY(!extractor.readEntry(pathOf(archivePath()), 2, 100));
+        QCOMPARE(extractor.error(), ZipExtractor::ReadError);
+
+        QVERIFY(writeArchive(archivePath(), {file("bomb.txt", QByteArray(100000, 'x'))}));
+        QCOMPARE(forgeSizes(archivePath(), 10), 1);
+        QVERIFY(!extractor.readEntry(pathOf(archivePath()), 0, 1000));
+        QCOMPARE(extractor.error(), ZipExtractor::TooLarge);
+    }
+
+    // Only the subdirectory is written, without the subdirectory itself. Its name is compared
+    // apart from case. The entries outside it are checked as well.
+    void a_subdirectory_is_extracted_alone() {
+        QVERIFY(writeArchive(archivePath(),
+                             {file("install.txt", "type=voiceset"), directory("contents/"),
+                              file("contents/a.txt", "a"), file("contents/sub/b.txt", "b"),
+                              file("contents-other/c.txt"), file("other/d.txt")}));
+        ZipExtractor extractor;
+        extractor.setSubdirectory(QStringLiteral("Contents"));
+        QVERIFY(extract(extractor));
+        QCOMPARE(listing(outPath()), QStringList({"a.txt", "sub", "sub/b.txt"}));
+
+        QVERIFY(
+            writeArchive(archivePath(), {file("contents/a.txt"), file("other/../../evil.txt")}));
+        QVERIFY(!extract(extractor));
+        QCOMPARE(extractor.error(), ZipExtractor::UnsafePath);
+
+        extractor.setSubdirectory(QStringLiteral("../contents"));
+        QVERIFY(writeArchive(archivePath(), {file("contents/a.txt")}));
+        QVERIFY(!extract(extractor));
+        QCOMPARE(extractor.error(), ZipExtractor::UnsafePath);
+    }
+
+    // check() runs the checks of extract() and writes nothing.
+    void check_writes_nothing() {
+        QVERIFY(writeArchive(archivePath(), {file("a.txt", "a"), file("sub/b.txt", "b")}));
+        ZipExtractor extractor;
+        QVERIFY(extractor.check(pathOf(archivePath()), pathOf(outPath())));
+        QCOMPARE(extractor.error(), ZipExtractor::NoError);
+        QVERIFY(!QFileInfo::exists(outPath()));
+
+        QVERIFY(writeArchive(archivePath(), {file("a.txt"), file("../evil.txt")}));
+        QVERIFY(!extractor.check(pathOf(archivePath()), pathOf(outPath())));
+        QCOMPARE(extractor.error(), ZipExtractor::UnsafePath);
+        QVERIFY(!QFileInfo::exists(outPath()));
     }
 
     void the_number_of_entries_is_limited() {

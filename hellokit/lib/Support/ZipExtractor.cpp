@@ -10,6 +10,7 @@
 #include <thread>
 #include <vector>
 
+#include <QtCore/QHash>
 #include <QtCore/QStringDecoder>
 #include <QtCore/QStringList>
 
@@ -170,6 +171,68 @@ namespace hello::kit {
             return r == root.end() && t != target.end();
         }
 
+        // Returns whether the name of the entry at index, whose raw bytes are raw, is ASCII or
+        // marked as UTF-8. With ZIP_FL_ENC_STRICT, libzip converts a name that is not marked as
+        // UTF-8 from code page 437 to UTF-8, and returns a name marked as UTF-8 unchanged. The
+        // conversion lengthens every byte above 0x7F, so that a non-ASCII name equals its
+        // strict form only if it is marked as UTF-8.
+        bool isUtf8Name(zip_t *zip, zip_uint64_t index, const QByteArray &raw) {
+            if (isAscii(raw)) {
+                return true;
+            }
+            const char *strict = zip_get_name(zip, index, ZIP_FL_ENC_STRICT);
+            return strict && raw == strict;
+        }
+
+        bool isSymbolicLink(zip_t *zip, zip_uint64_t index) {
+            zip_uint8_t system = 0;
+            zip_uint32_t attributes = 0;
+            return zip_file_get_external_attributes(zip, index, 0, &system, &attributes) == 0 &&
+                   system == ZIP_OPSYS_UNIX &&
+                   ((attributes >> 16) & unixTypeMask) == unixSymbolicLink;
+        }
+
+        // Returns the names of two entries whose paths are equal apart from case, or of a file
+        // and an entry whose folder has the path of the file, or std::nullopt if there are none
+        std::optional<std::pair<QString, QString>> collisionOf(const std::vector<Entry> &entries) {
+            struct Seen {
+                bool file = false;
+                QString name;
+            };
+            QHash<QString, Seen> seen;
+            for (const auto &entry : entries) {
+                QString path;
+                for (qsizetype k = 0; k < entry.components.size(); ++k) {
+                    if (k > 0) {
+                        path += u'/';
+                    }
+                    path += entry.components[k].toCaseFolded();
+                    const bool file = k == entry.components.size() - 1 && !entry.directory;
+                    const auto it = seen.constFind(path);
+                    if (it == seen.cend()) {
+                        seen.insert(path, {file, entry.name});
+                    } else if (file || it->file) {
+                        return std::pair(it->name, entry.name);
+                    }
+                }
+            }
+            return std::nullopt;
+        }
+
+        // Returns whether components begin with prefix, compared apart from case as Windows
+        // compares the names of files
+        bool beginsWith(const QStringList &components, const QStringList &prefix) {
+            if (components.size() < prefix.size()) {
+                return false;
+            }
+            for (qsizetype k = 0; k < prefix.size(); ++k) {
+                if (components[k].compare(prefix[k], Qt::CaseInsensitive) != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
     }
 
     ZipExtractor::ZipExtractor() = default;
@@ -204,6 +267,14 @@ namespace hello::kit {
         m_topDirectoryStripped = stripped;
     }
 
+    QString ZipExtractor::subdirectory() const {
+        return m_subdirectory;
+    }
+
+    void ZipExtractor::setSubdirectory(const QString &path) {
+        m_subdirectory = path;
+    }
+
     int ZipExtractor::threadCount() const {
         return m_threadCount;
     }
@@ -216,9 +287,120 @@ namespace hello::kit {
         m_progressHandler = std::move(handler);
     }
 
+    std::optional<QList<ZipExtractor::RawEntry>>
+        ZipExtractor::listEntries(const fs::path &archive) {
+        m_error = NoError;
+        m_errorString.clear();
+        QString reason;
+        const auto zip = openArchive(archive, ZIP_CHECKCONS, &reason);
+        if (!zip) {
+            fail(OpenError,
+                 tr("The archive %1 cannot be opened: %2").arg(pathText(archive), reason));
+            return std::nullopt;
+        }
+        const auto count = zip_get_num_entries(zip.get(), 0);
+        if (count < 0) {
+            fail(ReadError,
+                 tr("The archive %1 cannot be read: %2")
+                     .arg(pathText(archive), QString::fromUtf8(zip_strerror(zip.get()))));
+            return std::nullopt;
+        }
+        if (count > m_maximumEntryCount) {
+            fail(TooManyEntries,
+                 tr("The archive holds more than %1 entries.").arg(m_maximumEntryCount));
+            return std::nullopt;
+        }
+        QList<RawEntry> entries;
+        entries.reserve(count);
+        for (zip_uint64_t i = 0; i < zip_uint64_t(count); ++i) {
+            const char *rawName = zip_get_name(zip.get(), i, ZIP_FL_ENC_RAW);
+            zip_stat_t stat;
+            if (!rawName || zip_stat_index(zip.get(), i, 0, &stat) != 0) {
+                fail(ReadError, tr("The entry %1 cannot be read: %2")
+                                    .arg(i + 1)
+                                    .arg(QString::fromUtf8(zip_strerror(zip.get()))));
+                return std::nullopt;
+            }
+            RawEntry entry;
+            entry.index = qint64(i);
+            entry.name = QByteArray(rawName);
+            entry.utf8 = isUtf8Name(zip.get(), i, entry.name);
+            entry.directory = entry.name.endsWith('/') || entry.name.endsWith('\\');
+            entry.size = (stat.valid & ZIP_STAT_SIZE) ? qint64(stat.size) : 0;
+            entries.push_back(std::move(entry));
+        }
+        return entries;
+    }
+
+    std::optional<QByteArray> ZipExtractor::readEntry(const fs::path &archive, qint64 index,
+                                                      qint64 maximumSize) {
+        m_error = NoError;
+        m_errorString.clear();
+        QString reason;
+        const auto zip = openArchive(archive, ZIP_CHECKCONS, &reason);
+        if (!zip) {
+            fail(OpenError,
+                 tr("The archive %1 cannot be opened: %2").arg(pathText(archive), reason));
+            return std::nullopt;
+        }
+        const auto count = zip_get_num_entries(zip.get(), 0);
+        zip_stat_t stat;
+        if (index < 0 || index >= count || zip_stat_index(zip.get(), index, 0, &stat) != 0) {
+            fail(ReadError, tr("The entry %1 cannot be read.").arg(index + 1));
+            return std::nullopt;
+        }
+        if (isSymbolicLink(zip.get(), index)) {
+            fail(SymbolicLink, tr("The entry %1 is a symbolic link.").arg(index + 1));
+            return std::nullopt;
+        }
+        if ((stat.valid & ZIP_STAT_ENCRYPTION_METHOD) && stat.encryption_method != ZIP_EM_NONE) {
+            fail(EncryptedEntry, tr("The entry %1 is encrypted.").arg(index + 1));
+            return std::nullopt;
+        }
+        const auto tooLarge = [&] {
+            fail(TooLarge, tr("The entry %1 exceeds %2 bytes.").arg(index + 1).arg(maximumSize));
+            return std::nullopt;
+        };
+        if ((stat.valid & ZIP_STAT_SIZE) && stat.size > zip_uint64_t(maximumSize)) {
+            return tooLarge();
+        }
+        FilePointer file(zip_fopen_index(zip.get(), index, 0));
+        if (!file) {
+            fail(ReadError, tr("The entry %1 cannot be read: %2")
+                                .arg(index + 1)
+                                .arg(QString::fromUtf8(zip_strerror(zip.get()))));
+            return std::nullopt;
+        }
+        QByteArray content;
+        std::vector<char> buffer(blockSize);
+        for (;;) {
+            const auto n = zip_fread(file.get(), buffer.data(), buffer.size());
+            if (n < 0) {
+                fail(ReadError, tr("The entry %1 cannot be read: %2")
+                                    .arg(index + 1)
+                                    .arg(QString::fromUtf8(zip_file_strerror(file.get()))));
+                return std::nullopt;
+            }
+            if (n == 0) {
+                break;
+            }
+            // The declared size can be forged, so the bytes actually read are counted as well.
+            if (content.size() + n > maximumSize) {
+                return tooLarge();
+            }
+            content.append(buffer.data(), qsizetype(n));
+        }
+        return content;
+    }
+
+    bool ZipExtractor::check(const fs::path &archive, const fs::path &directory) {
+        m_canceled = false;
+        return run(archive, directory, false);
+    }
+
     bool ZipExtractor::extract(const fs::path &archive, const fs::path &directory) {
         m_canceled = false;
-        return run(archive, directory);
+        return run(archive, directory, true);
     }
 
     std::future<bool> ZipExtractor::extractAsync(const fs::path &archive,
@@ -227,14 +409,14 @@ namespace hello::kit {
         // call is not discarded.
         m_canceled = false;
         return std::async(std::launch::async,
-                          [this, archive, directory] { return run(archive, directory); });
+                          [this, archive, directory] { return run(archive, directory, true); });
     }
 
     void ZipExtractor::cancel() {
         m_canceled = true;
     }
 
-    bool ZipExtractor::run(const fs::path &archive, const fs::path &directory) {
+    bool ZipExtractor::run(const fs::path &archive, const fs::path &directory, bool write) {
         m_error = NoError;
         m_errorString.clear();
 
@@ -273,15 +455,10 @@ namespace hello::kit {
             }
             const QByteArray raw(rawName);
 
-            // With ZIP_FL_ENC_STRICT, libzip converts a name that is not marked as UTF-8 from
-            // code page 437 to UTF-8, and returns a name marked as UTF-8 unchanged. The
-            // conversion lengthens every byte above 0x7F, so that a non-ASCII name equals its
-            // strict form only if it is marked as UTF-8.
             std::optional<QString> name;
             if (isAscii(raw)) {
                 name = QString::fromLatin1(raw);
-            } else if (const char *strict = zip_get_name(zip.get(), i, ZIP_FL_ENC_STRICT);
-                       strict && raw == strict) {
+            } else if (isUtf8Name(zip.get(), i, raw)) {
                 name = decodeUtf8(raw);
             } else if (m_nameDecoder) {
                 name = m_nameDecoder(raw);
@@ -333,6 +510,30 @@ namespace hello::kit {
             entries.push_back(std::move(entry));
         }
 
+        if (const auto collision = collisionOf(entries)) {
+            return fail(DuplicateName,
+                        tr("The entries %1 and %2 have the same name apart from case.")
+                            .arg(collision->first, collision->second));
+        }
+
+        if (!m_subdirectory.isEmpty()) {
+            bool directory = false;
+            const auto prefix = componentsOf(m_subdirectory, &directory);
+            if (!prefix) {
+                return fail(UnsafePath, tr("The folder %1 is an unsafe path.").arg(m_subdirectory));
+            }
+            entries.erase(std::remove_if(entries.begin(), entries.end(),
+                                         [&](const Entry &e) {
+                                             return !beginsWith(e.components, *prefix) ||
+                                                    e.components.size() == prefix->size();
+                                         }),
+                          entries.end());
+            for (auto &entry : entries) {
+                entry.components.erase(entry.components.begin(),
+                                       entry.components.begin() + prefix->size());
+            }
+        }
+
         if (m_topDirectoryStripped && !entries.empty()) {
             const auto top = entries.front().components.front();
             const bool single = std::all_of(entries.begin(), entries.end(), [&](const Entry &e) {
@@ -376,6 +577,9 @@ namespace hello::kit {
 
         if (m_canceled) {
             return fail(Canceled, tr("The extraction was canceled."));
+        }
+        if (!write) {
+            return true;
         }
 
         // Every entry has passed the checks. Nothing has been written before this point. The

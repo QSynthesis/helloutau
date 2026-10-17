@@ -45,8 +45,8 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 条目的检查由 `kit::ZipExtractor` 完成（见其头文件），在第 1 步的读取与第 7 步的解压中各进行一次，后者针对选定的编码与目标文件夹。安装另外要求：
 
 - **`install.txt` 的值是不可信输入。** `folder` 与 `contentsdir` 都必须是单个安全的路径分量，规则与条目名的分量相同（非空，不是 `.` 或 `..`，不含分隔符、冒号与控制字符，Windows 上不是保留设备名、不以点或空格结尾）。不符合时拒绝整个压缩包。`install.txt` 以第 2 步选定的编码解码，只有 `description` 显示给用户，以纯文本显示。
-- **名字冲突。** 解码后按大小写不敏感比较出现重复的条目名时，拒绝整个压缩包，因为在 Windows 与 macOS 的默认文件系统上后者会覆盖前者。
-- **Unicode Path 扩展字段（0x7075）。** libzip 以该字段中的 UTF-8 名字替换原始名字（字段的 CRC 与原名一致时），因此带该字段的条目视同带 UTF-8 标志。替换后的名字照常检查。字段与原名不一致时 libzip 打开失败，按无法打开的压缩包拒绝。
+- **名字冲突。** 解码后按大小写不敏感比较出现重复的条目名，或者一个文件与另一个条目的文件夹同名时，拒绝整个压缩包，因为在 Windows 与 macOS 的默认文件系统上后者会覆盖前者。完全相同的条目名在打开时即被 libzip 拒绝。只是大小写不同的文件夹视为同一个文件夹，同 Windows。
+- **Unicode Path 扩展字段（0x7075）。** 字段的 CRC-32 与原始名字一致时，libzip 以字段中的 UTF-8 名字替换原始名字，因此带该字段的条目视同带 UTF-8 标志，替换后的名字照常检查。CRC-32 不一致时 libzip 忽略该字段，仍按原始名字处理（2026-10-18 以 libzip 1.11.4 测试，`test_ZipExtractor`）。
 - **上限。** 沿用 `ZipExtractor` 的条目数与大小上限，并统计实际写入的字节数。
 - **测试。** 构造的恶意压缩包至少包括以下几类：
   - `folder` 与 `contentsdir` 为 `..`、带分隔符、带盘符、为保留设备名
@@ -57,6 +57,6 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 
 ## 实现结构
 
-- **`kit::ZipExtractor` 的补充**（`HelloKitSupport`）：只读取中央目录的条目列表（原始名字、UTF-8 标志、大小、类型），读取单个条目的内容并限制其大小（用于 `install.txt` 与文本预览），只解压某个文件夹并去掉这一层（`contentsdir`），大小写冲突的检查。现有的检查与测试不变。
+- **`kit::ZipExtractor` 的补充**（`HelloKitSupport`，已实现）：`listEntries()` 只读取中央目录的条目列表（原始名字、UTF-8 标志、大小、类型），`readEntry()` 读取单个条目的内容并限制其大小，实际读出的字节同样计数（用于 `install.txt` 与文本预览），`setSubdirectory()` 只写出某个文件夹并去掉这一层（`contentsdir`，文件夹名按大小写不敏感比较，其外的条目照常检查），`check()` 进行解压的全部检查而不写入，名字冲突以 `DuplicateName` 拒绝。
 - **`kit::InstallArchive`**（`HelloKitVoiceBank`）：打开压缩包，解析 `install.txt`，给出种类、目标文件夹名、条目的目录树与需要询问的问题，按选定的编码与写入方式安装。不依赖 QtWidgets，以 `FixedCharsetSelector` 一类的固定回答测试。插件的安装同样由它完成，因为两者共用 `install.txt` 的格式与全部检查。
 - **安装对话框**（`HelloUtauEditor`）：条目名编码、文本编码、写入方式、同名文件夹的处理与进度。入口的拖放与菜单动作也在编辑器中。
