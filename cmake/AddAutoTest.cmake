@@ -59,4 +59,13 @@ function(add_auto_test _src)
             "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:Qt${QT_VERSION_MAJOR}::Core>>"
         )
     endif()
+
+    # On Windows, QtTest writes its results with OutputDebugString() instead of to the standard
+    # output if the process has no console window, as on the runners of CI (qplaintestlogger.cpp
+    # of Qt 6.11). The results of a failed test would then be missing from the output of ctest.
+    if(WIN32)
+        set_property(TEST ${_name} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+            "QT_FORCE_STDERR_LOGGING=set:1"
+        )
+    endif()
 endfunction()
