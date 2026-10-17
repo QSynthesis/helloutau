@@ -121,6 +121,12 @@ namespace hello::kit {
         /// **wrote** the file, not of the machine reading it.
         static QString systemName();
 
+        /// Replaces the result of systemName() with \a name, for the tests that reproduce a
+        /// machine of another region. An empty \a name restores the encoding of the system.
+        ///
+        /// \warning Not thread-safe. The replacement applies to every codec created afterwards.
+        static void setSystemName(const QString &name);
+
         /// The encodings a UST is likely to use, in the order in which they are offered.
         ///
         /// The list is short by design. UTAU writes either UTF-8, marked by a \c Charset line,

@@ -41,6 +41,10 @@ private:
     }
 
 private Q_SLOTS:
+    void cleanup() {
+        TextCodec::setSystemName({});
+    }
+
     // The encoding a text was written in reads best of the candidates, and bytes that read
     // alike in all keep the order given.
     void the_encoding_of_a_text_reads_best_data() {
@@ -268,6 +272,34 @@ private Q_SLOTS:
         QVERIFY(name != QLatin1String("Locale"));
         QVERIFY(TextCodec(name).isValid());
         QCOMPARE(TextCodec().name(), TextCodec(name).name());
+    }
+
+    // The system encodings of several regions, with the number of candidates on each machine
+    void the_system_encoding_of_another_region_is_offered_data() {
+        QTest::addColumn<QString>("system");
+        QTest::addColumn<int>("count");
+        QTest::newRow("GBK") << QStringLiteral("GBK") << 4;
+        QTest::newRow("Shift_JIS") << QStringLiteral("Shift_JIS") << 4;
+        QTest::newRow("Big5") << QStringLiteral("Big5") << 4;
+        QTest::newRow("EUC-KR") << QStringLiteral("EUC-KR") << 5;
+        QTest::newRow("windows-1252") << QStringLiteral("windows-1252") << 5;
+        QTest::newRow("UTF-8") << QStringLiteral("UTF-8") << 4;
+    }
+
+    // A replaced system encoding applies to the default codec and to the candidates, which
+    // append it if it is none of the four, and an empty name restores the encoding of the system.
+    void the_system_encoding_of_another_region_is_offered() {
+        QFETCH(QString, system);
+        QFETCH(int, count);
+        const auto original = TextCodec::systemName();
+        TextCodec::setSystemName(system);
+        QCOMPARE(TextCodec::systemName(), system);
+        QCOMPARE(TextCodec().name(), TextCodec(system).name());
+        const auto candidates = TextCodec::ustCandidates();
+        QCOMPARE(candidates.size(), count);
+        QVERIFY(candidates.contains(system));
+        TextCodec::setSystemName({});
+        QCOMPARE(TextCodec::systemName(), original);
     }
 
     void a_character_the_target_cannot_hold_becomes_an_escape() {

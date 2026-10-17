@@ -35,6 +35,16 @@ private:
     }
 
 private Q_SLOTS:
+    // The misdecoded names are those of a machine in mainland China, whichever machine runs the
+    // test.
+    void init() {
+        kit::TextCodec::setSystemName(QStringLiteral("GBK"));
+    }
+
+    void cleanup() {
+        kit::TextCodec::setSystemName({});
+    }
+
     // Each folder is checked as its conversion proposes, and nothing is converted until chosen.
     // The names of a folder have a box that checks or unchecks all of them.
     void the_folders_are_checked_as_proposed() {

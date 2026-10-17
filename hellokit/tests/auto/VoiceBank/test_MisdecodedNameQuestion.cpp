@@ -70,12 +70,6 @@ private:
             VoiceBankConfiguration::FileNameEncoding::Files{misdecoded, correct}));
     }
 
-    /// Returns whether the system encoding is GBK, which misdecodes the names in the tests
-    /// without an inference, whose encodings are preset to the system encoding.
-    static bool systemIsGbk() {
-        return TextCodec(TextCodec::systemName()).name() == TextCodec(QStringLiteral("GBK")).name();
-    }
-
     VoiceBankDirectorySource source() const {
         DiagnosticList diagnostics;
         const auto read = VoiceBankSource::readDirectory(root(), {}, diagnostics);
@@ -101,13 +95,17 @@ private:
     }
 
 private Q_SLOTS:
+    // The tests without an inference preset the encodings to the system encoding, which
+    // misdecodes the names as on a machine in mainland China, whichever machine runs the test.
     void init() {
+        TextCodec::setSystemName(QStringLiteral("GBK"));
         m_dir = std::make_unique<QTemporaryDir>();
         QVERIFY(m_dir->isValid());
     }
 
     void cleanup() {
         m_dir.reset();
+        TextCodec::setSystemName({});
     }
 
     // The entries name あ.wav and い.wav, which the disk holds as 偁.wav and 偄.wav. Only
@@ -161,9 +159,6 @@ private Q_SLOTS:
     // A name that no entry names is asked about without an inference, under the encoding of the
     // text files misdecoded in the system encoding, and proposed as misdecoded.
     void an_entry_that_no_name_restores_to_infers_nothing() {
-        if (!systemIsGbk()) {
-            QSKIP("The preset encodings depend on the system encoding.");
-        }
         writeOto({QString::fromUtf8("う.wav")});
         write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
         const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
@@ -190,9 +185,6 @@ private Q_SLOTS:
     // Most directories have no misdecoded name. が.wav is a name in Shift_JIS, and 3 of the 4
     // entries find their files.
     void the_names_are_proposed_as_they_are_if_the_entries_find_their_files() {
-        if (!systemIsGbk()) {
-            QSKIP("The preset encodings depend on the system encoding.");
-        }
         writeOto({QStringLiteral("a.wav"), QStringLiteral("b.wav"), QStringLiteral("c.wav"),
                   QStringLiteral("d.wav")});
         write(QStringLiteral("a.wav"), "RIFF");
@@ -218,9 +210,6 @@ private Q_SLOTS:
 
     // 偁 is not a name in Shift_JIS, so the names are not proposed as they are.
     void a_name_unrepresentable_in_the_encoding_of_the_text_files_is_not_proposed_as_it_is() {
-        if (!systemIsGbk()) {
-            QSKIP("The preset encodings depend on the system encoding.");
-        }
         QVERIFY(!TextCodec(QStringLiteral("Shift_JIS")).canEncode(kMisdecodedA));
         writeOto({QStringLiteral("a.wav")});
         write(QStringLiteral("a.wav"), "RIFF");
@@ -234,9 +223,6 @@ private Q_SLOTS:
 
     // Without an oto.ini, no entry finds its file.
     void a_directory_without_entries_is_asked_about() {
-        if (!systemIsGbk()) {
-            QSKIP("The preset encodings depend on the system encoding.");
-        }
         write(QString::fromUtf8("が.wav"), "RIFF");
         const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
         QVERIFY(question.has_value());

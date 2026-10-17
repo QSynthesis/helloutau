@@ -67,6 +67,10 @@ private:
     }
 
 private Q_SLOTS:
+    void cleanup() {
+        TextCodec::setSystemName({});
+    }
+
     // Without a record, the entries infer the encodings. Every name that restores is listed and
     // checked unless an entry names it as it is.
     void a_directory_without_a_record_checks_the_names_no_entry_names() {
@@ -85,20 +89,46 @@ private Q_SLOTS:
         QCOMPARE(conversion.unrestorable(), QStringList({wav(kKorean)}));
     }
 
-    // Without an entry to infer from, the names are misdecoded in the system encoding. The bytes
-    // of the names read as kana in Shift_JIS only if the system encoding is GBK.
+    // Japanese and Chinese voice banks extracted on machines of other regions, whose system
+    // encodings misdecode the names
+    void a_directory_without_entries_is_ranked_in_the_system_encoding_data() {
+        QTest::addColumn<QString>("system");
+        QTest::addColumn<QString>("original");
+        QTest::addColumn<QStringList>("names");
+        const QStringList japanese{QString::fromUtf8("あ"), QString::fromUtf8("い"),
+                                   QString::fromUtf8("う")};
+        const QStringList chinese{QString::fromUtf8("你好"), QString::fromUtf8("音源")};
+        QTest::newRow("Japanese on GBK")
+            << QStringLiteral("GBK") << QStringLiteral("Shift_JIS") << japanese;
+        // Big5 has no characters for the bytes of kana in Shift_JIS, from 0x81 to 0xa0.
+        QTest::newRow("Chinese on Big5")
+            << QStringLiteral("Big5") << QStringLiteral("GBK") << chinese;
+        QTest::newRow("Japanese on windows-1252")
+            << QStringLiteral("windows-1252") << QStringLiteral("Shift_JIS") << japanese;
+        QTest::newRow("Chinese on Shift_JIS")
+            << QStringLiteral("Shift_JIS") << QStringLiteral("GBK") << chinese;
+        QTest::newRow("Chinese on windows-1252")
+            << QStringLiteral("windows-1252") << QStringLiteral("GBK") << chinese;
+    }
+
+    // Without an entry to infer from, the names are misdecoded in the system encoding, from the
+    // candidate in which their bytes read best.
     void a_directory_without_entries_is_ranked_in_the_system_encoding() {
-        auto source = listing();
-        source.entries.clear();
-        source.charset = QStringLiteral("Big5");
-        const auto conversion = MisdecodedNameConversion::of(source);
-        const auto system = TextCodec(TextCodec::systemName()).name();
-        QCOMPARE(conversion.misdecodedAs(), system);
-        QVERIFY(conversion.original() != system);
-        if (system != TextCodec(QStringLiteral("GBK")).name()) {
-            QSKIP("The names are misdecoded as GBK.");
+        QFETCH(QString, system);
+        QFETCH(QString, original);
+        QFETCH(QStringList, names);
+        TextCodec::setSystemName(system);
+        MisdecodedNameConversion::Listing source;
+        for (const auto &name : names) {
+            const auto misdecoded = TextCodec(system).decode(TextCodec(original).encode(wav(name)));
+            QVERIFY(misdecoded);
+            source.audioFiles.push_back(*misdecoded);
         }
-        QCOMPARE(conversion.original(), TextCodec(QStringLiteral("Shift_JIS")).name());
+        const auto conversion = MisdecodedNameConversion::of(source);
+        QCOMPARE(conversion.misdecodedAs(), TextCodec(system).name());
+        QCOMPARE(conversion.original(), TextCodec(original).name());
+        QCOMPARE(namesOf(conversion), source.audioFiles);
+        QCOMPARE(conversion.choices().at(0).restored, wav(names.at(0)));
     }
 
     // The bytes of correct Chinese names read best in GBK, which is no original encoding if the

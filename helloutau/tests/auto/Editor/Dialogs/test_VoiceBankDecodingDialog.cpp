@@ -18,12 +18,14 @@ class test_VoiceBankDecodingDialog : public QObject {
     Q_OBJECT
 
 private:
-    // A subfolder "jp" whose oto.ini has the alias ｱ in Shift_JIS, a single byte that GBK reads
-    // as a lead byte without its trail, and whose readme.txt is ASCII
+    // A subfolder "jp" whose oto.ini has the alias あいｱ in Shift_JIS, and whose readme.txt is
+    // ASCII. GBK reads the last byte as a lead byte without its trail. Without the kana,
+    // windows-1252 would read the byte as ± and rank first.
     static kit::VoiceBankDirectorySource shiftJisFolder() {
         kit::VoiceBankDirectorySource source;
         source.path = "jp";
-        source.contents[kit::VoiceBankDirectorySource::Oto] = "a.wav=\xb1,0,0,0,0,0\r\n";
+        source.contents[kit::VoiceBankDirectorySource::Oto] =
+            "a.wav=\x82\xa0\x82\xa2\xb1,0,0,0,0,0\r\n";
         source.contents[kit::VoiceBankDirectorySource::Readme] = "readme";
         source.files[kit::VoiceBankDirectorySource::Oto].name = "OTO.INI";
         return source;
@@ -63,10 +65,30 @@ private:
     }
 
 private Q_SLOTS:
+    // The misdecoded names are those of a machine in mainland China, whichever machine runs the
+    // test.
+    void init() {
+        kit::TextCodec::setSystemName(QStringLiteral("GBK"));
+    }
+
+    void cleanup() {
+        kit::TextCodec::setSystemName({});
+    }
+
+    // The system encodings of several regions, which the candidates include
+    void the_folders_are_asked_about_at_once_data() {
+        QTest::addColumn<QString>("system");
+        for (const auto name : {"GBK", "Shift_JIS", "Big5", "EUC-KR", "windows-1252", "UTF-8"}) {
+            QTest::newRow(name) << QString::fromLatin1(name);
+        }
+    }
+
     // The folders are asked about at once. The encoding that reads them all best is selected
     // for each, but a folder that the encoding cannot read takes its own. An encoding chosen
     // applies to the folders selected, and an unchecked folder is left out.
     void the_folders_are_asked_about_at_once() {
+        QFETCH(QString, system);
+        kit::TextCodec::setSystemName(system);
         const auto jp = shiftJisFolder();
         const auto cn = gbkFolder();
         VoiceBankDecodingDialog dialog;
@@ -222,9 +244,6 @@ private Q_SLOTS:
     // The entries find their files, and が.wav is a name in Shift_JIS, so the names are used as
     // they are at first, which records the record without encodings.
     void the_names_are_used_as_they_are_if_the_question_proposes_so() {
-        if (kit::TextCodec(kit::TextCodec::systemName()).name() != QStringLiteral("GBK")) {
-            QSKIP("The preset encodings depend on the system encoding.");
-        }
         QTemporaryDir dir;
         const auto write = [&dir](const QString &name, const QByteArray &bytes) {
             QFile file(dir.path() + QLatin1Char('/') + name);

@@ -63,6 +63,12 @@ namespace hello::kit {
             return nullptr;
         }
 
+        // The replacement of systemName() set by setSystemName(), empty if none
+        QString &replacedSystemName() {
+            static QString name;
+            return name;
+        }
+
     }
 
     // Four conversion paths, tried in this order:
@@ -295,6 +301,9 @@ namespace hello::kit {
     }
 
     QString TextCodec::systemName() {
+        if (const auto &replaced = replacedSystemName(); !replaced.isEmpty()) {
+            return replaced;
+        }
 #ifdef _WIN32
         // The encoding UTAU uses for a file without an encoding declaration. Resolved to a name
         // rather than left as QStringConverter::System, whose name is "Locale" and cannot be
@@ -314,6 +323,10 @@ namespace hello::kit {
         // declaration is UTF-8 in every configuration still in use.
         return QStringLiteral("UTF-8");
 #endif
+    }
+
+    void TextCodec::setSystemName(const QString &name) {
+        replacedSystemName() = name;
     }
 
     QStringList TextCodec::ustCandidates() {
