@@ -12,8 +12,8 @@ HelloUtau 的目标是在功能上与 UTAU 0.4.19 一致，界面、文本编码
 
 | 发布包 | 文件 |
 |---|---|
-| 安装包 | `helloutau-<版本>-x64-windows-msvc-setup.exe` |
-| 免安装版，解压到任意文件夹即可使用 | `helloutau-<版本>-x64-windows-msvc.zip` |
+| 安装包 | `helloutau-<版本>-x86_64-windows-msvc-setup.exe` |
+| 免安装版，解压到任意文件夹即可使用 | `helloutau-<版本>-x86_64-windows-msvc.zip` |
 
 `SHA256SUMS` 列出各发布包的 SHA-256 摘要。发布包包含所需的全部库，包括 C++ 运行库。发布包未经签名，首次启动时 Windows SmartScreen 会显示警告。在 macOS 与 Linux 上须从源代码构建，见「构建」一节。
 

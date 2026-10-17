@@ -12,8 +12,8 @@ Each release on [GitHub](https://github.com/QSynthesis/helloutau/releases) and [
 
 | Package | File |
 |---|---|
-| Installer | `helloutau-<version>-x64-windows-msvc-setup.exe` |
-| Portable package, extracted into any folder | `helloutau-<version>-x64-windows-msvc.zip` |
+| Installer | `helloutau-<version>-x86_64-windows-msvc-setup.exe` |
+| Portable package, extracted into any folder | `helloutau-<version>-x86_64-windows-msvc.zip` |
 
 `SHA256SUMS` lists the SHA-256 digest of each package. The packages contain every required library, including the C++ runtime. Neither package is signed, so Windows SmartScreen displays a warning on the first start. On macOS and Linux, HelloUtau is built from source, as described in [Building](#building).
 

@@ -29,7 +29,7 @@
 | 校验文件 | `SHA256SUMS` |
 
 - `<version>` 为 `HELLO_VERSION` 的四段版本号。
-- `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x64` 或 `arm64`，系统为 `windows`、`linux` 或 `osx`，ABI 为 `msvc`、`mingw`、`gcc` 或 `appleclang`，例如 `x64-windows-msvc`。其余编译器取 CMake 编译器 ID 的小写，macOS 上 Xcode 的编译器因此为 `appleclang`，与 vcpkg 沿用的 CMake 编译器 ID 一致，macOS 版为 `arm64-osx-appleclang`（作者 2026-10-16 决定）。vcpkg 的 triplet 本身不含 ABI 段，HelloUtau 仍然保留这一段。架构与系统的写法沿用 vcpkg 的 triplet。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入缓存项 `HELLO_TRIPLET`，可以 `-DHELLO_TRIPLET=` 覆盖。
+- `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x86_64` 或 `arm64`，系统为 `windows`、`linux` 或 `mac`，ABI 为 `msvc`、`mingw`、`gcc` 或 `appleclang`，例如 `x86_64-windows-msvc`。其余编译器取 CMake 编译器 ID 的小写，macOS 上 Xcode 的编译器因此为 `appleclang`，与 vcpkg 沿用的 CMake 编译器 ID 一致，macOS 版为 `arm64-mac-appleclang`（作者 2026-10-16 决定）。vcpkg 的 triplet 本身不含 ABI 段，HelloUtau 仍然保留这一段。架构与系统取用户熟悉的名称，不沿用 vcpkg 的写法（作者 2026-10-17 决定，当时尚未发布过带 triplet 的版本，无须迁移）：架构用 `x86_64` 而不用 `x64`，因为 `x64` 是微软的叫法，`x86_64` 不偏向任何一方；`arm64` 是苹果的叫法，照用；系统用 `mac` 而不用 `osx`，因为不少用户不知道 `osx` 指什么。vcpkg 自己的 triplet（如 `x64-windows`、`arm64-osx`）照旧，只用于安装依赖。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入缓存项 `HELLO_TRIPLET`，可以 `-DHELLO_TRIPLET=` 覆盖。
 - 程序编译时由 CMake 写入自己的 triplet，更新时按它挑选附件，不在运行时推断。
 - `SHA256SUMS` 每行为一个附件的 SHA-256 摘要与文件名，格式同 `sha256sum` 的输出。更新前必须以它校验下载的附件。
 - 附件由本地脚本上传到 Gitee（`.cache/claude/tools/sync_gitee_assets.py`），可能晚于 release 本身出现。客户端只在当前 triplet 的附件与 `SHA256SUMS` 都已存在时，才把该源视为有新版本。
@@ -40,9 +40,9 @@ CMake 缓存项 `HELLO_BUILD_CHANNEL` 区分三种构建，正式版与 CI 的�
 
 | 渠道 | 来源 | 窗口标题的结尾 | 附件文件名 |
 |---|---|---|---|
-| `release` | 推送 `v` 开头的 tag 时 CI 的构建 | `HelloUtau 0.1.8.0` | `helloutau-0.1.8.0-x64-windows-msvc.zip` |
-| `ci` | CI 的其他构建 | `HelloUtau CI 1a2b3c4` | `helloutau-0.1.8.0-x64-windows-msvc-ci-1a2b3c4.zip` |
-| `dev` | 本地构建，默认值 | `HelloUtau dev 1a2b3c4` | `helloutau-0.1.8.0-x64-windows-msvc-dev-1a2b3c4.zip` |
+| `release` | 推送 `v` 开头的 tag 时 CI 的构建 | `HelloUtau 0.1.8.0` | `helloutau-0.1.8.0-x86_64-windows-msvc.zip` |
+| `ci` | CI 的其他构建 | `HelloUtau CI 1a2b3c4` | `helloutau-0.1.8.0-x86_64-windows-msvc-ci-1a2b3c4.zip` |
+| `dev` | 本地构建，默认值 | `HelloUtau dev 1a2b3c4` | `helloutau-0.1.8.0-x86_64-windows-msvc-dev-1a2b3c4.zip` |
 
 - 渠道写入 `hellokit/Config.h` 的 `HELLOKIT_BUILD_CHANNEL`，提交取 `hellokit/BuildInfo.h` 的 `HELLOKIT_GIT_LAST_COMMIT_HASH` 的前七位。程序由 `SoftwareBuildChannel` 读取，工程窗口与音源窗口的标题以它结尾，关于对话框在版本号后注明。`package.ps1` 以它命名附件，并作为安装包的 `AppVerName` 传入，安装向导与「已安装的应用」中的名称因此同样不会被当成正式版。
 - 渠道只影响名称，不影响行为。非正式的构建同样检查更新（作者 2026-10-16 决定）：CI 的构建来自最新的提交，版本号不低于最新的正式版，因此不会被提示更新到旧版本。
@@ -58,7 +58,7 @@ CI 构建、运行全部测试并打包，作者 2026-10-16 提出要求，结�
 | `.github/workflows/deploy.yml` | 推送 `main`、推送 `v` 开头的 tag、手动 | 编译、测试与打包，tag 时发布 |
 | `.github/workflows/sync-gitee-release.yml` | release 发布后由 `deploy.yml` 启动、手动 | 同步到 Gitee |
 
-- **系统**：两个工作流以 matrix 列出各系统，目前只有 `x64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（triplet、vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分，因此增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
+- **系统**：两个工作流以 matrix 列出各系统，目前只有 `x86_64-windows-msvc`。组合 action 不限于某一系统，系统的差别由输入（triplet、vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分，因此增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
 - **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
 - **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
 - **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
@@ -140,7 +140,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 - **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：
   - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
   - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。
-- **Linux**：只出 zip，即 `helloutau-<version>-x64-linux-gcc.zip`，不出 AppImage 与发行版的包。
+- **Linux**：只出 zip，即 `helloutau-<version>-x86_64-linux-gcc.zip`，不出 AppImage 与发行版的包。
 
 ## 应用图标
 

@@ -13,7 +13,7 @@ inputs:
     description: The value of HELLO_BUILD_CHANNEL, release for the tag of a version and ci otherwise.
     required: true
   triplet:
-    description: The triplet of HelloUtau, such as x64-windows-msvc, which names the summary.
+    description: The triplet of HelloUtau, such as x86_64-windows-msvc, which names the summary.
     required: true
   vcpkg-triplet:
     description: The triplet of vcpkg in the overlay, such as x64-windows.

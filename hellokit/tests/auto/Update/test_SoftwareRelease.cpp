@@ -19,11 +19,11 @@ namespace {
             {"body",       "Notes"                                             },
             {"assets",
              QJsonArray{
-                 QJsonObject{{"name", "app-0.1.6.0-x64-windows-msvc.zip"},
+                 QJsonObject{{"name", "app-0.1.6.0-x86_64-windows-msvc.zip"},
                              {"size", 100},
                              {"browser_download_url",
                               "https://github.com/owner/app/releases/download/v0.1.6.0/"
-                              "app-0.1.6.0-x64-windows-msvc.zip"}},
+                              "app-0.1.6.0-x86_64-windows-msvc.zip"}},
                  QJsonObject{{"name", "insecure.zip"},
                              {"browser_download_url", "http://example.com/insecure.zip"}},
              }                                                                 },
@@ -94,7 +94,7 @@ private Q_SLOTS:
         QCOMPARE(release->page,
                  QUrl(QStringLiteral("https://github.com/owner/app/releases/tag/v0.1.6.0")));
         QCOMPARE(release->assets.size(), 1);
-        QVERIFY(release->asset(QStringLiteral("app-0.1.6.0-x64-windows-msvc.zip")));
+        QVERIFY(release->asset(QStringLiteral("app-0.1.6.0-x86_64-windows-msvc.zip")));
         QVERIFY(!release->asset(QStringLiteral("insecure.zip")));
     }
 

@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - triplet: x64-windows-msvc
+          - triplet: x86_64-windows-msvc
             os: windows-latest
             vcpkg-triplet: x64-windows
             qt-arch: win64_msvc2022_64

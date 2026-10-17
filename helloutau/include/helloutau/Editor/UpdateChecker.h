@@ -53,7 +53,7 @@ namespace hello::daw {
             QList<Source> sources;
 
             /// The start of the names of the assets, such as \c helloutau in
-            /// <tt>helloutau-0.1.6.0-x64-windows-msvc.zip</tt>
+            /// <tt>helloutau-0.1.6.0-x86_64-windows-msvc.zip</tt>
             QString assetPrefix;
 
             /// The \c AppId of the Windows installer, the same as in
