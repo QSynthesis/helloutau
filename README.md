@@ -2,7 +2,7 @@
 
 English | [简体中文](docs/README.zh-CN.md)
 
-A cross-platform editor for UTAU projects and voice banks, for Windows, macOS and Linux.
+A modern, faithfully compatible, cross-platform UTAU editor, with the frequency map editor and the classic tools built in, and a polished user experience.
 
 The goal of HelloUtau is functional parity with UTAU 0.4.19. Its interface, its handling of text encodings and its extension mechanism are designed anew.
 
