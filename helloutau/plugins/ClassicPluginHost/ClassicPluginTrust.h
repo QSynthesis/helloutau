@@ -9,8 +9,10 @@ namespace hello::daw {
 
     class ClassicPlugin;
 
-    /// Trust of the programs of classic plugins, which run only after the user has trusted
-    /// them.
+    /// Trust of the programs of classic plugins.
+    ///
+    /// The program of a classic plugin runs only after the user has trusted the program, and runs
+    /// again without a prompt until its content changes.
     ///
     /// The records are a JSON array in the user data of the plugin settings, at userDataPath.
     /// Each record holds the plugin folder, the path of the program relative to the folder for
