@@ -2,7 +2,7 @@
 
 [English](../README.md) | 简体中文
 
-HelloUtau 是 UTAU 工程与音源的跨平台编辑器，支持 Windows、macOS 与 Linux。
+HelloUtau 是现代、忠实兼容、跨平台的 UTAU 编辑器，内置频率表编辑器与经典工具，并提供精致的用户体验。
 
 HelloUtau 的目标是在功能上与 UTAU 0.4.19 一致，界面、文本编码的处理与扩展机制重新设计。
 
