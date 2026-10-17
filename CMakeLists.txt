@@ -5,7 +5,7 @@ set(HELLO_VERSION 0.1.8.0)
 project(helloutau
     VERSION ${HELLO_VERSION}
     LANGUAGES CXX
-    DESCRIPTION "Cross-platform UTAU editor"
+    DESCRIPTION "Modern cross-platform UTAU editor with faithful compatibility"
     HOMEPAGE_URL "https://github.com/QSynthesis/helloutau"
 )
 
