@@ -8,6 +8,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QCryptographicHash>
 
+#include <hellokit/Support/FileName.h>
 #include <hellokit/Support/TextCodec.h>
 
 namespace hello::kit {
@@ -99,19 +100,20 @@ namespace hello::kit {
                 if (entry.is_symlink()) {
                     continue;
                 }
+                const auto fileName = FileName::listed(entry.path().filename());
                 if (entry.is_directory()) {
-                    children.push_back(relative / entry.path().filename());
+                    children.push_back(relative / fileName);
                     continue;
                 }
                 if (!entry.is_regular_file()) {
                     continue;
                 }
 
-                const auto name = folded(entry.path().filename());
+                const auto name = folded(fileName);
                 const auto kind = VoiceBankDirectorySource::fileNamed(name, relative.empty());
                 if (!kind) {
                     if (isAudioName(name)) {
-                        directory.audioFiles.push_back(entry.path().filename());
+                        directory.audioFiles.push_back(fileName);
                     }
                     continue;
                 }
@@ -226,7 +228,7 @@ namespace hello::kit {
                 continue;
             }
             Entry entry;
-            entry.name = item.path().filename();
+            entry.name = FileName::listed(item.path().filename());
             if (item.is_directory(error)) {
                 entry.directory = true;
             } else if (item.is_regular_file(error)) {

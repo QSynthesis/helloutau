@@ -14,6 +14,7 @@
 
 #include <stdcorelib/path.h>
 
+#include <hellokit/Support/FileName.h>
 #include <hellokit/Support/TextCodec.h>
 
 #include "MisdecodedNameQuestion.h"
@@ -1734,7 +1735,8 @@ namespace hello::kit {
             // The names of the directory after the renames, each of which must be unique
             std::map<QString, fs::path> names;
             for (const auto &entry : fs::directory_iterator(directory, error)) {
-                names[nameKeyOf(entry.path().filename())] = entry.path().filename();
+                const auto name = FileName::listed(entry.path().filename());
+                names[nameKeyOf(name)] = name;
             }
             for (const auto &rename : std::as_const(all)) {
                 if (!fs::exists(fs::symlink_status(directory / rename.from, error))) {

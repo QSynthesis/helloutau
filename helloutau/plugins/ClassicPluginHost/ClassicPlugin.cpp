@@ -12,6 +12,7 @@
 #include <stdutau/plugintxt.h>
 #include <stdutau/utaconst.h>
 
+#include <hellokit/Support/FileName.h>
 #include <hellokit/Support/TextCodec.h>
 
 namespace hello::daw {
@@ -152,7 +153,7 @@ namespace hello::daw {
             for (const auto &entry : std::filesystem::directory_iterator(directory, error)) {
                 std::error_code entryError;
                 if (entry.is_directory(entryError)) {
-                    folders.push_back(entry.path());
+                    folders.push_back(directory / kit::FileName::listed(entry.path().filename()));
                 }
             }
             std::sort(folders.begin(), folders.end());

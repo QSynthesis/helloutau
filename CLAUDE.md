@@ -87,6 +87,7 @@ stdutau 在本项目开发过程中会被大幅修改并补充测试，应将其
 - 转换发生在文件读写层，进入内存模型后只有 UTF-8。界面层只处理 UTF-8，磁盘上的 Shift_JIS 与 GBK 的转换由文件读写层完成，不进入界面层。
 - 目标编码无法表示的字符以转义序列表示，见 `docs/note.md`。转义与还原必须是同一段代码的两个方向，实现为一对函数，并配有一组往返测试。
 - 路径使用 `std::filesystem::path`，不要经由 `std::string` 中转。在 Windows 上它使用 `wchar_t`，转换为窄字符串会丢失信息。
+- **目录列表中的文件名经 `kit::FileName::listed()` 后才进入模型**，macOS 上由此转换为 NFC，与 Qt 相同，见 `docs/note.md`「文件名的 Unicode 规范化」。
 
 ## 调用外部程序
 
