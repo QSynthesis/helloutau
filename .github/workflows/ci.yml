@@ -27,15 +27,11 @@ jobs:
       fail-fast: false
       matrix:
         # The triplet names the job, and the action checks it against the triplet of the build.
-        # Each variant of the action runs for each system, AddressSanitizer with the MSVC ABI only.
+        # Each variant of the action runs for each system. AddressSanitizer is not built for MinGW.
         triplet: [ x86_64-windows-msvc, x86_64-windows-mingw, x86_64-linux-gcc, arm64-mac-appleclang ]
         variant: [ release, debug, asan ]
         exclude:
           - triplet: x86_64-windows-mingw
-            variant: asan
-          - triplet: x86_64-linux-gcc
-            variant: asan
-          - triplet: arm64-mac-appleclang
             variant: asan
         include:
           # As in deploy.yml

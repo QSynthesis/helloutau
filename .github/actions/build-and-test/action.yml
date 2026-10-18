@@ -39,7 +39,8 @@ inputs:
   compiler:
     description: >-
       The C++ compiler of the variants release and debug, such as x86_64-w64-mingw32-clang++, or
-      empty for the compiler that CMake finds. The variant asan is built by clang++.
+      empty for the compiler that CMake finds. The variant asan is built by clang++ on Windows
+      and by the compiler that CMake finds on the other systems.
     required: false
     default: ''
 
@@ -68,15 +69,17 @@ runs:
         case "${{ inputs.variant }}" in
           release) directory=build/Release; type=Release; asan=OFF ;;
           debug) directory=build/Debug; type=Debug; asan=OFF ;;
-          asan) directory=build/asan; type=Release; asan=ON; compiler=clang++ ;;
+          asan) directory=build/asan; type=Release; asan=ON ;;
           *) echo "::error::The variant ${{ inputs.variant }} is none of release, debug and asan."
              exit 1 ;;
         esac
-        # asan is built by clang, as locally. The runtime of clang has the same name as that of
-        # MSVC, whose directory the environment of MSVC puts first, so the tests put its
-        # directory first again.
+        # asan is built by clang on Windows, as locally, with the ABI of MSVC. The runtime of
+        # clang has the same name as that of MSVC, whose directory the environment of MSVC puts
+        # first, so the tests put its directory first again. On Linux GCC builds it, and on
+        # macOS Apple clang, the compilers that CMake finds.
         runtime=
         if [ "$asan" = ON ] && [ "$RUNNER_OS" = "Windows" ]; then
+          compiler=clang++
           runtime="$(cygpath -u "$(clang++ -print-resource-dir)")/lib/windows"
           if [ ! -f "$runtime/clang_rt.asan_dynamic-x86_64.dll" ]; then
             echo "::error::The runtime of AddressSanitizer is missing from $runtime."

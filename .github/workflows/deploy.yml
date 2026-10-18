@@ -153,8 +153,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # As in the job package, for each variant. AddressSanitizer is built with the MSVC ABI
-        # only.
+        # As in the job package, for each variant. AddressSanitizer is not built for MinGW.
         include:
           - triplet: x86_64-linux-gcc
             variant: release
@@ -166,6 +165,11 @@ jobs:
             os: ubuntu-24.04
             vcpkg-triplet: x64-linux
             qt-arch: linux_gcc_64
+          - triplet: x86_64-linux-gcc
+            variant: asan
+            os: ubuntu-24.04
+            vcpkg-triplet: x64-linux
+            qt-arch: linux_gcc_64
           - triplet: arm64-mac-appleclang
             variant: release
             os: macos-15
@@ -173,6 +177,11 @@ jobs:
             qt-arch: clang_64
           - triplet: arm64-mac-appleclang
             variant: debug
+            os: macos-15
+            vcpkg-triplet: arm64-osx
+            qt-arch: clang_64
+          - triplet: arm64-mac-appleclang
+            variant: asan
             os: macos-15
             vcpkg-triplet: arm64-osx
             qt-arch: clang_64
