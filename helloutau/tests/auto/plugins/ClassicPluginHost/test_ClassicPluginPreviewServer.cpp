@@ -61,10 +61,13 @@ namespace {
         return lyrics;
     }
 
+    // Returns the path of the written file, or an empty path if the file cannot be written
     QString write(const QTemporaryDir &dir, const QString &name, const QByteArray &bytes) {
         const auto path = dir.filePath(name);
         QFile file(path);
-        file.open(QIODevice::WriteOnly);
+        if (!file.open(QIODevice::WriteOnly)) {
+            return {};
+        }
         file.write(bytes);
         return path;
     }

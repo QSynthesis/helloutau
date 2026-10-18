@@ -49,7 +49,8 @@ namespace {
     };
 
     void sendContextMenu(QWidget *widget) {
-        QContextMenuEvent event(QContextMenuEvent::Mouse, QPoint(1, 1));
+        QContextMenuEvent event(QContextMenuEvent::Mouse, QPoint(1, 1),
+                                widget->mapToGlobal(QPoint(1, 1)));
         QCoreApplication::sendEvent(widget, &event);
     }
 
