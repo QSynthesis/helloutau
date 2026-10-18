@@ -109,11 +109,12 @@ private Q_SLOTS:
         QVERIFY(at(*source, std::filesystem::path("A4") / "deeper")->oto.has_value());
     }
 
-    // The subdirectories are read in the order of their names ignoring case, in whatever order
-    // the file system lists them.
-    void the_subdirectories_follow_the_order_of_their_names() {
+    // The subdirectories and the audio files are read in the order of their names ignoring case,
+    // in whatever order the file system lists them.
+    void the_listings_follow_the_order_of_their_names() {
         for (const auto name : {"c", "B", "a", "d"}) {
             write(QString::fromLatin1(name) + QStringLiteral("/oto.ini"), "x.wav=x,0,0,0,0,0\n");
+            write(QString::fromLatin1(name) + QStringLiteral(".wav"), "RIFF");
         }
 
         DiagnosticList diagnostics;
@@ -124,6 +125,9 @@ private Q_SLOTS:
             paths.push_back(directory.path);
         }
         QCOMPARE(paths, (QList<std::filesystem::path>{{}, "a", "B", "c", "d"}));
+        const auto &audio = source->directories().at(0).audioFiles;
+        QCOMPARE(QList<std::filesystem::path>(audio.begin(), audio.end()),
+                 (QList<std::filesystem::path>{"a.wav", "B.wav", "c.wav", "d.wav"}));
     }
 
     // A voice bank is a folder selected by the user, so its structure cannot be trusted.

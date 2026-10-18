@@ -79,6 +79,18 @@ namespace hello::kit {
             return std::string_view(bytes.constData(), size_t(bytes.size()));
         }
 
+        // Orders the names of a listing by name ignoring case, and by the exact name if equal. The
+        // order of a listing depends on the file system, and ext4 lists the names of the same
+        // directory in different orders on different machines. The subdirectories and the audio
+        // files, and therefore the directories that the limits leave out, follow the names on
+        // every file system, close to the order in which NTFS lists them.
+        bool listedBefore(const fs::path &a, const fs::path &b) {
+            const auto first = QString::fromStdU16String(a.u16string());
+            const auto second = QString::fromStdU16String(b.u16string());
+            const int folded = first.compare(second, Qt::CaseInsensitive);
+            return folded != 0 ? folded < 0 : first < second;
+        }
+
         /// Reads one directory. Subdirectories are collected into \a children rather than
         /// traversed here, so that the traversal remains iterative and the limits are checked
         /// in one place.
@@ -160,17 +172,8 @@ namespace hello::kit {
                 }
             }
 
-            // The subdirectories are sorted by name ignoring case, and by the exact name if equal,
-            // because the order of a listing depends on the file system. The order of the
-            // directories, and the directories that the limits leave out, therefore follow the
-            // names on every file system, close to the order in which NTFS lists them.
-            std::sort(subdirectories.begin(), subdirectories.end(),
-                      [](const fs::path &a, const fs::path &b) {
-                          const auto first = QString::fromStdU16String(a.u16string());
-                          const auto second = QString::fromStdU16String(b.u16string());
-                          const int folded = first.compare(second, Qt::CaseInsensitive);
-                          return folded != 0 ? folded < 0 : first < second;
-                      });
+            std::sort(subdirectories.begin(), subdirectories.end(), listedBefore);
+            std::sort(directory.audioFiles.begin(), directory.audioFiles.end(), listedBefore);
             for (const auto &name : std::as_const(subdirectories)) {
                 children.push_back(relative / name);
             }
