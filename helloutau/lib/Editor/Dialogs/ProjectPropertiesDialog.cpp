@@ -64,22 +64,24 @@ namespace hello::daw {
 
         // Returns the synth tool value relative to utau if the synth tool is inside utau, or else
         // as an absolute path. A value that does not name an existing synth tool is returned
-        // unchanged.
+        // unchanged. The canonical paths decide whether the synth tool is inside utau, and an
+        // absolute path keeps its links, because the canonical path once replaced a link that
+        // the user wrote with its target.
         QString normalizedSynthTool(const QString &value, const fs::path &utau) {
             if (utau.empty() || !SynthToolTrust::exists(value, utau)) {
                 return value;
             }
             std::error_code rootError;
             std::error_code synthToolError;
+            const auto resolved = SynthToolTrust::resolved(value, utau);
             const auto root = fs::weakly_canonical(utau, rootError);
-            const auto synthTool =
-                fs::weakly_canonical(SynthToolTrust::resolved(value, utau), synthToolError);
+            const auto synthTool = fs::weakly_canonical(resolved, synthToolError);
             if (rootError || synthToolError) {
                 return value;
             }
             const auto relative = stdc::path::lexically_relative(synthTool, root);
             const bool inside = !relative.empty() && *relative.begin() != u"..";
-            return textOf(inside ? relative : synthTool);
+            return textOf(inside ? relative : resolved.lexically_normal());
         }
 
         // Returns the voiceDir value as UTAU writes it on save. An absolute path inside a voice
