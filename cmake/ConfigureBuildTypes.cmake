@@ -20,8 +20,15 @@ unset(_lang)
 # after this file: clang with the GNU front end targeting the MSVC ABI links with link or lld-link
 # as cl does. /DEBUG writes the PDB and keeps the unreferenced and the identical functions unless
 # /OPT:REF and /OPT:ICF are given again. The GNU front end takes them through -Xlinker.
+#
+# /OPT:ICF is left out with AddressSanitizer: it folds identical constants, such as the string
+# literals of different files, into one address, and AddressSanitizer then reports each pair of
+# its instrumented globals there as an odr-violation. The tests of the variant asan failed so.
 if(MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-    set(_options /DEBUG /OPT:REF /OPT:ICF)
+    set(_options /DEBUG /OPT:REF)
+    if(NOT HELLO_ENABLE_ADDRESS_SANITIZER)
+        list(APPEND _options /OPT:ICF)
+    endif()
     if(NOT MSVC)
         list(TRANSFORM _options PREPEND "-Xlinker ")
     endif()
