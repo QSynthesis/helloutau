@@ -26,9 +26,9 @@ namespace hello::daw {
         if (release) {
             return QStringLiteral(HELLOKIT_VERSION);
         }
-        return QStringLiteral("%1 %2").arg(
-            QLatin1String(HELLOKIT_BUILD_CHANNEL),
-            QStringLiteral(HELLOKIT_GIT_LAST_COMMIT_HASH).left(abbreviatedCommitLength));
+        return QStringLiteral(HELLOKIT_VERSION "-%1.%2")
+            .arg(QLatin1String(HELLOKIT_BUILD_CHANNEL),
+                 QStringLiteral(HELLOKIT_GIT_LAST_COMMIT_HASH).left(abbreviatedCommitLength));
     }
 
     QString SoftwareBuildChannel::applicationTitle() {

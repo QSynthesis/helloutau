@@ -44,8 +44,8 @@ CMake 缓存项 `HELLO_BUILD_CHANNEL` 区分三种构建，正式版与 CI 的�
 | 渠道 | 来源 | 窗口标题的结尾 | 附件文件名 |
 |---|---|---|---|
 | `release` | 推送 `v` 开头的 tag 时 CI 的构建 | `HelloUtau 0.1.8.0` | `helloutau-0.1.8.0-x86_64-windows-msvc.zip` |
-| `ci` | CI 的其他构建 | `HelloUtau ci 1a2b3c4` | `helloutau-0.1.8.0-ci.1a2b3c4-x86_64-windows-msvc.zip` |
-| `dev` | 本地构建，默认值 | `HelloUtau dev 1a2b3c4` | `helloutau-0.1.8.0-dev.1a2b3c4-x86_64-windows-msvc.zip` |
+| `ci` | CI 的其他构建 | `HelloUtau 0.1.8.0-ci.1a2b3c4` | `helloutau-0.1.8.0-ci.1a2b3c4-x86_64-windows-msvc.zip` |
+| `dev` | 本地构建，默认值 | `HelloUtau 0.1.8.0-dev.1a2b3c4` | `helloutau-0.1.8.0-dev.1a2b3c4-x86_64-windows-msvc.zip` |
 
 - 渠道写入 `hellokit/Config.h` 的 `HELLOKIT_BUILD_CHANNEL`，提交取 `hellokit/BuildInfo.h` 的 `HELLOKIT_GIT_LAST_COMMIT_HASH` 的前七位。程序由 `SoftwareBuildChannel` 读取，工程窗口与音源窗口的标题以它结尾，关于对话框在版本号后注明。`package.ps1` 以它命名附件，并作为安装包的 `AppVerName` 传入，安装向导与「已安装的应用」中的名称因此同样不会被当成正式版。
 - 其他渠道的附件名把 `-<渠道>.<提交>` 跟在版本号之后，再接 triplet 与附件种类的后缀，例如 `helloutau-0.1.8.0-ci.1a2b3c4-x86_64-windows-msvc-setup.exe`（作者 2026-10-18 决定）。DiffScope 的开发构建同样把构建标识跟在版本号之后（`<版本>+<标识>`），平台在其后，附件种类在最后。不用 semver 的 `+`，因为它在 URL 中须转义。
