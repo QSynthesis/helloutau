@@ -328,6 +328,10 @@ namespace hello::daw {
         bool watchesDisk = true;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
+        // Every window that the editor created, until the window is destroyed. A window leaves
+        // the two lists above once replaced, but its deletion is deferred, and the window refers
+        // to the registries and the settings until then. The destructor deletes these windows.
+        QList<QPointer<QWidget>> createdWindows;
         mutable std::set<int> untitledNumbers;
         mutable std::set<int> reusableUntitledNumbers;
         mutable QHash<const ProjectWindow *, int> untitledNumberOf;
@@ -433,6 +437,8 @@ namespace hello::daw {
             window->setAttribute(Qt::WA_DeleteOnClose);
             windows.removeAll(nullptr);
             windows.push_back(window);
+            createdWindows.removeAll(nullptr);
+            createdWindows.push_back(window);
             if (!untitledNumberOf.contains(window)) {
                 const auto number = nextUntitledNumber();
                 untitledNumbers.insert(number);
@@ -636,11 +642,13 @@ namespace hello::daw {
 
     Editor::~Editor() {
         stdc_impl_t;
-        // The windows refer to the registries and the settings, so they go first.
+        // The windows refer to the registries and the settings, so they go first, the project
+        // windows before the voice bank windows. A closed window whose deferred deletion has not
+        // run is deleted as well.
         for (const auto &window : std::as_const(impl.windows)) {
             delete window.data();
         }
-        for (const auto &window : std::as_const(impl.voiceBankWindows)) {
+        for (const auto &window : std::as_const(impl.createdWindows)) {
             delete window.data();
         }
     }
@@ -807,6 +815,8 @@ namespace hello::daw {
                          [this, saved] { lendVoiceBank(windows(), saved); });
         impl.voiceBankWindows.removeAll(nullptr);
         impl.voiceBankWindows.push_back(window);
+        impl.createdWindows.removeAll(nullptr);
+        impl.createdWindows.push_back(window);
         placeNewWindow(window, previous);
         window->show();
         DiagnosticBox::report(window, title, diagnostics);

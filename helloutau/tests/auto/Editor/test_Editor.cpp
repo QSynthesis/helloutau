@@ -3108,6 +3108,23 @@ private Q_SLOTS:
         QVERIFY(fs::exists(sample->path));
     }
 
+    // The editor deletes a window replaced by reopenVoiceBank() before its registries, also if
+    // the deferred deletion has not happened. The window otherwise received the removal of the
+    // frequency formats from a destroyed editor, which crashed with libc++.
+    void a_replaced_window_is_deleted_with_the_editor() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        auto e = editor();
+        const QPointer<VoiceBankWindow> replaced = e->openVoiceBank(bank);
+        QVERIFY(replaced);
+        const QPointer<VoiceBankWindow> reopened = e->reopenVoiceBank(replaced);
+        QVERIFY(reopened);
+        QVERIFY(replaced);
+        e.reset();
+        QVERIFY(!replaced);
+        QVERIFY(!reopened);
+    }
+
     // A generation in which the resampler writes no maps is reported in one box: a summary and
     // the probable cause, which names the format, with the audio files in the details. The box
     // does not show the output of the resampler.
