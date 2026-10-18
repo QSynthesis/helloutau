@@ -183,6 +183,20 @@ runs:
           qmsetup stdcorelib stdcorelib-plugin stdutau substate "qactionkit[core,widgets]" \
           winacp wolf-midi r8brain-free-src libzip zlib
 
+    # vcpkg reports a failed port by the paths of its logs, which stay on the runner. The end of each
+    # log of the configuration and of the build is printed instead.
+    - name: vcpkg logs
+      if: failure()
+      shell: bash
+      run: |
+        for log in build/vcpkg/buildtrees/*/config-*-out.log build/vcpkg/buildtrees/*/config-*-err.log \
+                   build/vcpkg/buildtrees/*/build-*-out.log build/vcpkg/buildtrees/*/build-*-err.log; do
+          [ -s "$log" ] || continue
+          echo "::group::$log"
+          tail -120 "$log"
+          echo "::endgroup::"
+        done
+
     # The cache is saved as soon as the dependencies are installed.
     # A cache of the same key cannot be saved again, so the save is skipped after an exact hit.
     - if: steps.vcpkg-cache.outputs.cache-hit != 'true'
