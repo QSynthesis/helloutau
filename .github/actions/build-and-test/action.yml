@@ -86,12 +86,21 @@ runs:
             exit 1
           fi
         fi
+        # On macOS, test_AppLoader loads and unloads its plugin in each test, and AddressSanitizer
+        # reported an ODR violation of the global stdc_plugin_metadata of the plugin with itself:
+        # both registrations named the same library and the same size. Level 1 reports an ODR
+        # violation only between globals of different sizes.
+        options=
+        if [ "$asan" = ON ] && [ "$RUNNER_OS" != "Windows" ]; then
+          options="detect_odr_violation=1"
+        fi
         {
           echo "BUILD_DIR=$directory"
           echo "BUILD_TYPE=$type"
           echo "BUILD_ASAN=$asan"
           echo "BUILD_COMPILER=$compiler"
           echo "ASAN_RUNTIME_DIR=$runtime"
+          echo "ASAN_OPTIONS=$options"
         } >> "$GITHUB_ENV"
         echo "directory=$directory" >> "$GITHUB_OUTPUT"
 
