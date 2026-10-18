@@ -5,6 +5,8 @@
 
 #include <QtCore/QDir>
 
+#include <stdcorelib/path.h>
+
 #include <stdutau/pluginfile.h>
 #include <stdutau/utaconst.h>
 
@@ -216,7 +218,8 @@ namespace hello::daw {
             note.stpRO = timing.startPoint;
             if (voiceBank && !from.isRest()) {
                 if (const auto sample = voiceBank->find(from.noteNum, from.lyric)) {
-                    const auto file = sample->path.lexically_proximate(voiceBank->root());
+                    const auto file =
+                        stdc::path::lexically_proximate(sample->path, voiceBank->root());
                     note.filenameRO = text.encodeReadOnly(textOf(file.lexically_normal()));
                     // Written only if the prefix map maps the lyric to another alias
                     const auto alias = voiceBank->prefixedLyric(from.noteNum, from.lyric);

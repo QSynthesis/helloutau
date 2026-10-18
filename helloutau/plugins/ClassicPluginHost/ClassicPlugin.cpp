@@ -7,6 +7,8 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 
+#include <stdcorelib/path.h>
+
 #include <stdutau/plugintxt.h>
 #include <stdutau/utaconst.h>
 
@@ -47,7 +49,7 @@ namespace hello::daw {
             std::error_code error;
             const auto base = std::filesystem::weakly_canonical(folder, error);
             const auto program = std::filesystem::weakly_canonical(folder / relative, error);
-            const auto inside = program.lexically_relative(base);
+            const auto inside = stdc::path::lexically_relative(program, base);
             if (error || inside.empty() || *inside.begin() == std::filesystem::path(u"..")) {
                 reason =
                     ClassicPlugin::tr("Its program \"%1\" is outside its folder.").arg(execute);

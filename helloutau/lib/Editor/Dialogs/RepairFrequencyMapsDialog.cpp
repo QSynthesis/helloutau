@@ -10,6 +10,8 @@
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdcorelib/path.h>
+
 #include <helloutau/Widgets/CheckAllBox.h>
 
 namespace hello::daw {
@@ -21,7 +23,7 @@ namespace hello::daw {
         // Returns the path of name in folder relative to root, or the whole path if it has no path
         // relative to root, with native separators.
         QString displayed(const fs::path &root, const fs::path &folder, const fs::path &name) {
-            const auto relative = (folder / name).lexically_relative(root);
+            const auto relative = stdc::path::lexically_relative(folder / name, root);
             const auto path = relative.empty() ? folder / name : relative;
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }

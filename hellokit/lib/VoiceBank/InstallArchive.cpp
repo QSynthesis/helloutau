@@ -8,6 +8,8 @@
 #include <QtCore/QDir>
 #include <QtCore/QTemporaryDir>
 
+#include <stdcorelib/path.h>
+
 #include <hellokit/Support/Diagnostic.h>
 #include <hellokit/Support/TextCodec.h>
 
@@ -377,7 +379,8 @@ namespace hello::kit {
             // Merged as UTAU merges: a file of the same name is replaced, the others are kept.
             for (auto it = fs::recursive_directory_iterator(staging, error);
                  !error && it != fs::recursive_directory_iterator(); it.increment(error)) {
-                const auto destination = target / it->path().lexically_relative(staging);
+                const auto destination =
+                    target / stdc::path::lexically_relative(it->path(), staging);
                 if (it->is_directory(error)) {
                     fs::create_directories(destination, error);
                     continue;

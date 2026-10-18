@@ -43,6 +43,7 @@
 #include <QtWidgets/QTreeWidgetItemIterator>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdcorelib/path.h>
 #include <stdcorelib/pimpl.h>
 
 #include <QAKCore/actionregistry.h>
@@ -1705,7 +1706,7 @@ namespace hello::daw {
         // and with misdecoded names restored as the window shows them, or an empty path for a
         // file outside the root.
         std::filesystem::path shownPathOf(const std::filesystem::path &path) const {
-            const auto relative = path.lexically_relative(document->rootPath());
+            const auto relative = stdc::path::lexically_relative(path, document->rootPath());
             if (relative.empty() || *relative.begin() == "..") {
                 return {};
             }
@@ -3184,7 +3185,7 @@ namespace hello::daw {
             progress.setLabelText(QDir::toNativeSeparators(textOf(file)));
             if (folder) {
                 // A file outside the voice bank keeps only its name.
-                auto relative = file.lexically_relative(root);
+                auto relative = stdc::path::lexically_relative(file, root);
                 if (relative.empty() || *relative.begin() == "..") {
                     relative = file.filename();
                 }

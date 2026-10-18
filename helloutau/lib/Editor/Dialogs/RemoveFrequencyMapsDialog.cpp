@@ -5,6 +5,8 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdcorelib/path.h>
+
 #include <helloutau/Widgets/FileCheckList.h>
 
 namespace hello::daw {
@@ -35,7 +37,7 @@ namespace hello::daw {
             m_list->setColumnAlignment(column, Qt::AlignCenter);
         }
         for (const auto &file : std::as_const(m_files)) {
-            auto relative = file.path.lexically_relative(root);
+            auto relative = stdc::path::lexically_relative(file.path, root);
             if (!file.shownPath.empty()) {
                 relative = file.shownPath;
             }

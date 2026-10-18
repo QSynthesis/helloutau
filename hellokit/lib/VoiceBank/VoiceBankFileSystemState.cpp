@@ -12,6 +12,8 @@
 #include <QtCore/QSaveFile>
 #include <QtCore/QSet>
 
+#include <stdcorelib/path.h>
+
 #include <hellokit/Support/TextCodec.h>
 
 #include "MisdecodedNameQuestion.h"
@@ -866,7 +868,8 @@ namespace hello::kit {
         const auto root = m_root.lexically_normal();
         std::vector<fs::path> scope;
         for (const auto &place : places) {
-            auto relative = fs::path(place).lexically_normal().lexically_relative(root);
+            auto relative =
+                stdc::path::lexically_relative(fs::path(place).lexically_normal(), root);
             if (relative.empty() || *relative.begin() == "..") {
                 continue;
             }
@@ -1572,7 +1575,7 @@ namespace hello::kit {
                 if (entry.is_symlink(status) || !entry.is_regular_file(status)) {
                     continue;
                 }
-                const auto relative = entry.path().lexically_relative(bank.m_root);
+                const auto relative = stdc::path::lexically_relative(entry.path(), bank.m_root);
                 const auto directory = relative.parent_path();
                 if (bank.indexOf(directory) >= 0 &&
                     VoiceBankDirectorySource::fileNamed(foldedName(relative.filename()),

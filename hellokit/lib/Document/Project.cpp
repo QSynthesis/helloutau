@@ -10,6 +10,8 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonParseError>
 
+#include <stdcorelib/path.h>
+
 #include "DocumentConstants.h"
 #include "JsonFields_p.h"
 #include "PayloadCodec.h"
@@ -217,7 +219,7 @@ namespace hello::kit {
                 if (folder.empty()) {
                     continue;
                 }
-                const auto relative = bank.lexically_relative(directoryOf(folder));
+                const auto relative = stdc::path::lexically_relative(bank, directoryOf(folder));
                 if (relative.empty() || relative == u"." || *relative.begin() == u"..") {
                     continue;
                 }

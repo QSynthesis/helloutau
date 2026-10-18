@@ -15,6 +15,8 @@
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdcorelib/path.h>
+
 #include <helloutau/Widgets/FileCheckList.h>
 
 namespace hello::daw {
@@ -112,7 +114,7 @@ namespace hello::daw {
         // The rows are in the order of the files.
         m_list = new FileCheckList({tr("File"), tr("Format"), tr("Changes")});
         for (const auto &file : m_files) {
-            auto relative = file.path.lexically_relative(m_root);
+            auto relative = stdc::path::lexically_relative(file.path, m_root);
             if (!file.shownPath.empty()) {
                 relative = file.shownPath;
             }

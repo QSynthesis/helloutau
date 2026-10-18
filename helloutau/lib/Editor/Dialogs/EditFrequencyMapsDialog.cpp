@@ -40,6 +40,7 @@
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdcorelib/path.h>
 #include <stdcorelib/pimpl.h>
 
 #include <stdutau/utautils.h>
@@ -1252,7 +1253,7 @@ namespace hello::daw {
         FolderTree folders(impl.list);
         for (int i = 0; i < impl.files.size(); ++i) {
             const auto &file = impl.files.at(i);
-            auto relative = file.path.lexically_relative(root);
+            auto relative = stdc::path::lexically_relative(file.path, root);
             if (!file.shownPath.empty()) {
                 relative = file.shownPath;
             }

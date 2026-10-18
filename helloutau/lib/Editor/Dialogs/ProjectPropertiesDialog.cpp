@@ -20,6 +20,8 @@
 #include <QtWidgets/QStyle>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdcorelib/path.h>
+
 #include "AppSettings.h"
 #include "SynthToolTrust.h"
 
@@ -75,7 +77,7 @@ namespace hello::daw {
             if (rootError || synthToolError) {
                 return value;
             }
-            const auto relative = synthTool.lexically_relative(root);
+            const auto relative = stdc::path::lexically_relative(synthTool, root);
             const bool inside = !relative.empty() && *relative.begin() != u"..";
             return textOf(inside ? relative : synthTool);
         }
