@@ -112,9 +112,14 @@ private Q_SLOTS:
         QVERIFY(QDir().mkpath(at(QStringLiteral("old"))));
         const auto watcher = follow();
         QSignalSpy notFound(watcher.get(), &FileSystemWatcher::rootNotFound);
+        QSignalSpy changed(watcher.get(), &FileSystemWatcher::changed);
 
         QVERIFY(QDir(at(QStringLiteral("removed"))).removeRecursively());
         QVERIFY(QDir().rename(at(QStringLiteral("old")), at(QStringLiteral("new"))));
+        // The root is renamed after the report of new, which the program examines before it
+        // reports the directory. Windows refuses to rename a directory while an entry in it is
+        // open, and the rename of the root failed once on CI without this wait.
+        QTRY_VERIFY_WITH_TIMEOUT(reported(collect(changed), at(QStringLiteral("new"))), 5000);
         QVERIFY(QDir().rename(root(), root() + QStringLiteral(" renamed")));
         QTRY_COMPARE_WITH_TIMEOUT(notFound.size(), 1, 5000);
         QCOMPARE(notFound.at(0).at(0).toString(), root());
