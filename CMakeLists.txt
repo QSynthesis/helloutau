@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 
-set(HELLO_VERSION 0.1.8.0)
-
 project(helloutau
-    VERSION ${HELLO_VERSION}
+    VERSION 0.1.8.0
     LANGUAGES CXX
     DESCRIPTION "Modern cross-platform UTAU editor with faithful compatibility"
     HOMEPAGE_URL "https://github.com/QSynthesis/helloutau"
@@ -78,6 +76,8 @@ endif()
 # ----------------------------------
 # Project Variables
 # ----------------------------------
+# The version of the repository, which every subdirectory passes to its own project(). That
+# project() replaces PROJECT_VERSION, and an ordinary variable reaches every subdirectory.
 set(HELLO_VERSION ${PROJECT_VERSION})
 set(HELLO_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
