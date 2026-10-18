@@ -1038,13 +1038,17 @@ namespace hello::daw {
         }
 
         // Returns the folder in which an audio file of the project is proposed: the folder of the
-        // project file, or the music folder of the user for a project without a file.
+        // project file, or the music folder of the user for a project without a file. The home
+        // folder replaces a music folder that does not exist, as on a Linux system without the
+        // folders of XDG, because the file dialog starts in the working directory instead.
         std::filesystem::path audioFolder() const {
             const auto source = document->sourcePath();
-            return source.empty() ? std::filesystem::path(QStandardPaths::writableLocation(
-                                                              QStandardPaths::MusicLocation)
-                                                              .toStdU16String())
-                                  : source.parent_path();
+            if (!source.empty()) {
+                return source.parent_path();
+            }
+            const auto music = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+            const auto folder = QDir(music).exists() ? music : QDir::homePath();
+            return std::filesystem::path(folder.toStdU16String());
         }
 
         QString projectAudioBaseName() const {

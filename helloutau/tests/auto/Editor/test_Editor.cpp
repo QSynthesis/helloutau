@@ -4361,7 +4361,10 @@ private Q_SLOTS:
         const auto renderTrack =
             declaredActionOf(*e, window, QStringLiteral("helloutau.playback.renderTrack"));
         QVERIFY(renderTrack);
-        const auto music = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+        // The home folder replaces a music folder that does not exist, as on the runners of the
+        // workflow.
+        const auto musicLocation = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+        const auto music = QDir(musicLocation).exists() ? musicLocation : QDir::homePath();
 
         // Returns the file name that the file dialog proposes for the project name.
         const auto proposalFor = [&](const QString &name) {
