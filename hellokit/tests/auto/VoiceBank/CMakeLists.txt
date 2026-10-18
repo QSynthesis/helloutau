@@ -1,4 +1,7 @@
 add_auto_test(test_VoiceBankConfiguration.cpp HelloKitVoiceBank)
+
+# The test writes its archives with libzip, including names without the UTF-8 flag.
+add_auto_test(test_InstallArchive.cpp HelloKitVoiceBank libzip::zip)
 add_auto_test(test_MisdecodedNameQuestion.cpp HelloKitVoiceBank)
 add_auto_test(test_MisdecodedNameConversion.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankSource.cpp HelloKitVoiceBank)

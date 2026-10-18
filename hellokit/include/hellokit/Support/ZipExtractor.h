@@ -157,6 +157,11 @@ namespace hello::kit {
         /// called from any thread. A request before extract() or extractAsync() is discarded.
         void cancel();
 
+        /// Returns whether \a component is a safe component of a path under the rules above: not
+        /// empty, \c . or \c .., without a separator, a colon or a control character, and on
+        /// Windows neither a reserved device name nor ending with a dot or a space.
+        static bool isSafeComponent(const QString &component);
+
         /// Returns the reason why the last extraction failed, or \c NoError if it succeeded.
         Error error() const;
 

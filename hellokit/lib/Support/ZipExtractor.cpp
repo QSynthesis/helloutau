@@ -105,7 +105,7 @@ namespace hello::kit {
         }
 #endif
 
-        bool isSafeComponent(const QString &component) {
+        bool isSafeName(const QString &component) {
             if (component.isEmpty() || component == u"." || component == u"..") {
                 return false;
             }
@@ -135,7 +135,7 @@ namespace hello::kit {
                 name.chop(1);
             }
             auto components = name.split(u'/');
-            if (!std::all_of(components.begin(), components.end(), isSafeComponent)) {
+            if (!std::all_of(components.begin(), components.end(), isSafeName)) {
                 return std::nullopt;
             }
             return components;
@@ -718,6 +718,10 @@ namespace hello::kit {
 
     QString ZipExtractor::errorString() const {
         return m_errorString;
+    }
+
+    bool ZipExtractor::isSafeComponent(const QString &component) {
+        return !component.contains(u'/') && !component.contains(u'\\') && isSafeName(component);
     }
 
     bool ZipExtractor::fail(Error error, const QString &message) {

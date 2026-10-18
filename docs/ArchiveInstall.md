@@ -10,7 +10,7 @@
 - **`install.txt` 的规格只写了插件。** 原文给出四个键：`type`（插件为 `editplugin`）、`folder`（在 `plugins` 下创建的文件夹名，不可省略）、`contentsdir`（包中要展开的文件夹名，省略时同 `folder`）与 `description`（可省略，一行说明）。包的根上是 `install.txt` 与 `contentsdir` 所指的文件夹。
 - **`type=voiceset` 没有文档**，它只以字符串形式出现在 utau.exe 中，与 `editplugin` 相邻。以下由 `.cache/utau-probe/install` 的探针实测（2026-10-17，作者以 UTAU 0.4.18 实测，0.4.19 只修正了路径穿越）：
   - 没有 `install.txt` 时拒绝安装，提示「安装信息未找到 / 这个文件并不是用于UTAU自动安装」。`type` 不是 `voiceset` 或 `editplugin` 时提示「未知的安装文件」。
-  - `contentsdir` 指向包里不存在的文件夹时提示「安装信息中有错误」。只写 `folder` 而文件夹同名时，`voiceset` 同样提示「安装信息中有错误」，`editplugin` 提示「插件信息并未找到。」，补上同名的 `contentsdir` 后可以安装。因此省略 `contentsdir` 时 UTAU 并不像规格所写的那样取 `folder`，是否改取包的根待实测。
+  - `contentsdir` 指向包里不存在的文件夹时提示「安装信息中有错误」。只写 `folder` 而文件夹同名时，`voiceset` 同样提示「安装信息中有错误」，`editplugin` 提示「插件信息并未找到。」，补上同名的 `contentsdir` 后可以安装。省略 `contentsdir` 而音源文件或 `plugin.txt` 放在根上时可以安装，装出的是根上除 `install.txt` 以外的文件。因此省略 `contentsdir` 时 UTAU 取包的根，并不像规格所写的那样取 `folder`。装出的内容的根上必须有 `character.txt`（`voiceset`）或 `plugin.txt`（`editplugin`），确认框中的名字取自这两个文件，没有时分别报告上述两种错误。
   - `install.txt` 按系统 ANSI 代码页解码：Shift_JIS 的日文说明在 GBK 系统上显示为乱码。
   - 安装前的确认框显示音源的 `character.txt` 中的 `name` 与 `description`，插件则显示 `plugin.txt` 中的 `name`。
   - 目标文件夹已存在时询问是否覆盖，同时显示文件夹名与已安装音源的名字。选「否」时改装到在文件夹名后加数字的新文件夹（`probe1-folder0`）。覆盖为合并：同名文件被替换，原有的其他文件保留。
@@ -31,7 +31,7 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 
 1. **读取条目。** 只读取中央目录，不解压。得到每个条目的原始名字、UTF-8 标志、声明的大小与类型。此时即进行与解压相同的全部检查（见「安全」），不通过时拒绝整个压缩包并告知用户，不进入下一步。
 2. **条目名的编码。** 条目名全为 ASCII 或都带 UTF-8 标志时不询问。否则在安装对话框中选择编码：候选为 `TextCodec::ustCandidates()`，默认值按 `TextCodec::ranked()` 选出，旁边以所选编码解码出的目录树预览。某个候选对某个名字是非法字节序列时，该候选不可选。不检测编码，见 [`note.md`](note.md)。
-3. **种类与目标文件夹。** 按根上的 `install.txt` 的 `type`、`folder` 与 `contentsdir` 确定：`contentsdir` 所指的文件夹装为 `folder`，同 UTAU 不复制 `install.txt`。省略 `contentsdir` 时的处理以实测为准。
+3. **种类与目标文件夹。** 按根上的 `install.txt` 的 `type`、`folder` 与 `contentsdir` 确定：`contentsdir` 所指的文件夹装为 `folder`，省略时包的根装为 `folder`，同 UTAU 不复制 `install.txt`。同 UTAU 要求内容的根上有 `character.txt` 或 `plugin.txt`，否则拒绝安装。
 4. **文本编码。** 音源的 `character.txt`、`oto.ini` 等文本文件的编码在同一个对话框中选择，预览沿用 `VoiceBankDecodingDialog` 的文本预览。安装后为每个含 `oto.ini` 的文件夹写入 `hello-config.json`，记录文本编码与文件名编码（见第 5 步），打开该音源时不再询问。插件的 `plugin.txt` 照 UTAU 按系统 ANSI 代码页读取（[`note.md`](note.md)「插件」），不写 `plugin.json`。
 5. **名字写入磁盘的方式**（作者 2026-10-17 决定，默认第一种，用户可选第二种）：
    - **按所选编码还原**：磁盘上是正确的 Unicode 名字，`fileNameEncoding` 记为 `{}`。在 Windows 上，有名字无法以系统 ANSI 代码页表示时提示用户：官方 UTAU 在这台机器上无法使用这些文件。
@@ -58,5 +58,5 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 ## 实现结构
 
 - **`kit::ZipExtractor` 的补充**（`HelloKitSupport`，已实现）：`listEntries()` 只读取中央目录的条目列表（原始名字、UTF-8 标志、大小、类型），`readEntry()` 读取单个条目的内容并限制其大小，实际读出的字节同样计数（用于 `install.txt` 与文本预览），`setSubdirectory()` 只写出某个文件夹并去掉这一层（`contentsdir`，文件夹名按大小写不敏感比较，其外的条目照常检查），`check()` 进行解压的全部检查而不写入，名字冲突以 `DuplicateName` 拒绝。
-- **`kit::InstallArchive`**（`HelloKitVoiceBank`）：打开压缩包，解析 `install.txt`，给出种类、目标文件夹名、条目的目录树与需要询问的问题，按选定的编码与写入方式安装。不依赖 QtWidgets，以 `FixedCharsetSelector` 一类的固定回答测试。插件的安装同样由它完成，因为两者共用 `install.txt` 的格式与全部检查。
+- **`kit::InstallArchive`**（`HelloKitVoiceBank`，已实现）：`open()` 读取条目与 `install.txt`，`setNameEncoding()` 以选定的编码解码条目名与 `install.txt`、解析并进行全部检查，`contents()` 与 `readContent()` 供预览，`canWriteMisdecoded()` 与 `unrepresentableNames()` 给出两种写入方式的条件，`freeFolderName()` 给出 UTAU 式的新文件夹名，`install()` 解压到临时文件夹后改名或合并，并为音源写入 `hello-config.json`。不依赖 QtWidgets。插件的安装同样由它完成，因为两者共用 `install.txt` 的格式与全部检查。`folder` 与 `contentsdir` 的检查使用 `ZipExtractor::isSafeComponent()`，与条目名的分量是同一套规则。测试为 `test_InstallArchive`。
 - **安装对话框**（`HelloUtauEditor`）：条目名编码、文本编码、写入方式、同名文件夹的处理与进度。入口的拖放与菜单动作也在编辑器中。
