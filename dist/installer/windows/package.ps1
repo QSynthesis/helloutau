@@ -144,7 +144,12 @@ $binaries += Get-ChildItem -LiteralPath $bin -Filter *.dll | ForEach-Object { $_
 $binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\helloutau\plugins") -Recurse `
     -Filter *.dll | ForEach-Object { $_.FullName }
 $mingw = $triplet -like "*-mingw"
-$runtime = if ($mingw) { @() } else { @("--no-compiler-runtime") }
+# An array from the start: an if that yields one string returns the string, and splatting a
+# string passes its characters, as the first build after this option showed.
+$runtime = @()
+if (-not $mingw) {
+    $runtime += "--no-compiler-runtime"
+}
 Invoke-Step "windeployqt" {
     & (Join-Path $Qt "bin\windeployqt.exe") --release --dir $bin --plugindir $qtPlugins `
         --no-translations @runtime --no-system-d3d-compiler `
