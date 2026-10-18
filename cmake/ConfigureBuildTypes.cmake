@@ -21,13 +21,14 @@ unset(_lang)
 # as cl does. /DEBUG writes the PDB and keeps the unreferenced and the identical functions unless
 # /OPT:REF and /OPT:ICF are given again. The GNU front end takes them through -Xlinker.
 #
-# /OPT:ICF is left out with AddressSanitizer: it folds identical constants, such as the string
-# literals of different files, into one address, and AddressSanitizer then reports each pair of
-# its instrumented globals there as an odr-violation. The tests of the variant asan failed so.
+# With AddressSanitizer only /DEBUG is given. With /OPT:REF and /OPT:ICF the tests of the variant
+# asan failed, and with /OPT:REF alone as well: string literals of one file, such as u"" and "",
+# shared one address, which AddressSanitizer reported as an odr-violation of its instrumented
+# globals. A build for the tests needs no removal of dead code.
 if(MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-    set(_options /DEBUG /OPT:REF)
+    set(_options /DEBUG)
     if(NOT HELLO_ENABLE_ADDRESS_SANITIZER)
-        list(APPEND _options /OPT:ICF)
+        list(APPEND _options /OPT:REF /OPT:ICF)
     endif()
     if(NOT MSVC)
         list(TRANSFORM _options PREPEND "-Xlinker ")
