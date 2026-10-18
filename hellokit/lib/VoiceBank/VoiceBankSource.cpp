@@ -93,6 +93,7 @@ namespace hello::kit {
                                   .value_or(VoiceBankDirectoryStamp());
 
             std::error_code error;
+            std::vector<fs::path> subdirectories;
             for (const auto &entry : fs::directory_iterator(
                      absolute, fs::directory_options::skip_permission_denied, error)) {
                 // Symbolic links are never followed. A voice bank is a folder selected by the
@@ -102,7 +103,7 @@ namespace hello::kit {
                 }
                 const auto fileName = FileName::listed(entry.path().filename());
                 if (entry.is_directory()) {
-                    children.push_back(relative / fileName);
+                    subdirectories.push_back(fileName);
                     continue;
                 }
                 if (!entry.is_regular_file()) {
@@ -157,6 +158,21 @@ namespace hello::kit {
                 if (*kind != VoiceBankDirectorySource::Config) {
                     directory.contents[*kind] = *bytes;
                 }
+            }
+
+            // The subdirectories are sorted by name ignoring case, and by the exact name if equal,
+            // because the order of a listing depends on the file system. The order of the
+            // directories, and the directories that the limits leave out, therefore follow the
+            // names on every file system, close to the order in which NTFS lists them.
+            std::sort(subdirectories.begin(), subdirectories.end(),
+                      [](const fs::path &a, const fs::path &b) {
+                          const auto first = QString::fromStdU16String(a.u16string());
+                          const auto second = QString::fromStdU16String(b.u16string());
+                          const int folded = first.compare(second, Qt::CaseInsensitive);
+                          return folded != 0 ? folded < 0 : first < second;
+                      });
+            for (const auto &name : std::as_const(subdirectories)) {
+                children.push_back(relative / name);
             }
 
             if (error) {

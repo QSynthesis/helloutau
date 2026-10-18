@@ -109,6 +109,23 @@ private Q_SLOTS:
         QVERIFY(at(*source, std::filesystem::path("A4") / "deeper")->oto.has_value());
     }
 
+    // The subdirectories are read in the order of their names ignoring case, in whatever order
+    // the file system lists them.
+    void the_subdirectories_follow_the_order_of_their_names() {
+        for (const auto name : {"c", "B", "a", "d"}) {
+            write(QString::fromLatin1(name) + QStringLiteral("/oto.ini"), "x.wav=x,0,0,0,0,0\n");
+        }
+
+        DiagnosticList diagnostics;
+        const auto source = VoiceBankSource::open(root(), diagnostics);
+        QVERIFY(source.has_value());
+        QList<std::filesystem::path> paths;
+        for (const auto &directory : source->directories()) {
+            paths.push_back(directory.path);
+        }
+        QCOMPARE(paths, (QList<std::filesystem::path>{{}, "a", "B", "c", "d"}));
+    }
+
     // A voice bank is a folder selected by the user, so its structure cannot be trusted.
     void a_tree_deeper_than_the_limit_is_truncated_with_a_warning() {
         write(QStringLiteral("a/b/c/oto.ini"), "x.wav=x,0,0,0,0,0\n");
