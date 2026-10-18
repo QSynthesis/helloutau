@@ -63,7 +63,7 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 | `.github/workflows/sync-gitee-release.yml` | release 发布后由 `deploy.yml` 启动、手动 | 同步到 Gitee |
 
 - **系统**：两个工作流以 matrix 列出各系统，目前为 `x86_64-windows-msvc` 与 `x86_64-windows-mingw`。组合 action 不限于某一系统，系统的差别由输入（vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分。matrix 中的 triplet 是 job 的名称，组合 action 检查它与构建的 triplet 相同，不同即失败，其后的步骤不使用它：组合 action 在配置后从 `CMakeCache.txt` 读出 `HELLO_TRIPLET`，作为输出 `triplet` 交给工作流命名 artifact，因此与程序、打包脚本所用的值必然一致，将来增加 mingw 等构建时也不会混淆（作者 2026-10-17 要求）。增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
-- **MinGW**：以 llvm-mingw 17.0.6 构建（作者 2026-10-18 决定），即 Qt 6.11.1 的 llvm-mingw 构建（aqt 的架构 `win64_llvm_mingw`）所依赖的工具链 `qt.tools.win64_llvm_mingw1706`，由 install-qt-action 一并安装并加入 `PATH`。程序与 Qt 共用一份 `libc++.dll`，编译器因此与 Qt 的工具链一致。不用 GCC 的 MinGW，因为 GCC 只生成 DWARF，Windows 的调试器与崩溃转储的工具读不了，llvm-mingw 则以 `-gcodeview` 与 `-Wl,--pdb=` 生成 PDB（`cmake/ConfigureBuildTypes.cmake`）。依赖以 vcpkg 社区的 triplet `x64-mingw-dynamic` 安装，vcpkg 按 GCC 的名字在 `PATH` 中找到 llvm-mingw 的编译器。打包时 windeployqt 部署编译器的运行库（`libc++` 与 `libunwind`），不复制 Visual Studio 的运行库。AddressSanitizer 只以 MSVC 的 ABI 构建。依赖 Qt 的 QActionKit 与 substate 仍在开发，没有自己的 CI，它们在 MinGW 下能否构建由本仓库的 CI 检验（作者 2026-10-18 决定）。stdutau 与 winacp 的 CI 以 MSYS2 的 CLANG64 环境检验同一套工具链。
+- **MinGW**：以 llvm-mingw 17.0.6 构建（作者 2026-10-18 决定），即 Qt 6.11.1 的 llvm-mingw 构建（aqt 的架构 `win64_llvm_mingw`）所依赖的工具链 `qt.tools.win64_llvm_mingw1706`，由 install-qt-action 一并安装并加入 `PATH`。程序与 Qt 共用一份 `libc++.dll`，编译器因此与 Qt 的工具链一致。不用 GCC 的 MinGW，因为 GCC 只生成 DWARF，Windows 的调试器与崩溃转储的工具读不了，llvm-mingw 则以 `-gcodeview` 与 `-Wl,--pdb=` 生成 PDB（`cmake/ConfigureBuildTypes.cmake`）。依赖以 vcpkg 社区的 triplet `x64-mingw-dynamic` 安装，vcpkg 按 GCC 的名字在 `PATH` 中找到 llvm-mingw 的编译器。安装时的部署从编译器所在目录与目标的目录（llvm-mingw 以目标三元组命名，如 `x86_64-w64-mingw32/bin`）取得编译器的运行库（`libc++` 与 `libunwind`），不复制 Visual Studio 的运行库。AddressSanitizer 只以 MSVC 的 ABI 构建。依赖 Qt 的 QActionKit 与 substate 仍在开发，没有自己的 CI，它们在 MinGW 下能否构建由本仓库的 CI 检验（作者 2026-10-18 决定）。stdutau 与 winacp 的 CI 以 MSYS2 的 CLANG64 环境检验同一套工具链。
 - **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
 - **变体**：组合 action 的输入 `variant` 选择构建的变体，每种变体在自己的构建目录中（作者 2026-10-17 决定）。
   - `release`：Release，即发布的构建，位于 `build/Release`，打包脚本读取这里。Release 带调试信息，同 vcpkg 的 Release 构建（作者 2026-10-18 决定，见 `cmake/ConfigureBuildTypes.cmake`）：MSVC 编译时加 `/Z7`，把调试信息写入目标文件，其他前端加 `-g`。链接选项按 ABI：MSVC 的 ABI（包括以 GNU 前端、MSVC 的 ABI 构建的 clang）链接时加 `/DEBUG /OPT:REF /OPT:ICF`，为每个二进制生成 PDB，并去掉未引用与重复的函数。优化与原来的 Release 相同，符号随附件发布。vcpkg 只构建 Debug 与 Release，`vcpkg_cmake_config_fixup` 只处理 `*-release.cmake`，因此不使用 RelWithDebInfo 这一配置（同 DiffScope 的 overlay triplet 的说明）。vcpkg 在 Windows 上的 Release 本来就以 `/Z7` 编译、以 `/DEBUG` 链接并安装 PDB。
@@ -115,7 +115,14 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 
 Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中文、繁体中文与日语（7.0.2 起两种中文均为官方翻译）。脚本为 `dist/installer/windows/setup.iss`，是可以直接用 Inno Setup 打开和编译的普通脚本，提示文字与卸载页分别在同目录的 `messages.iss` 与 `uninstall.iss` 中。版本号、源目录与输出文件名由命令行的 `/D` 传入，不经 `configure_file()`（作者 2026-10-11 决定）。
 
-同目录的 `package.ps1` 打包一个已完成的 Release 构建：`cmake --install`，补上构建时复制到程序旁的依赖 DLL，以 windeployqt 部署 Qt（不带 Direct3D 的着色器编译器 `d3dcompiler_47.dll`、`dxcompiler.dll`、`dxil.dll` 与软件 OpenGL `opengl32sw.dll`，因为界面以光栅方式绘制，不使用 Qt Quick、OpenGL 控件与 RHI 控件，作者 2026-10-15 同意），删除只供开发者使用的文件，复制 C++ 运行库，收集各个二进制的 PDB，生成 zip、安装包、符号包与 `SHA256SUMS`。它从构建目录的 `CMakeCache.txt` 读取版本号（`CMAKE_PROJECT_VERSION`）与 triplet（`HELLO_TRIPLET`）。脚本不负责构建，因为构建需要编译器的环境。
+同目录的 `package.ps1` 打包一个已完成的 Release 构建：`cmake --install`，删除只供开发者使用的文件，复制 C++ 运行库，收集各个二进制的 PDB，生成 zip、安装包、符号包与 `SHA256SUMS`。它从构建目录的 `CMakeCache.txt` 读取版本号（`CMAKE_PROJECT_VERSION`）与 triplet（`HELLO_TRIPLET`）。脚本不负责构建，因为构建需要编译器的环境。
+
+Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.txt` 末尾的 `qm_deploy_directory()`，与 DiffScope 相同，不用 windeployqt（作者 2026-10-18 决定）。由 `HELLO_DEPLOY` 控制，默认开启，只在 Windows 上部署，Debug 构建不部署，因为 `qm_deploy_directory()` 只部署 release 版的库，`package.ps1` 遇到这两种构建即报错。
+
+- 依赖库按已安装的二进制逐级解析，放在程序旁的 `bin`，在构建的输出目录（`third-party/Dependencies.cmake` 复制依赖库之处）与 Qt 中查找。系统库与 MSVC 的运行库不部署，后者由 `package.ps1` 复制。
+- Qt 的插件以 `QT_PLUGINS` 按二进制用到的 Qt 模块选出，放在 `lib/Qt/plugins`，并采用 windeployqt 对不使用 QML 的程序的默认选择：不部署依赖 Qt Quick 的插件（`QT_PLUGINS_EXCLUDE_MODULES Qml Quick`），不部署运行时载入 OpenSSL 的 `tls/qopensslbackend` 与 `generic/qinsighttracker`。
+- 结果与 windeployqt 相同：MSVC 下打出的包与原来逐个文件一致（2026-10-18 本地比对）。Direct3D 的着色器编译器 `d3dcompiler_47.dll`、`dxcompiler.dll`、`dxil.dll` 与软件 OpenGL `opengl32sw.dll` 不是链接的依赖，不会被部署，界面以光栅方式绘制，不使用 Qt Quick、OpenGL 控件与 RHI 控件（作者 2026-10-15 同意）。
+- 部署在安装时按安装前缀解析目录，`cmake --install --prefix` 因此同样适用，这需要 qmsetup `5b83fa7` 或更新的版本。
 
 ### 标识与安装模式
 

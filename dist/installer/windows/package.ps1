@@ -1,7 +1,6 @@
 param(
     [string]$BuildDir,
     [string]$OutputDir,
-    [string]$Qt,
     [string]$Iscc,
     [switch]$NoInstaller
 )
@@ -32,17 +31,16 @@ param(
 #     share/helloutau/update/ UpdateManifest.json, installed by helloutau/CMakeLists.txt
 #
 # The build must be complete: this script does not build, because building requires the
-# environment of the compiler. Steps: cmake --install, copy the DLLs that the build copied beside
-# the program but cmake --install does not install (stdcorelib, stdutau, substate, QActionKit,
-# wolf-midi and the like), deploy Qt with windeployqt, remove the development files, copy the
-# C++ runtime, archive, and compile the installer with Inno Setup 7.
+# environment of the compiler. Steps: cmake --install, which deploys Qt and the other libraries
+# (HELLO_DEPLOY, see helloutau/CMakeLists.txt), remove the development files, copy the C++
+# runtime of MSVC, archive, and compile the installer with Inno Setup 7.
 #
 #     powershell -File dist\installer\windows\package.ps1 [-BuildDir <dir>] [-OutputDir <dir>]
-#         [-Qt <dir>] [-Iscc <ISCC.exe>] [-NoInstaller]
+#         [-Iscc <ISCC.exe>] [-NoInstaller]
 #
-# BuildDir defaults to build\Release of the repository, OutputDir to package in BuildDir, Qt to the
-# Qt of the build, and Iscc to ISCC.exe of the installation of Inno Setup 7 that its setup
-# records, or else to ISCC.exe in PATH.
+# BuildDir defaults to build\Release of the repository, OutputDir to package in BuildDir, and Iscc
+# to ISCC.exe of the installation of Inno Setup 7 that its setup records, or else to ISCC.exe in
+# PATH.
 $ErrorActionPreference = "Stop"
 $repository = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 
@@ -83,13 +81,12 @@ $triplet = Get-Value $cache "HELLO_TRIPLET" ":[A-Z]+="
 if (-not $version -or -not $triplet) {
     throw "The version or the triplet is missing from $cache. Configure the build again."
 }
-if (-not $Qt) {
-    # Qt6_DIR is <Qt>\lib\cmake\Qt6.
-    $qtDir = Get-Value $cache "Qt6_DIR" ":[A-Z]+="
-    if (-not $qtDir) {
-        throw "Qt6_DIR was not found in the CMake cache. Give the directory of Qt with -Qt."
-    }
-    $Qt = (Resolve-Path (Join-Path $qtDir "..\..\..")).Path
+# The deployment is an install rule, which a build without HELLO_DEPLOY or a Debug build lacks
+if ((Get-Value $cache "HELLO_DEPLOY" ":[A-Z]+=") -notin @("ON", "TRUE", "1", "YES")) {
+    throw "HELLO_DEPLOY is off in $cache. Configure the build with -DHELLO_DEPLOY=ON."
+}
+if ((Get-Value $cache "CMAKE_BUILD_TYPE" ":[A-Z]+=") -eq "Debug") {
+    throw "$BuildDir is a Debug build, which is not deployed. Package a Release build."
 }
 # The channel of the build. A build of another channel than release is named by its channel and
 # its abbreviated commit, in the file names and in the name of the installer, so that it is not
@@ -122,45 +119,7 @@ New-Item -ItemType Directory -Force $OutputDir | Out-Null
 Invoke-Step "Install" { cmake --install $BuildDir --prefix $staging }
 
 $bin = Join-Path $staging "bin"
-$qtPlugins = Join-Path $staging "lib\Qt\plugins"
-
-Write-Output "== Copy the dependencies"
-foreach ($dll in Get-ChildItem -LiteralPath (Join-Path $BuildDir "out\bin") -Filter *.dll) {
-    $target = Join-Path $bin $dll.Name
-    if (-not (Test-Path -LiteralPath $target)) {
-        Copy-Item -LiteralPath $dll.FullName -Destination $target
-        Write-Output "  $($dll.Name)"
-    }
-}
-
-# Qt for the program, every library and every plugin of the application, with the plugins of Qt
-# in lib/Qt/plugins. For the MSVC ABI the C++ runtime is copied below instead of the installer of
-# windeployqt. For MinGW windeployqt copies the runtime of the compiler, which for llvm-mingw is
-# libc++ and libunwind, the libraries that Qt itself loads. The shader compilers of Direct3D and
-# the software OpenGL are left out: the widgets draw with the raster engine, and no Qt Quick,
-# OpenGL widget or RHI widget is used. A program that adds one of these needs the three options
-# removed.
-$binaries = @(Join-Path $bin "helloutau.exe")
-$binaries += Get-ChildItem -LiteralPath $bin -Filter *.dll | ForEach-Object { $_.FullName }
-$binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\helloutau\plugins") -Recurse `
-    -Filter *.dll | ForEach-Object { $_.FullName }
 $mingw = $triplet -like "*-mingw"
-# An array from the start: an if that yields one string returns the string, and splatting a
-# string passes its characters, as the first build after this option showed.
-#
-# --release only for the MSVC ABI. Without the MSVC runtime, windeployqt reads a binary with a
-# debug directory as a debug build, the plugins of Qt for llvm-mingw included. With --release,
-# windeployqt therefore excluded every plugin and failed for lack of the platform plugin. Without
-# the option, windeployqt matches debug and release builds alike for MinGW.
-$options = @()
-if (-not $mingw) {
-    $options += "--release", "--no-compiler-runtime"
-}
-Invoke-Step "windeployqt" {
-    & (Join-Path $Qt "bin\windeployqt.exe") @options --dir $bin --plugindir $qtPlugins `
-        --no-translations --no-system-d3d-compiler `
-        --no-system-dxc-compiler --no-opengl-sw @binaries
-}
 
 Write-Output "== Remove the development files"
 foreach ($path in @("include", "lib\cmake")) {

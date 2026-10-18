@@ -94,4 +94,43 @@ endif()
 
 helloutau_install()
 
+# Deploys Qt and the other dependencies after every other install rule, with the plugin choices of
+# windeployqt for a program without QML. Windows only, and not for Debug, because
+# qm_deploy_directory deploys release libraries only. See the installer in docs/Distribution.md.
+if(HELLO_INSTALL AND HELLO_DEPLOY AND WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    qm_import(Deploy)
+
+    set(_searching_paths "${QMSETUP_BUILD_DIR}/${HELLOUTAU_INSTALL_RUNTIME_DIR}")
+
+    # libc++ and libunwind of llvm-mingw, beside the compiler and in the directory of the target
+    if(MINGW)
+        get_filename_component(_compiler_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        list(APPEND _searching_paths "${_compiler_dir}")
+
+        if(CMAKE_CXX_COMPILER_TARGET)
+            set(_target_triple "${CMAKE_CXX_COMPILER_TARGET}")
+        else()
+            execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -dumpmachine
+                OUTPUT_VARIABLE _target_triple OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+        endif()
+
+        if(_target_triple AND IS_DIRECTORY "${_compiler_dir}/../${_target_triple}/bin")
+            list(APPEND _searching_paths "${_compiler_dir}/../${_target_triple}/bin")
+        endif()
+    endif()
+
+    qm_deploy_directory(.
+        LIBRARY_DIR ${HELLOUTAU_INSTALL_RUNTIME_DIR}
+        PLUGIN_DIR lib/Qt/plugins
+        EXTRA_SEARCHING_PATHS ${_searching_paths}
+        QT_PLUGINS
+        QT_PLUGINS_EXCLUDE_MODULES Qml Quick
+        QT_PLUGINS_EXCLUDE tls/qopensslbackend generic/qinsighttracker
+        STANDARD
+        VERBOSE
+        COMMENT "Deploying Qt and the libraries that the installed binaries require"
+    )
+endif()
+
 helloutau_finish_buildsystem()

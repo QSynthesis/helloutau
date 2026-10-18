@@ -23,6 +23,10 @@ option(HELLO_DEVEL "Install the files for development" OFF)
 # installation for users carries neither these libraries nor Qt Test.
 option(HELLO_INSTALL_TESTING "Install the helper libraries of the tests" OFF)
 option(HELLO_INSTALL_MSVC_RUNTIME "Install MSVC runtime" OFF)
+# Deploys Qt and the other libraries that the installed binaries require into the installation,
+# on Windows and not for a Debug build, see helloutau/CMakeLists.txt. An installation for
+# development against libraries elsewhere turns it off.
+option(HELLO_DEPLOY "Deploy the dependencies into the installation" ON)
 # Builds the code of this repository with AddressSanitizer, for the tests. The workflow builds it
 # as Release, which carries the debug information. See the workflow in docs/Distribution.md.
 option(HELLO_ENABLE_ADDRESS_SANITIZER "Build with AddressSanitizer" OFF)
