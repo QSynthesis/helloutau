@@ -15,8 +15,9 @@ param(
 #     SHA256SUMS                                the digests of the files above, as sha256sum
 #                                               writes them
 #
-# A build of another channel than release (HELLO_BUILD_CHANNEL) appends -<channel>-<commit> to
-# the base name, such as helloutau-<version>-<triplet>-ci-1a2b3c4.zip.
+# A build of another channel than release (HELLO_BUILD_CHANNEL) follows the version with
+# -<channel>.<commit>, such as helloutau-<version>-ci.1a2b3c4-<triplet>.zip, as other projects
+# follow the version with the identifier of the build.
 #
 # The installation is laid out as
 #
@@ -107,7 +108,7 @@ if ($channel -ne "release") {
     if (-not $commit) {
         throw "The commit is missing from $buildInfo."
     }
-    $base = "$base-$channel-$commit"
+    $base = "helloutau-$version-$channel.$commit-$triplet"
     $appVerName = "HelloUtau $channel $commit"
 }
 Write-Output "Packaging $base from $BuildDir"
