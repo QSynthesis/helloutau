@@ -134,10 +134,12 @@ namespace hello::kit {
         encoding.name = tr("Encoding");
         encoding.type = InterchangeOption::Choice;
         encoding.defaultValue = QStringLiteral("UTF-8");
+        // ISO-8859-1 is the name of the built-in converter of Qt. The name ISO 8859-1 resolves
+        // only through ICU, which the Qt distribution for MinGW lacks.
         encoding.choices = {
             QStringLiteral("UTF-8"),      QStringLiteral("Shift_JIS"), QStringLiteral("GBK"),
             QStringLiteral("Big5"),       QStringLiteral("EUC-KR"),    QStringLiteral("UTF-16"),
-            QStringLiteral("ISO 8859-1"),
+            QStringLiteral("ISO-8859-1"),
         };
 
         // A note requires a lyric, because a UST note without one is a rest. This is the only

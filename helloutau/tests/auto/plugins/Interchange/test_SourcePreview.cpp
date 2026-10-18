@@ -57,15 +57,15 @@ private Q_SLOTS:
 
     // Before the ranking, the system encoding is the default if it decodes every text.
     void the_system_encoding_precedes_the_ranking() {
-        // Shift_JIS text, which ISO 8859-1 decodes into control characters. EUC-KR rejects the
+        // Shift_JIS text, which ISO-8859-1 decodes into control characters. EUC-KR rejects the
         // single half-width katakana byte, which EUC-KR reads as an incomplete lead byte.
         const QList<QByteArray> texts = {encoded("Shift_JIS", QStringLiteral("あいうえお")),
                                          encoded("Shift_JIS", QStringLiteral("ｱ"))};
         QVERIFY(!SourcePreview::decodes(texts, QStringLiteral("EUC-KR")));
         const QStringList candidates = {QStringLiteral("UTF-8"), QStringLiteral("Shift_JIS"),
-                                        QStringLiteral("ISO 8859-1"), QStringLiteral("EUC-KR")};
-        QCOMPARE(SourcePreview::defaultEncoding(texts, candidates, QStringLiteral("ISO 8859-1")),
-                 QStringLiteral("ISO 8859-1"));
+                                        QStringLiteral("ISO-8859-1"), QStringLiteral("EUC-KR")};
+        QCOMPARE(SourcePreview::defaultEncoding(texts, candidates, QStringLiteral("ISO-8859-1")),
+                 QStringLiteral("ISO-8859-1"));
         QCOMPARE(SourcePreview::defaultEncoding(texts, candidates, QStringLiteral("EUC-KR")),
                  QStringLiteral("Shift_JIS"));
         QCOMPARE(SourcePreview::defaultEncoding(texts, candidates, QStringLiteral("GBK")),
