@@ -68,7 +68,8 @@ private:
         roll.scrollToNotes();
     }
 
-    // The point at \a tick in the middle of the row of \a key
+    // The point at \a tick in the middle of the row of \a key. QTest reads the point (0, 0) as
+    // the center of the widget, so no check uses a tick and a key at that point.
     static QPoint pointOf(const PianoRoll &roll, double tick, int key) {
         return QPointF(roll.view()->timeAxis().toX(tick), roll.view()->keyAxis().toY(key + 0.5))
             .toPoint();
@@ -274,7 +275,7 @@ private Q_SLOTS:
         PianoRoll roll(&session);
         show(roll);
 
-        drag(roll, {0, 70}, {2000, 62});
+        drag(roll, {10, 70}, {2000, 62});
         QCOMPARE(roll.selectedIndices(), QList<int>{2});
         drag(roll, {10, 61}, {100, 60}, Qt::ControlModifier);
         QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
@@ -1299,7 +1300,9 @@ private Q_SLOTS:
         show(roll);
         QVERIFY(!roll.lyricSearch().isValid());
 
-        // The leftmost column of color over the notes from tick to tick + 480 at key, or -1
+        // The leftmost column of color over the notes from tick to tick + 480 at key, or -1. A
+        // pixel matches within a small difference, because the text is antialiased, and Linux
+        // draws no pixel of a glyph in the exact color.
         const auto leftmostIn = [&roll](double tick, int key, const QColor &color) {
             const auto image = roll.view()->viewport()->grab().toImage();
             const int left = int(roll.view()->timeAxis().toX(tick));
@@ -1308,7 +1311,11 @@ private Q_SLOTS:
             const int bottom = int(roll.view()->keyAxis().toY(key)) - 1;
             for (int x = left; x < right; ++x) {
                 for (int y = top; y < bottom; ++y) {
-                    if (image.pixelColor(x, y) == color) {
+                    const auto pixel = image.pixelColor(x, y);
+                    if (std::abs(pixel.red() - color.red()) +
+                            std::abs(pixel.green() - color.green()) +
+                            std::abs(pixel.blue() - color.blue()) <=
+                        48) {
                         return x;
                     }
                 }

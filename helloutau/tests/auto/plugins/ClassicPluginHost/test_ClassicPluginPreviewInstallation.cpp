@@ -27,6 +27,15 @@ namespace {
         return fs::path(text.toStdU16String());
     }
 
+    // The file names of the system, playinplugin and playinplugin-original outside Windows
+    fs::path programFile() {
+        return pathOf(Installation::programName);
+    }
+
+    fs::path originalFile() {
+        return pathOf(Installation::originalName);
+    }
+
     void write(const fs::path &path, const QByteArray &bytes) {
         QFile file(QString::fromStdU16String(path.u16string()));
         if (file.open(QIODevice::WriteOnly)) {
@@ -57,14 +66,14 @@ namespace {
     }
 
     // A plugin folder as PitTrace is distributed: plugin.txt in Shift_JIS with ustversion=1.00,
-    // the program, and the original playinplugin.exe beside it
+    // the program, and the original playinplugin(.exe) beside it
     fs::path pitTrace(const QTemporaryDir &dir) {
         const auto folder = pathOf(dir.path()) / "PitTrace";
         fs::create_directories(folder);
         write(folder / "plugin.txt",
               "name=" + japaneseName + "\r\nexecute=pittrace.exe\r\nustversion=1.00\r\n");
         write(folder / "pittrace.exe", "the plugin");
-        write(folder / "playinplugin.exe", "the original");
+        write(folder / programFile(), "the original");
         return folder;
     }
 
@@ -91,8 +100,8 @@ private Q_SLOTS:
         QVERIFY(Installation::install(folder, playPath, QStringLiteral("Shift_JIS"), diagnostics));
         QVERIFY(diagnostics.isEmpty());
 
-        QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("plugin-play"));
-        QCOMPARE(read(folder / "playinplugin-original.exe"), QByteArray("the original"));
+        QCOMPARE(read(folder / programFile()), QByteArray("plugin-play"));
+        QCOMPARE(read(folder / originalFile()), QByteArray("the original"));
         const auto manifest = manifestOf(folder);
         QVERIFY(manifest);
         QCOMPARE(manifest->value(QLatin1String("name")).toString(), QString::fromUtf8("テスト"));
@@ -101,8 +110,7 @@ private Q_SLOTS:
         QCOMPARE(manifest->value(QLatin1String("notes")).toString(), QStringLiteral("selection"));
         QVERIFY(!manifest->contains(QLatin1String("charset")));
         const auto record = recordIn(*manifest);
-        QCOMPARE(record.value(QLatin1String("original")).toString(),
-                 QStringLiteral("playinplugin-original.exe"));
+        QCOMPARE(record.value(QLatin1String("original")).toString(), Installation::originalName);
 
         const auto plugin = ClassicPlugin::read(folder, diagnostics);
         QVERIFY(plugin);
@@ -122,8 +130,8 @@ private Q_SLOTS:
         QVERIFY(Installation::install(folder, playPath, QStringLiteral("Shift_JIS"), diagnostics));
         QVERIFY(Installation::remove(folder, diagnostics));
         QVERIFY(diagnostics.isEmpty());
-        QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("the original"));
-        QVERIFY(!fs::exists(folder / "playinplugin-original.exe"));
+        QCOMPARE(read(folder / programFile()), QByteArray("the original"));
+        QVERIFY(!fs::exists(folder / originalFile()));
         const auto manifest = manifestOf(folder);
         QVERIFY(manifest);
         QVERIFY(!manifest->contains(QLatin1String("hostData")));
@@ -153,7 +161,7 @@ private Q_SLOTS:
         QVERIFY(record.value(QLatin1String("original")).isNull());
 
         QVERIFY(Installation::remove(folder, diagnostics));
-        QVERIFY(!fs::exists(folder / "playinplugin.exe"));
+        QVERIFY(!fs::exists(folder / programFile()));
         manifest = manifestOf(folder);
         QVERIFY(manifest);
         QCOMPARE(manifest->value(QLatin1String("custom")).toInt(), 1);
@@ -180,7 +188,7 @@ private Q_SLOTS:
 
         QVERIFY(Installation::remove(folder, diagnostics));
         QVERIFY(diagnostics.isEmpty());
-        QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("the original"));
+        QCOMPARE(read(folder / programFile()), QByteArray("the original"));
         manifest = manifestOf(folder);
         QVERIFY(manifest);
         QCOMPARE(manifest->value(QLatin1String("charset")).toString(), QStringLiteral("UTF-8"));
@@ -204,11 +212,11 @@ private Q_SLOTS:
         QCOMPARE(Installation::stateOf(folder, newer), Installation::Outdated);
         QVERIFY(Installation::update(folder, newer, diagnostics));
         QCOMPARE(Installation::stateOf(folder, newer), Installation::Installed);
-        QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("plugin-play 2"));
-        QCOMPARE(read(folder / "playinplugin-original.exe"), QByteArray("the original"));
+        QCOMPARE(read(folder / programFile()), QByteArray("plugin-play 2"));
+        QCOMPARE(read(folder / originalFile()), QByteArray("the original"));
     }
 
-    // Only a plugin that comes with a playinplugin.exe is recommended: the installation in its
+    // Only a plugin that comes with a playinplugin(.exe) is recommended: the installation in its
     // folder, and the update of its outdated installation. A plugin without the program is not
     // recommended, even with an outdated installation, and neither is a current installation.
     void the_plugins_with_playinplugin_are_recommended() {
@@ -239,25 +247,25 @@ private Q_SLOTS:
     void a_refused_installation_changes_nothing() {
         QTemporaryDir dir;
         const auto folder = pitTrace(dir);
-        write(folder / "playinplugin-original.exe", "another file");
+        write(folder / originalFile(), "another file");
         kit::DiagnosticList diagnostics;
         QVERIFY(
             !Installation::install(folder, program(dir), QStringLiteral("Shift_JIS"), diagnostics));
         QVERIFY(kit::hasError(diagnostics));
-        QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("the original"));
-        QCOMPARE(read(folder / "playinplugin-original.exe"), QByteArray("another file"));
+        QCOMPARE(read(folder / programFile()), QByteArray("the original"));
+        QCOMPARE(read(folder / originalFile()), QByteArray("another file"));
         QVERIFY(!fs::exists(folder / "plugin.json"));
 
         // A copy that fails after the original was renamed undoes the rename.
-        fs::remove(folder / "playinplugin-original.exe");
+        fs::remove(folder / originalFile());
         diagnostics.clear();
         const auto directory = pathOf(dir.path()) / "not a program";
         fs::create_directories(directory);
         QVERIFY(
             !Installation::install(folder, directory, QStringLiteral("Shift_JIS"), diagnostics));
         QVERIFY(kit::hasError(diagnostics));
-        QCOMPARE(read(folder / "playinplugin.exe"), QByteArray("the original"));
-        QVERIFY(!fs::exists(folder / "playinplugin-original.exe"));
+        QCOMPARE(read(folder / programFile()), QByteArray("the original"));
+        QVERIFY(!fs::exists(folder / originalFile()));
         QVERIFY(!fs::exists(folder / "plugin.json"));
 
         diagnostics.clear();
@@ -266,7 +274,7 @@ private Q_SLOTS:
         QVERIFY(
             !Installation::install(folder, program(dir), QStringLiteral("Shift_JIS"), diagnostics));
         QVERIFY(kit::hasError(diagnostics));
-        QCOMPARE(read(folder / "playinplugin-original.exe"), QByteArray("the original"));
+        QCOMPARE(read(folder / originalFile()), QByteArray("the original"));
 
         diagnostics.clear();
         const auto empty = pathOf(dir.path()) / "empty";

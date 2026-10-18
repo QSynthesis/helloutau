@@ -76,8 +76,10 @@ def check(condition, message):
 
 
 def same_path(first, second):
+    # Resolved first, because the temporary directory of macOS is under /var, a link to
+    # /private/var, and the program reports the resolved path of its working directory.
     return first is not None and second is not None and \
-        os.path.normcase(first) == os.path.normcase(second)
+        os.path.normcase(os.path.realpath(first)) == os.path.normcase(os.path.realpath(second))
 
 
 if WINDOWS:

@@ -64,10 +64,16 @@ class Installation:
     def version(self):
         return read(os.path.join(self.target, "bin", "version.txt"))
 
+    def command(self, *arguments):
+        return [UPDATER, "--target", self.target, "--source", self.source, "--log", self.log,
+                *arguments]
+
     def run(self, *arguments, cwd=None):
-        command = [UPDATER, "--target", self.target, "--source", self.source, "--log", self.log,
-                   *arguments]
-        return subprocess.run(command, timeout=RUN_LIMIT, cwd=cwd).returncode
+        return subprocess.run(self.command(*arguments), timeout=RUN_LIMIT, cwd=cwd).returncode
+
+    def start(self, *arguments):
+        """Starts the program and returns its process without awaiting it."""
+        return subprocess.Popen(self.command(*arguments))
 
     def log_text(self):
         return read(self.log) if os.path.exists(self.log) else ""
@@ -165,7 +171,12 @@ def test_the_process_is_awaited():
     sleeper = subprocess.Popen([PYTHON, "-c", "import time; time.sleep(2)"])
     try:
         start = time.monotonic()
-        status = installation.run("--pid", str(sleeper.pid))
+        updater = installation.start("--pid", str(sleeper.pid))
+        # The sleeper is reaped while the program waits. An exited child that its parent has not
+        # reaped remains a zombie on Linux and macOS, which kill(pid, 0) finds, and the program
+        # waited for it until the time limit.
+        sleeper.wait(timeout=RUN_LIMIT)
+        status = updater.wait(timeout=RUN_LIMIT)
         elapsed = time.monotonic() - start
         check(status == 0, "wait: exit status")
         check(sleeper.poll() is not None, "wait: the process is still running")

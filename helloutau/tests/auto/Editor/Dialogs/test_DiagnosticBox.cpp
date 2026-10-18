@@ -55,7 +55,10 @@ private Q_SLOTS:
                                 {diagnosticOf(kit::Diagnostic::Warning, "first", 3),
                                  diagnosticOf(kit::Diagnostic::Warning, "second")});
         QCOMPARE(box.text(), QStringLiteral("Note 4: first\nsecond"));
+        // QMessageBox::setWindowTitle() ignores the title on macOS, whose message boxes have none.
+#ifndef Q_OS_MACOS
         QCOMPARE(box.windowTitle(), QStringLiteral("Title"));
+#endif
     }
 
     void an_empty_list_shows_nothing() {

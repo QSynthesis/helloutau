@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include <QtCore/QDir>
 #include <QtTest/QTest>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QListWidget>
@@ -192,13 +193,17 @@ private Q_SLOTS:
         const auto firstLine = [](const QListWidgetItem *item) {
             return item->text().section(QLatin1Char('\n'), 0, 0);
         };
-        QCOMPARE(firstLine(dialog.list(0)->item(0)), QString::fromUtf8("い\\desc.map"));
-        QCOMPARE(firstLine(dialog.list(1)->item(0)), QString::fromUtf8("い\\あ.wav.cache"));
-        QCOMPARE(firstLine(dialog.list(1)->item(1)), QString::fromUtf8("い\\other.cache"));
+        // The list shows the paths with the separators of the system.
+        const auto shown = [](const char *path) {
+            return QDir::toNativeSeparators(QString::fromUtf8(path));
+        };
+        QCOMPARE(firstLine(dialog.list(0)->item(0)), shown("い/desc.map"));
+        QCOMPARE(firstLine(dialog.list(1)->item(0)), shown("い/あ.wav.cache"));
+        QCOMPARE(firstLine(dialog.list(1)->item(1)), shown("い/other.cache"));
 
         // Without the function, the names on disk are shown.
         RepairFrequencyMapsDialog onDisk(format, root, files);
-        QCOMPARE(firstLine(onDisk.list(1)->item(0)), QString::fromUtf8("偆\\偁.wav.cache"));
+        QCOMPARE(firstLine(onDisk.list(1)->item(0)), shown("偆/偁.wav.cache"));
     }
 };
 

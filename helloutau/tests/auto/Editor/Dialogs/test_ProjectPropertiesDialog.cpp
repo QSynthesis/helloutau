@@ -150,7 +150,9 @@ namespace {
         return utau;
     }
 
-    // Returns the %DATA% value of the voice bank name in the voice directory of a data folder
+    // Returns the %DATA% value of the voice bank name in the voice directory of a data folder, with
+    // the separators of the system, as the dialog shows it. The project records it with
+    // backslashes on every system.
     QString dataValueOf(const char *name) {
         return QDir::toNativeSeparators(QStringLiteral("%DATA%/voice/") + QLatin1String(name));
     }
@@ -396,7 +398,7 @@ private Q_SLOTS:
         dialog.nameEdit()->setText(QStringLiteral("other"));
         const auto changes = dialog.changes();
         QCOMPARE(changes.name, std::optional(QStringLiteral("other")));
-        QCOMPARE(changes.voiceDir, std::optional(dataValueOf("bank")));
+        QCOMPARE(changes.voiceDir, std::optional(QStringLiteral("%DATA%\\voice\\bank")));
         QCOMPARE(changes.wavtool, std::optional(QStringLiteral("tools\\wavtool.exe")));
         QCOMPARE(changes.resampler, std::optional(QStringLiteral("resampler.exe")));
         QVERIFY(!changes.tempo && !changes.flags && !changes.outputFile && !changes.mode2);
@@ -415,7 +417,8 @@ private Q_SLOTS:
         project.tracks.push_back({});
         project.settings.wavtool = QStringLiteral("tools\\wavtool.exe");
         project.settings.resampler = textOf(outside);
-        for (const auto &voiceDir : {dataValueOf("bank"), QStringLiteral("bank")}) {
+        for (const auto &voiceDir :
+             {QStringLiteral("%DATA%\\voice\\bank"), QStringLiteral("bank")}) {
             project.tracks[0].voiceDir = voiceDir;
             ProjectPropertiesDialog dialog(project, settings);
             dialog.nameEdit()->setText(QStringLiteral("other"));

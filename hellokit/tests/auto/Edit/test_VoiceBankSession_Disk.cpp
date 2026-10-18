@@ -84,10 +84,12 @@ private:
         return -1;
     }
 
-    using Times = std::map<QString, fs::file_time_type>;
+    using Times = std::map<QString, std::pair<fs::file_time_type, QByteArray>>;
 
-    /// The modification times of the text files of the fixture, by which a test finds the files
-    /// that a save wrote. A missing file has the default time.
+    /// The modification times and the contents of the text files of the fixture, by which a test
+    /// finds the files that a save wrote. A missing file has the default time. The content is
+    /// compared as well, because Linux stamps a file with a clock of a few milliseconds, and two
+    /// saves of the same file within that time once had the same stamp.
     Times times() const {
         Times out;
         for (const auto relative :
@@ -96,16 +98,16 @@ private:
             const auto name = QString::fromLatin1(relative);
             std::error_code error;
             const auto time = fs::last_write_time(fs::path(pathOf(name).toStdU16String()), error);
-            out[name] = error ? fs::file_time_type() : time;
+            out[name] = {error ? fs::file_time_type() : time, read(name)};
         }
         return out;
     }
 
-    /// Returns the files of times() whose modification time differs from \a before .
+    /// Returns the files of times() whose modification time or content differs from \a before .
     QStringList writtenSince(const Times &before) const {
         QStringList written;
-        for (const auto &[name, time] : times()) {
-            if (before.at(name) != time) {
+        for (const auto &[name, stamp] : times()) {
+            if (before.at(name) != stamp) {
                 written.push_back(name);
             }
         }
