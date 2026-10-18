@@ -11,6 +11,7 @@
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QItemSelectionModel>
 #include <QtCore/QMimeData>
+#include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
@@ -422,6 +423,15 @@ private:
     // outlives its editor removes nothing.
     mutable std::vector<kit::FrequencyFormatRegistry::AddFactory> m_formats;
 
+    // The watchdog of modal dialogs. A test answers each of its dialogs at once, so a dialog that
+    // stays open longer than strayDialogTime is closed and fails the test with its text, instead
+    // of blocking until the test times out.
+    static constexpr qint64 strayDialogTime = 20000;
+    QTimer m_watchdog;
+    QPointer<QWidget> m_watched;
+    QElapsedTimer m_watchedFor;
+    QStringList m_strayDialogs;
+
     // An editor with the menus, the commands and the frequency map formats that the core
     // plugin and the plugin SynthToolSupport register, whose voice bank windows do not follow the
     // disk independently, which would ask at any moment. A test calls VoiceBankWindow::checkDisk()
@@ -449,6 +459,42 @@ private:
     }
 
 private Q_SLOTS:
+    void initTestCase() {
+        m_watchdog.setInterval(500);
+        connect(&m_watchdog, &QTimer::timeout, this, [this] {
+            const auto widget = QApplication::activeModalWidget();
+            if (!widget || widget != m_watched) {
+                m_watched = widget;
+                m_watchedFor.start();
+                return;
+            }
+            if (m_watchedFor.elapsed() < strayDialogTime) {
+                return;
+            }
+            const auto box = qobject_cast<QMessageBox *>(widget);
+            m_strayDialogs.push_back(
+                QStringLiteral("%1: %2").arg(QString::fromLatin1(widget->metaObject()->className()),
+                                             box ? box->text() : widget->windowTitle()));
+            m_watched = nullptr;
+            if (const auto dialog = qobject_cast<QDialog *>(widget)) {
+                dialog->reject();
+            } else {
+                widget->close();
+            }
+        });
+    }
+
+    void init() {
+        m_strayDialogs.clear();
+        m_watched = nullptr;
+        m_watchdog.start();
+    }
+
+    void cleanup() {
+        m_watchdog.stop();
+        QVERIFY2(m_strayDialogs.isEmpty(), qPrintable(m_strayDialogs.join(u'\n')));
+    }
+
     void a_new_window_has_the_menus_of_the_manifest() {
         const auto e = editor();
         const auto window = e->newWindow();
