@@ -2348,24 +2348,17 @@ private Q_SLOTS:
         bar->setText(QStringLiteral("none"));
         QVERIFY(cell(2, VoiceBankEntryModel::FileColumn) != file);
 
-        // Closing the find bar removes the orange of the highlight from a row not selected.
-        const auto orange = [&cell](int row) {
-            const auto image = cell(row, VoiceBankEntryModel::FileColumn);
-            for (int y = 0; y < image.height(); ++y) {
-                for (int x = 0; x < image.width(); ++x) {
-                    const auto pixel = image.pixelColor(x, y);
-                    if (pixel.red() - pixel.blue() > 40 && pixel.red() - pixel.green() > 20) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        };
+        // Closing the find bar removes the highlight from a row not selected, which is then drawn
+        // as without a match. The highlight was once detected by orange pixels, which passed on
+        // Windows, macOS and a Linux desktop, and found orange pixels in the row after the bar
+        // closed on the runner of Ubuntu 24.04. The comparison does not depend on how the text is
+        // drawn.
+        const auto unmatched = cell(0, VoiceBankEntryModel::FileColumn);
         bar->setText(QStringLiteral("wav"));
         QCOMPARE(window->currentRow(), 2);
-        QVERIFY(orange(0));
+        QVERIFY(cell(0, VoiceBankEntryModel::FileColumn) != unmatched);
         QTest::keyClick(bar->findField(), Qt::Key_Escape);
-        QVERIFY(!orange(0));
+        QVERIFY(cell(0, VoiceBankEntryModel::FileColumn) == unmatched);
     }
 
     // The find bar of the voice bank window searches the names of the entries, an empty alias
