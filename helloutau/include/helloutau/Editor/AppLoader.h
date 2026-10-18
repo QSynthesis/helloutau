@@ -111,10 +111,13 @@ namespace hello::daw {
         /// the directory of the program, see applicationTranslationPath().
         QStringList translationPaths() const;
 
+        /// Returns the data directory of qmsetup for the program in \a programDirectory:
+        /// <tt>share/helloutau</tt> beside the directory of the program, or
+        /// <tt>Contents/Resources</tt> of a macOS bundle.
+        static QString applicationDataPath(const QString &programDirectory);
+
         /// Returns the directory of the translations that come with the program in
-        /// \a programDirectory: <tt>share/helloutau/translations</tt> beside the directory of
-        /// the program, or <tt>Contents/Resources/translations</tt> of a macOS bundle, the data
-        /// directory of qmsetup in either case.
+        /// \a programDirectory, \c translations in applicationDataPath().
         static QString applicationTranslationPath(const QString &programDirectory);
 
         /// Returns the directories of the translations of Qt for the program in

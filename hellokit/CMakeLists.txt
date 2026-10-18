@@ -13,6 +13,9 @@ set(HELLOKIT_INSTALL_NAME ${PROJECT_NAME})
 
 include("conf.cmake")
 
+# The libraries and the programs of hellokit go into the bundle of the application on macOS.
+set(HELLOKIT_MACOSX_BUNDLE_NAME ${HELLO_MACOSX_BUNDLE_NAME})
+
 hellokit_init_buildsystem(HELLOKIT)
 
 # The definitions of hellokit/Config.h, which hellokit_finish_buildsystem() generates: the version

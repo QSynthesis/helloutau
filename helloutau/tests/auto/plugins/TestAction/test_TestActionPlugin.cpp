@@ -63,7 +63,7 @@ private Q_SLOTS:
         AppLoader loader({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
                           settings.path()});
         loader.setPluginPaths(
-            {AppLoader::builtinPluginPath(), QStringLiteral(TEST_ACTION_PLUGINS_DIR)});
+            {QStringLiteral(TEST_BUILTIN_PLUGINS_DIR), QStringLiteral(TEST_ACTION_PLUGINS_DIR)});
         QString error;
         QVERIFY2(loader.load(&error), qPrintable(error));
 

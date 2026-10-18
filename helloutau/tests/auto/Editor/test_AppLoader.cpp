@@ -184,18 +184,30 @@ private Q_SLOTS:
         }
         QCOMPARE(AppLoader::instance(), nullptr);
 
-        // The tests run outside a macOS bundle and therefore use the layout without a bundle.
+        // The path follows the layout of the installation, the bundle on macOS, although the
+        // tests run beside the bundle there, see add_auto_test_program().
+#ifdef Q_OS_MACOS
+        const auto builtin = QStringLiteral("/../Plugins");
+#else
+        const auto builtin = QStringLiteral("/../lib/helloutau/plugins");
+#endif
         QCOMPARE(AppLoader::builtinPluginPath(),
-                 QDir::cleanPath(QCoreApplication::applicationDirPath() +
-                                 QStringLiteral("/../lib/helloutau/plugins")));
+                 QDir::cleanPath(QCoreApplication::applicationDirPath() + builtin));
     }
 
-    // The plugins of Qt are searched in lib/Qt/plugins, where the package puts them. A directory
-    // that does not exist is left out.
+    // The plugins of Qt are searched in lib/Qt/plugins, where the package puts them, or in
+    // Contents/Frameworks/Qt/plugins of the bundle on macOS. A directory that does not exist is
+    // left out.
     void the_qt_plugins_are_found_beside_the_program() {
         QTemporaryDir dir;
+#ifdef Q_OS_MACOS
+        const auto bin = dir.filePath(QStringLiteral("HelloUtau.app/Contents/MacOS"));
+        const auto packaged =
+            dir.filePath(QStringLiteral("HelloUtau.app/Contents/Frameworks/Qt/plugins"));
+#else
         const auto bin = dir.filePath(QStringLiteral("bin"));
         const auto packaged = dir.filePath(QStringLiteral("lib/Qt/plugins"));
+#endif
         QVERIFY(QDir().mkpath(bin));
         QVERIFY(AppLoader::qtPluginPaths(bin).isEmpty());
         QVERIFY(QDir().mkpath(packaged));
@@ -208,6 +220,8 @@ private Q_SLOTS:
     void the_translations_are_found_beside_the_program() {
         QTemporaryDir dir;
         const auto bin = dir.filePath(QStringLiteral("bin"));
+        QCOMPARE(AppLoader::applicationDataPath(bin),
+                 dir.filePath(QStringLiteral("share/helloutau")));
         QCOMPARE(AppLoader::applicationTranslationPath(bin),
                  dir.filePath(QStringLiteral("share/helloutau/translations")));
         const auto qt = AppLoader::qtTranslationPaths(bin);
@@ -216,10 +230,29 @@ private Q_SLOTS:
         QCOMPARE(qt.size(), 2);
     }
 
+#ifdef Q_OS_MACOS
+    // In a bundle the data are in Contents/Resources, the translations of Qt in Qt/translations
+    // of it.
+    void the_data_are_found_in_the_bundle() {
+        QTemporaryDir dir;
+        const auto contents = dir.filePath(QStringLiteral("HelloUtau.app/Contents"));
+        const auto bin = contents + QStringLiteral("/MacOS");
+        QVERIFY(QDir().mkpath(bin));
+        QCOMPARE(AppLoader::applicationDataPath(bin), contents + QStringLiteral("/Resources"));
+        QCOMPARE(AppLoader::applicationTranslationPath(bin),
+                 contents + QStringLiteral("/Resources/translations"));
+        QCOMPARE(AppLoader::qtTranslationPaths(bin).value(0),
+                 contents + QStringLiteral("/Resources/Qt/translations"));
+    }
+#endif
+
     // The directory is added for the program that runs, ahead of the defaults of Qt. It is
     // created beside the test for the time of the test, and the test is skipped if it exists
-    // already.
+    // already. On macOS the paths follow the bundle, beside which the test runs.
     void the_qt_plugin_paths_are_added_for_the_program() {
+#ifdef Q_OS_MACOS
+        QSKIP("On macOS the paths of the program follow the bundle, beside which the test runs.");
+#endif
         const auto program = QCoreApplication::applicationDirPath();
         const auto packaged = QDir::cleanPath(program + QStringLiteral("/../lib/Qt/plugins"));
         if (QFileInfo::exists(packaged)) {

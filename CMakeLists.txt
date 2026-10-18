@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 
+# The oldest macOS that the application supports, 13.3, which stdutau requires, set before
+# project() so that the compilers receive it. See the release of macOS in docs/Distribution.md.
+set(CMAKE_OSX_DEPLOYMENT_TARGET 13.3 CACHE STRING "The oldest macOS that the build supports")
+
 project(helloutau
     VERSION 0.1.8.0
     LANGUAGES CXX
@@ -83,6 +87,15 @@ set(HELLO_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Sets the cache entry HELLO_TRIPLET, the triplet of the build such as x86_64-windows-msvc
 include(DetectTriplet)
+
+# The application is a bundle on macOS, HelloUtau.app. Both modules lay their build and their
+# installation out in it, as qmsetup does for <proj>_MACOSX_BUNDLE_NAME: the programs in
+# Contents/MacOS, the libraries in Contents/Frameworks, the plugins in Contents/Plugins and the
+# data in Contents/Resources.
+set(HELLO_MACOSX_BUNDLE_NAME)
+if(APPLE AND HELLO_BUILD_APPLICATION)
+    set(HELLO_MACOSX_BUNDLE_NAME HelloUtau)
+endif()
 
 # ----------------------------------
 # Find basic dependencies

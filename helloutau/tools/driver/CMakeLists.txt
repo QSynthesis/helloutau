@@ -27,3 +27,23 @@ qm_add_win_rc(${PROJECT_NAME}
 
 # The manifest of qmsetup, without the UTF-8 code page, so that GetACP() reports the ANSI one
 qm_add_win_manifest(${PROJECT_NAME} NAME "HelloUtau")
+
+# HelloUtau.app on macOS, whose name the root CMakeLists.txt gives as HELLO_MACOSX_BUNDLE_NAME.
+# qm_add_mac_bundle names the executable after the bundle. The icon is written from the drawings
+# of the icon as helloutau.ico is, see the application icon in docs/Distribution.md.
+if(HELLO_MACOSX_BUNDLE_NAME)
+    qm_add_mac_bundle(${PROJECT_NAME}
+        NAME "${HELLO_MACOSX_BUNDLE_NAME}"
+        DESCRIPTION "${PROJECT_DESCRIPTION}"
+        COPYRIGHT "${HELLOUTAU_RC_COPYRIGHT}"
+        ICON "${CMAKE_CURRENT_SOURCE_DIR}/helloutau.icns"
+        INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
+    )
+    # The identifier is the AppId of the installer of Windows, and the short version has the
+    # three parts that macOS shows, where qm_add_mac_bundle sets two.
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE_GUI_IDENTIFIER "org.openvpi.helloutau"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING
+            "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
+    )
+endif()

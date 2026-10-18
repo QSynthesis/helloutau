@@ -22,9 +22,9 @@ add_auto_test(test_UpdateChecker.cpp HelloUtauEditor)
 # The test writes its archives with libzip, and copies hello-updater from out/bin, where the
 # program must be built before the test runs.
 add_auto_test(test_PortableUpdate.cpp HelloUtauEditor libzip::zip)
-add_dependencies(test_PortableUpdate hello-updater)
+add_auto_test_program(test_PortableUpdate hello-updater)
 add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip)
-add_dependencies(test_UpdateTask hello-updater)
+add_auto_test_program(test_UpdateTask hello-updater)
 add_auto_test(test_UpdateTaskView.cpp HelloUtauEditor)
 
 add_subdirectory(Dialogs)

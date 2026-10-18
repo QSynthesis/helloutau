@@ -148,7 +148,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 
 作者 2026-10-16 决定，有 macOS 与 Linux 的环境后实施，先完成 Windows 的正式部署。
 
-- **macOS 的发布物**：只出 arm64，最低系统版本为 13.0，同 DiffScope。以 DMG 发布，不另出 zip。
+- **macOS 的发布物**：只出 arm64，最低系统版本为 13.3，因为 stdutau 需要（作者 2026-10-19 决定，DiffScope 为 13.0）。以 DMG 发布，不另出 zip。
 - **macOS 的签名**：ad-hoc 签名（`codesign --sign -`），不申请 Apple 的 Developer ID，不公证，同 DiffScope。Apple Silicon 只运行带签名的代码，ad-hoc 签名满足这一条件，但 Gatekeeper 不信任它。用户第一次打开下载的应用时须在「系统设置 > 隐私与安全性」中选择「仍要打开」。
 - **bundle 与部署**：参照 DiffScope（`diffscope/diffscope-project`，`eb92abd4`）。bundle 由 qmsetup 的 `qm_add_mac_bundle()` 与 Info.plist 模板生成，模板声明 `.usth` 与 `.ust` 的文档类型。icns 在配置时以 `iconutil` 生成。Qt 与依赖以 `qm_deploy_directory()` 部署到 `Contents/Frameworks`，Qt 的插件放在 `Contents/Frameworks/Qt/plugins`，不用 macdeployqt。HelloUtau 另须处理以下几处：
   - Qt 的插件目录由 `AppLoader::addQtPluginPaths()` 按 bundle 求出，不用 `qt.conf`（作者 2026-10-01 决定）。bundle 中为 `Contents/Frameworks/Qt/plugins`，而不是 Qt 自己会查找的 `Contents/PlugIns`，因为 qmsetup 的布局以 `Contents/Plugins` 存放应用的插件，两者在不区分大小写的文件系统上是同一个目录（作者 2026-10-17 决定）。`AppLoader` 已按此求出，尚未在 macOS 上构建验证。

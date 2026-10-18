@@ -22,6 +22,7 @@
 #  include <hellokit/Update/Windows/InnoSetup.h>
 #endif
 
+#include "AppLoader.h"
 #include "PortableUpdate.h"
 #include "UpdateDialog.h"
 #include "UpdateTask.h"
@@ -151,8 +152,8 @@ namespace hello::daw {
     };
 
     QString UpdateChecker::ManifestFile::defaultFileName() {
-        return QDir::cleanPath(QCoreApplication::applicationDirPath() +
-                               QStringLiteral("/../share/helloutau/update/UpdateManifest.json"));
+        return AppLoader::applicationDataPath(QCoreApplication::applicationDirPath()) +
+               QStringLiteral("/update/UpdateManifest.json");
     }
 
     std::optional<UpdateChecker::ManifestFile>

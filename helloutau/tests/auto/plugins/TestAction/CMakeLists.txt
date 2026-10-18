@@ -27,6 +27,9 @@ target_include_directories(TestActionPlugin PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 add_auto_test(test_TestActionPlugin.cpp HelloUtauEditor QActionKit::Widgets)
 add_dependencies(test_TestActionPlugin TestActionPlugin CorePlugin)
+# The built plugins, in the bundle on macOS, where AppLoader::builtinPluginPath() of a test
+# beside the bundle finds nothing
 target_compile_definitions(test_TestActionPlugin PRIVATE
     TEST_ACTION_PLUGINS_DIR="${_plugins_dir}"
+    TEST_BUILTIN_PLUGINS_DIR="${HELLOUTAU_BUILD_PLUGINS_DIR}"
 )

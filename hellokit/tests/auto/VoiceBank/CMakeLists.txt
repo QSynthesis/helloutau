@@ -20,4 +20,4 @@ add_auto_test(test_VoiceAliasRule.cpp HelloKitVoiceBank)
 
 # The test starts the watcher, whose monitor program must be built into the same directory.
 add_auto_test(test_VoiceBankCheckScheduler.cpp HelloKitVoiceBank)
-add_dependencies(test_VoiceBankCheckScheduler hello-fswatcher)
+add_auto_test_program(test_VoiceBankCheckScheduler hello-fswatcher)

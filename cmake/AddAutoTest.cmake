@@ -69,3 +69,21 @@ function(add_auto_test _src)
         )
     endif()
 endfunction()
+
+# add_auto_test_program(<test> <program>)
+#
+# Builds \a program, a program that the code under \a test starts from the directory of the
+# running program, before the test. On macOS the program is built into the bundle of the
+# application and the test beside the bundle, so the program is copied beside the test as well.
+# The tests stay out of the bundle, which holds what the application installs.
+function(add_auto_test_program _test _program)
+    add_dependencies(${_test} ${_program})
+
+    if(HELLO_MACOSX_BUNDLE_NAME)
+        add_custom_command(TARGET ${_test} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${_program}>
+                $<TARGET_FILE_DIR:${_test}>
+            VERBATIM
+        )
+    endif()
+endfunction()

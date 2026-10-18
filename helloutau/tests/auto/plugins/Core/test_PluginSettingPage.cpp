@@ -25,7 +25,7 @@ private Q_SLOTS:
         QTemporaryDir settings;
         AppLoader loader({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
                           settings.path()});
-        loader.setPluginPaths({AppLoader::builtinPluginPath()});
+        loader.setPluginPaths({QStringLiteral(TEST_BUILTIN_PLUGINS_DIR)});
         QString error;
         QVERIFY2(loader.load(&error), qPrintable(error));
         const auto plugins = loader.pluginSystem().plugins();

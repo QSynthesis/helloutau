@@ -322,11 +322,13 @@ namespace hello::daw {
                 applicationTranslationPath(QCoreApplication::applicationDirPath())};
     }
 
-    QString AppLoader::applicationTranslationPath(const QString &programDirectory) {
-        // In the data directory of qmsetup, share/helloutau, or in Contents/Resources of a bundle
+    QString AppLoader::applicationDataPath(const QString &programDirectory) {
         const auto share = sharePath(programDirectory);
-        return isBundle(programDirectory) ? share + QStringLiteral("/translations")
-                                          : share + QStringLiteral("/helloutau/translations");
+        return isBundle(programDirectory) ? share : share + QStringLiteral("/helloutau");
+    }
+
+    QString AppLoader::applicationTranslationPath(const QString &programDirectory) {
+        return applicationDataPath(programDirectory) + QStringLiteral("/translations");
     }
 
     QStringList AppLoader::qtTranslationPaths(const QString &programDirectory) {

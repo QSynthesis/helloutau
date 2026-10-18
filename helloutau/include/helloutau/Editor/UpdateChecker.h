@@ -68,7 +68,8 @@ namespace hello::daw {
             /// Returns whether a source is named \a name.
             bool hasSource(const QString &name) const;
 
-            /// Returns the path of \c UpdateManifest.json beside the program.
+            /// Returns the path of \c UpdateManifest.json, in \c update of the data directory of
+            /// the program, see AppLoader::applicationDataPath().
             static QString defaultFileName();
 
             /// Reads the manifest in \a fileName.
