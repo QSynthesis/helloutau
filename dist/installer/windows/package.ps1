@@ -136,9 +136,10 @@ foreach ($dll in Get-ChildItem -LiteralPath (Join-Path $BuildDir "out\bin") -Fil
 # Qt for the program, every library and every plugin of the application, with the plugins of Qt
 # in lib/Qt/plugins. For the MSVC ABI the C++ runtime is copied below instead of the installer of
 # windeployqt. For MinGW windeployqt copies the runtime of the compiler, which for llvm-mingw is
-# libc++ and libunwind, the libraries that Qt itself loads. The shader compilers of Direct3D and the software OpenGL are left out: the widgets draw with the
-# raster engine, and no Qt Quick, OpenGL widget or RHI widget is used. A program that adds one of
-# these needs the three options removed.
+# libc++ and libunwind, the libraries that Qt itself loads. The shader compilers of Direct3D and
+# the software OpenGL are left out: the widgets draw with the raster engine, and no Qt Quick,
+# OpenGL widget or RHI widget is used. A program that adds one of these needs the three options
+# removed.
 $binaries = @(Join-Path $bin "helloutau.exe")
 $binaries += Get-ChildItem -LiteralPath $bin -Filter *.dll | ForEach-Object { $_.FullName }
 $binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\helloutau\plugins") -Recurse `
@@ -146,13 +147,18 @@ $binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\helloutau\plugi
 $mingw = $triplet -like "*-mingw"
 # An array from the start: an if that yields one string returns the string, and splatting a
 # string passes its characters, as the first build after this option showed.
-$runtime = @()
+#
+# --release only for the MSVC ABI. Without the MSVC runtime, windeployqt reads a binary with a
+# debug directory as a debug build, the plugins of Qt for llvm-mingw included. With --release,
+# windeployqt therefore excluded every plugin and failed for lack of the platform plugin. Without
+# the option, windeployqt matches debug and release builds alike for MinGW.
+$options = @()
 if (-not $mingw) {
-    $runtime += "--no-compiler-runtime"
+    $options += "--release", "--no-compiler-runtime"
 }
 Invoke-Step "windeployqt" {
-    & (Join-Path $Qt "bin\windeployqt.exe") --release --dir $bin --plugindir $qtPlugins `
-        --no-translations @runtime --no-system-d3d-compiler `
+    & (Join-Path $Qt "bin\windeployqt.exe") @options --dir $bin --plugindir $qtPlugins `
+        --no-translations --no-system-d3d-compiler `
         --no-system-dxc-compiler --no-opengl-sw @binaries
 }
 
