@@ -144,7 +144,8 @@ jobs:
             sed 's/^[0-9a-f]*  /- `/; s/$/`/' build/package/SHA256SUMS
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # The variants debug and asan, which only build and test
+  # The variants debug and asan, which only build and test, and the variants release and debug of
+  # the systems without a package so far, Linux and macOS
   test:
     name: ${{ matrix.triplet }} ${{ matrix.variant }}
     runs-on: ${{ matrix.os }}
@@ -155,6 +156,26 @@ jobs:
         # As in the job package, for each variant. AddressSanitizer is built with the MSVC ABI
         # only.
         include:
+          - triplet: x86_64-linux-gcc
+            variant: release
+            os: ubuntu-24.04
+            vcpkg-triplet: x64-linux
+            qt-arch: linux_gcc_64
+          - triplet: x86_64-linux-gcc
+            variant: debug
+            os: ubuntu-24.04
+            vcpkg-triplet: x64-linux
+            qt-arch: linux_gcc_64
+          - triplet: arm64-mac-appleclang
+            variant: release
+            os: macos-15
+            vcpkg-triplet: arm64-osx
+            qt-arch: clang_64
+          - triplet: arm64-mac-appleclang
+            variant: debug
+            os: macos-15
+            vcpkg-triplet: arm64-osx
+            qt-arch: clang_64
           - triplet: x86_64-windows-msvc
             variant: debug
             os: windows-latest

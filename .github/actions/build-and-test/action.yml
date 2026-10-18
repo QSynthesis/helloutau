@@ -106,6 +106,17 @@ runs:
           *) python -m pip install ninja ;;
         esac
 
+    # The libraries of the system that the official binaries of Qt for Linux require: OpenGL, EGL
+    # and xkbcommon to configure Qt Gui, and fontconfig and PulseAudio to run the tests with the
+    # offscreen platform. The other libraries are part of the runner.
+    - if: runner.os == 'Linux'
+      name: System libraries
+      shell: bash
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y -q --no-install-recommends libgl-dev libegl-dev libxkbcommon-dev \
+          libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libpulse0
+
     - if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
       with:
@@ -284,9 +295,15 @@ runs:
         if [ -n "${ASAN_RUNTIME_DIR:-}" ]; then
           PATH="$ASAN_RUNTIME_DIR:$PATH"
         fi
-        # The directories that ctest prepends to PATH: Qt, and the plugins that tests load
-        if [ -n "${QT_ROOT_DIR:-}" ]; then
+        # The directories that ctest prepends to PATH on Windows: Qt, and the plugins that tests
+        # load
+        if [ -n "${QT_ROOT_DIR:-}" ] && [ "$RUNNER_OS" = "Windows" ]; then
           PATH="$(cygpath -u "$QT_ROOT_DIR")/bin:$PATH"
+        fi
+        # macOS has no timeout, and a test runs without the limit there
+        limit=
+        if command -v timeout > /dev/null; then
+          limit="timeout 120"
         fi
         for directory in "$PWD/$BUILD_DIR"/out/lib/helloutau/plugins/*/; do
           PATH="$directory:$PATH"
@@ -300,7 +317,7 @@ runs:
           if [ -n "$program" ]; then
             # Every check is written with -v2 into a file, whose end shows the check that blocks
             # if the test is ended by the timeout
-            timeout 120 "$program" -v2 -o "build/$name.txt,txt"
+            $limit "$program" -v2 -o "build/$name.txt,txt"
             echo "$name exited with status $?"
             tail -60 "build/$name.txt"
           else

@@ -28,12 +28,25 @@ jobs:
       matrix:
         # The triplet names the job, and the action checks it against the triplet of the build.
         # Each variant of the action runs for each system, AddressSanitizer with the MSVC ABI only.
-        triplet: [ x86_64-windows-msvc, x86_64-windows-mingw ]
+        triplet: [ x86_64-windows-msvc, x86_64-windows-mingw, x86_64-linux-gcc, arm64-mac-appleclang ]
         variant: [ release, debug, asan ]
         exclude:
           - triplet: x86_64-windows-mingw
             variant: asan
+          - triplet: x86_64-linux-gcc
+            variant: asan
+          - triplet: arm64-mac-appleclang
+            variant: asan
         include:
+          # As in deploy.yml
+          - triplet: x86_64-linux-gcc
+            os: ubuntu-24.04
+            vcpkg-triplet: x64-linux
+            qt-arch: linux_gcc_64
+          - triplet: arm64-mac-appleclang
+            os: macos-15
+            vcpkg-triplet: arm64-osx
+            qt-arch: clang_64
           - triplet: x86_64-windows-msvc
             os: windows-latest
             vcpkg-triplet: x64-windows
