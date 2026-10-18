@@ -42,6 +42,14 @@ jobs:
             os: windows-latest
             vcpkg-triplet: x64-windows
             qt-arch: win64_msvc2022_64
+          # llvm-mingw 17.0.6, the toolchain of the build of Qt for llvm-mingw, whose libc++ the
+          # program loads with Qt. vcpkg finds its compilers in PATH by their GCC names.
+          - triplet: x86_64-windows-mingw
+            os: windows-latest
+            vcpkg-triplet: x64-mingw-dynamic
+            qt-arch: win64_llvm_mingw
+            qt-tools: tools_llvm_mingw1706,qt.tools.win64_llvm_mingw1706
+            compiler: x86_64-w64-mingw32-clang++
     env:
       INNO_SETUP_URL: https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe
     steps:
@@ -58,6 +66,8 @@ jobs:
           triplet: ${{ matrix.triplet }}
           vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
           qt-arch: ${{ matrix.qt-arch }}
+          qt-tools: ${{ matrix.qt-tools }}
+          compiler: ${{ matrix.compiler }}
 
       # A release whose tag names another version than the build would be found by no update.
       - name: Check the tag against the version
@@ -142,14 +152,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # As in the job package, for each variant
-        triplet: [ x86_64-windows-msvc ]
-        variant: [ debug, asan ]
+        # As in the job package, for each variant. AddressSanitizer is built with the MSVC ABI
+        # only.
         include:
           - triplet: x86_64-windows-msvc
+            variant: debug
             os: windows-latest
             vcpkg-triplet: x64-windows
             qt-arch: win64_msvc2022_64
+          - triplet: x86_64-windows-msvc
+            variant: asan
+            os: windows-latest
+            vcpkg-triplet: x64-windows
+            qt-arch: win64_msvc2022_64
+          - triplet: x86_64-windows-mingw
+            variant: debug
+            os: windows-latest
+            vcpkg-triplet: x64-mingw-dynamic
+            qt-arch: win64_llvm_mingw
+            qt-tools: tools_llvm_mingw1706,qt.tools.win64_llvm_mingw1706
+            compiler: x86_64-w64-mingw32-clang++
     steps:
       - uses: actions/checkout@v4
         with:
@@ -162,6 +184,8 @@ jobs:
           triplet: ${{ matrix.triplet }}
           vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
           qt-arch: ${{ matrix.qt-arch }}
+          qt-tools: ${{ matrix.qt-tools }}
+          compiler: ${{ matrix.compiler }}
 
   # The release of a tag, with the assets of every system and the notes of
   # docs/changelog/<version>.md, which Unreleased.md becomes on the release. One SHA256SUMS for

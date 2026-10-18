@@ -14,6 +14,19 @@ else()
         string(APPEND CMAKE_${_lang}_FLAGS_RELEASE " -g")
     endforeach()
 endif()
+
+# clang targeting MinGW, as llvm-mingw, writes CodeView, and lld writes a PDB beside each binary
+# for an empty --pdb=, as for the MSVC ABI. The debuggers and the tools for crash dumps of Windows
+# read PDBs, not the DWARF that GCC writes.
+if(MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    foreach(_lang C CXX)
+        string(APPEND CMAKE_${_lang}_FLAGS_RELEASE " -gcodeview")
+    endforeach()
+    foreach(_kind EXE MODULE SHARED)
+        string(APPEND CMAKE_${_kind}_LINKER_FLAGS_RELEASE " -Wl,--pdb=")
+    endforeach()
+    unset(_kind)
+endif()
 unset(_lang)
 
 # The options of the linker follow the ABI, as QMSETUP_MSVC_ABI of qmsetup, which is set only

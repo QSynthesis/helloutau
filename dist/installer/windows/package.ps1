@@ -134,17 +134,20 @@ foreach ($dll in Get-ChildItem -LiteralPath (Join-Path $BuildDir "out\bin") -Fil
 }
 
 # Qt for the program, every library and every plugin of the application, with the plugins of Qt
-# in lib/Qt/plugins. The C++ runtime is copied below instead of the installer of windeployqt.
-# The shader compilers of Direct3D and the software OpenGL are left out: the widgets draw with the
+# in lib/Qt/plugins. For the MSVC ABI the C++ runtime is copied below instead of the installer of
+# windeployqt. For MinGW windeployqt copies the runtime of the compiler, which for llvm-mingw is
+# libc++ and libunwind, the libraries that Qt itself loads. The shader compilers of Direct3D and the software OpenGL are left out: the widgets draw with the
 # raster engine, and no Qt Quick, OpenGL widget or RHI widget is used. A program that adds one of
 # these needs the three options removed.
 $binaries = @(Join-Path $bin "helloutau.exe")
 $binaries += Get-ChildItem -LiteralPath $bin -Filter *.dll | ForEach-Object { $_.FullName }
 $binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\helloutau\plugins") -Recurse `
     -Filter *.dll | ForEach-Object { $_.FullName }
+$mingw = $triplet -like "*-mingw"
+$runtime = if ($mingw) { @() } else { @("--no-compiler-runtime") }
 Invoke-Step "windeployqt" {
     & (Join-Path $Qt "bin\windeployqt.exe") --release --dir $bin --plugindir $qtPlugins `
-        --no-translations --no-compiler-runtime --no-system-d3d-compiler `
+        --no-translations @runtime --no-system-d3d-compiler `
         --no-system-dxc-compiler --no-opengl-sw @binaries
 }
 
@@ -164,20 +167,22 @@ foreach ($file in $files) {
 
 # The C++ runtime as DLLs beside the program, so that the package runs without installing
 # anything. The newest runtime of the newest Visual Studio is taken. The Universal CRT is part of
-# Windows 10 and later.
-Write-Output "== Copy the C++ runtime"
+# Windows 10 and later. Visual Studio provides dumpbin below for MinGW as well.
 $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
 $visualStudio = & $vswhere -latest -products * -property installationPath
-$crt = Get-ChildItem (Join-Path $visualStudio "VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT") `
-    -Directory -ErrorAction SilentlyContinue |
-    Where-Object { $_.Parent.Parent.Name -match '^[0-9.]+$' } |
-    Sort-Object { [version]$_.Parent.Parent.Name } | Select-Object -Last 1
-if (-not $crt) {
-    throw "The C++ runtime of Visual Studio was not found in $visualStudio."
-}
-foreach ($dll in Get-ChildItem -LiteralPath $crt.FullName -Filter *.dll) {
-    Copy-Item -LiteralPath $dll.FullName -Destination $bin -Force
-    Write-Output "  $($dll.Name)"
+if (-not $mingw) {
+    Write-Output "== Copy the C++ runtime"
+    $crt = Get-ChildItem (Join-Path $visualStudio "VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT") `
+        -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Parent.Parent.Name -match '^[0-9.]+$' } |
+        Sort-Object { [version]$_.Parent.Parent.Name } | Select-Object -Last 1
+    if (-not $crt) {
+        throw "The C++ runtime of Visual Studio was not found in $visualStudio."
+    }
+    foreach ($dll in Get-ChildItem -LiteralPath $crt.FullName -Filter *.dll) {
+        Copy-Item -LiteralPath $dll.FullName -Destination $bin -Force
+        Write-Output "  $($dll.Name)"
+    }
 }
 
 # The debug symbols of the binaries of the package, in the layout of the package, for the analysis

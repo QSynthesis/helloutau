@@ -30,6 +30,18 @@ inputs:
   qt-arch:
     description: The architecture of Qt for aqt, such as win64_msvc2022_64.
     required: true
+  qt-tools:
+    description: >-
+      The tools of the installer of Qt that the build needs, as install-qt-action takes them, such
+      as the toolchain of llvm-mingw. Empty for none.
+    required: false
+    default: ''
+  compiler:
+    description: >-
+      The C++ compiler of the variants release and debug, such as x86_64-w64-mingw32-clang++, or
+      empty for the compiler that CMake finds. The variant asan is built by clang++.
+    required: false
+    default: ''
 
 # The triplet is the one that cmake/DetectTriplet.cmake detects, read from the cache of the build,
 # so that the workflows do not repeat it.
@@ -52,7 +64,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        compiler=
+        compiler="${{ inputs.compiler }}"
         case "${{ inputs.variant }}" in
           release) directory=build/Release; type=Release; asan=OFF ;;
           debug) directory=build/Debug; type=Debug; asan=OFF ;;
@@ -110,12 +122,14 @@ runs:
     # The official binaries of Qt, as for a local build. Multimedia is an add-on of aqt, and Svg
     # and the Linguist tools come with the base installation. aqtinstall 3.3.0, the latest release,
     # finds no Qt 6.11 for Windows. Its support arrived in miurahr/aqtinstall#1000, merged after
-    # that release, so a commit of master is installed until the next release.
+    # that release, so a commit of master is installed until the next release. The tools, such as
+    # llvm-mingw, are added to PATH.
     - uses: jurplel/install-qt-action@v4
       with:
         version: '6.11.1'
         arch: ${{ inputs.qt-arch }}
         modules: qtmultimedia
+        tools: ${{ inputs.qt-tools }}
         aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7'
         cache: true
 

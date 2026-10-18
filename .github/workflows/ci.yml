@@ -27,14 +27,24 @@ jobs:
       fail-fast: false
       matrix:
         # The triplet names the job, and the action checks it against the triplet of the build.
-        # Each variant of the action runs for each system.
-        triplet: [ x86_64-windows-msvc ]
+        # Each variant of the action runs for each system, AddressSanitizer with the MSVC ABI only.
+        triplet: [ x86_64-windows-msvc, x86_64-windows-mingw ]
         variant: [ release, debug, asan ]
+        exclude:
+          - triplet: x86_64-windows-mingw
+            variant: asan
         include:
           - triplet: x86_64-windows-msvc
             os: windows-latest
             vcpkg-triplet: x64-windows
             qt-arch: win64_msvc2022_64
+          # As in deploy.yml
+          - triplet: x86_64-windows-mingw
+            os: windows-latest
+            vcpkg-triplet: x64-mingw-dynamic
+            qt-arch: win64_llvm_mingw
+            qt-tools: tools_llvm_mingw1706,qt.tools.win64_llvm_mingw1706
+            compiler: x86_64-w64-mingw32-clang++
     steps:
       # The whole history, because BuildInfo.h records the number of commits as the revision.
       - uses: actions/checkout@v4
@@ -49,3 +59,5 @@ jobs:
           triplet: ${{ matrix.triplet }}
           vcpkg-triplet: ${{ matrix.vcpkg-triplet }}
           qt-arch: ${{ matrix.qt-arch }}
+          qt-tools: ${{ matrix.qt-tools }}
+          compiler: ${{ matrix.compiler }}
