@@ -72,6 +72,7 @@ namespace hello::daw {
         Q_PROPERTY(
             QColor intensityBorderColor READ intensityBorderColor WRITE setIntensityBorderColor)
         Q_PROPERTY(QColor parameterColor READ parameterColor WRITE setParameterColor)
+        Q_PROPERTY(QColor parameterTextColor READ parameterTextColor WRITE setParameterTextColor)
         Q_PROPERTY(double pointGrip READ pointGrip WRITE setPointGrip)
         Q_PROPERTY(double curveGrip READ curveGrip WRITE setCurveGrip)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
@@ -508,7 +509,7 @@ namespace hello::daw {
         QColor envelopeColor() const;
         void setEnvelopeColor(const QColor &color);
         /// The background and the border of the intensity of the envelope under the pointer, by
-        /// default the color of the white rows and the dark color of the palette. A theme sets
+        /// default the color of the white rows and the dark color of CanvasColors. A theme sets
         /// them with \c qproperty-intensityBackgroundColor and \c qproperty-intensityBorderColor.
         QColor intensityBackgroundColor() const;
         void setIntensityBackgroundColor(const QColor &color);
@@ -517,6 +518,9 @@ namespace hello::daw {
         /// The color of the handles of the values in the parameter area
         QColor parameterColor() const;
         void setParameterColor(const QColor &color);
+        /// The text of the parameters over each note while the parameter area is shown
+        QColor parameterTextColor() const;
+        void setParameterTextColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
         /// The colors of the render states: by default gray, amber, green and red.

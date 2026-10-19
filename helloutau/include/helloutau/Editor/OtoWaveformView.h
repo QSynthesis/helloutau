@@ -32,8 +32,8 @@ namespace hello::daw {
     /// about the pointer as the bindings of OtoWaveformKeyboardModifiers select, see
     /// setKeyboardModifierBindings().
     ///
-    /// The colors are properties that a style sheet can set. Unset, they have fixed defaults
-    /// that read on light and dark palettes alike.
+    /// The colors are properties that a style sheet can set. Unset, they have fixed defaults,
+    /// those of CanvasColors for the background, the text and the lines.
     class HELLOUTAU_EDITOR_EXPORT OtoWaveformView : public QAbstractScrollArea {
         Q_OBJECT
         Q_PROPERTY(QColor waveColor READ waveColor WRITE setWaveColor)
@@ -46,6 +46,11 @@ namespace hello::daw {
         Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
         Q_PROPERTY(QColor frequencyColor READ frequencyColor WRITE setFrequencyColor)
         Q_PROPERTY(QColor spectrumColor READ spectrumColor WRITE setSpectrumColor)
+        Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor)
+        Q_PROPERTY(QColor textColor READ textColor WRITE setTextColor)
+        Q_PROPERTY(QColor lineColor READ lineColor WRITE setLineColor)
+        Q_PROPERTY(QColor laneLineColor READ laneLineColor WRITE setLaneLineColor)
+        Q_PROPERTY(QColor placeholderColor READ placeholderColor WRITE setPlaceholderColor)
         Q_PROPERTY(double grip READ grip WRITE setGrip)
     public:
         /// The values of an entry, in the order of the keys 1 to 5 that set them at the pointer,
@@ -195,6 +200,25 @@ namespace hello::daw {
         /// with the level
         QColor spectrumColor() const;
         void setSpectrumColor(const QColor &color);
+
+        QColor backgroundColor() const;
+        void setBackgroundColor(const QColor &color);
+
+        /// The numbers of the time axis
+        QColor textColor() const;
+        void setTextColor(const QColor &color);
+
+        /// The time axis, the zero line of each channel and the line at each C
+        QColor lineColor() const;
+        void setLineColor(const QColor &color);
+
+        /// The lines between the lanes of the channels
+        QColor laneLineColor() const;
+        void setLaneLineColor(const QColor &color);
+
+        /// The text in place of the waveform without audio
+        QColor placeholderColor() const;
+        void setPlaceholderColor(const QColor &color);
 
     Q_SIGNALS:
         /// A drag ended, or setValueAt() moved a value: \a entry is to be written.

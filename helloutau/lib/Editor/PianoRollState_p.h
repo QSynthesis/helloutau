@@ -228,6 +228,7 @@ namespace hello::daw {
         QColor intensityBackgroundColor;
         QColor intensityBorderColor;
         QColor parameterColor;
+        QColor parameterTextColor;
         /// The value that a gesture shows in place of that of some notes, by note index
         QHash<int, double> valuePreview;
 

@@ -8,6 +8,7 @@
 #include <QtGui/QPainter>
 #include <QtGui/QPen>
 
+#include "CanvasColors.h"
 #include "SceneView.h"
 
 namespace hello::daw {
@@ -87,11 +88,21 @@ namespace hello::daw {
         update();
     }
 
+    QColor TimelineRuler::backgroundColor() const {
+        return m_backgroundColor.isValid() ? m_backgroundColor
+                                           : QColor::fromRgba(CanvasColors::window);
+    }
+
+    void TimelineRuler::setBackgroundColor(const QColor &color) {
+        m_backgroundColor = color;
+        update();
+    }
+
     QColor TimelineRuler::lineColor() const {
         if (m_lineColor.isValid()) {
             return m_lineColor;
         }
-        auto color = palette().color(QPalette::WindowText);
+        auto color = QColor::fromRgba(CanvasColors::text);
         color.setAlphaF(0.6f);
         return color;
     }
@@ -232,6 +243,7 @@ namespace hello::daw {
             return;
         }
         QPainter painter(this);
+        painter.fillRect(rect(), backgroundColor());
         const auto &axis = m_view->timeAxis();
         // The ruler starts where the viewport of the view does.
         const double offset = this->offset();

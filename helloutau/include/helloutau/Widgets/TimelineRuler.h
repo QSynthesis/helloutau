@@ -24,6 +24,7 @@ namespace hello::daw {
     /// keeps them legible.
     class HELLOUTAU_WIDGETS_EXPORT TimelineRuler : public QWidget {
         Q_OBJECT
+        Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor)
         Q_PROPERTY(QColor lineColor READ lineColor WRITE setLineColor)
         Q_PROPERTY(QColor markColor READ markColor WRITE setMarkColor)
     public:
@@ -79,6 +80,8 @@ namespace hello::daw {
 
         /// The color of the lines and bar numbers, by default that of text with some
         /// transparency.
+        QColor backgroundColor() const;
+        void setBackgroundColor(const QColor &color);
         QColor lineColor() const;
         void setLineColor(const QColor &color);
 
@@ -126,6 +129,7 @@ namespace hello::daw {
         std::optional<std::pair<double, double>> m_selectionRange;
         std::optional<std::pair<double, double>> m_menuRange;
         QList<Section> m_sections;
+        QColor m_backgroundColor;
         QColor m_lineColor;
         QColor m_markColor;
         int m_hoveredSection = -1;

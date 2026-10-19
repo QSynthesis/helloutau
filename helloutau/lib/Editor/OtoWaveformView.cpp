@@ -21,6 +21,7 @@
 
 #include <stdcorelib/pimpl.h>
 
+#include <helloutau/Widgets/CanvasColors.h>
 #include <helloutau/Widgets/PlatformWheel.h>
 
 #include "OtoWaveformKeyboardModifiers.h"
@@ -74,7 +75,8 @@ namespace hello::daw {
         double grip = 5;
 
         QColor waveColor, maskColor, consonantColor, preUtteranceColor, overlapColor, boundaryColor,
-            envelopeColor, playheadColor, frequencyColor, spectrumColor;
+            envelopeColor, playheadColor, frequencyColor, spectrumColor, backgroundColor, textColor,
+            lineColor, laneLineColor, placeholderColor;
 
         std::shared_ptr<const kit::Spectrogram> spectrogram;
         std::optional<kit::FrequencyMap> table;
@@ -122,7 +124,7 @@ namespace hello::daw {
         // The spectrogram of the view in area of the viewport
         const QImage &spectrumImageOf(const QRect &area) {
             stdc_decl_t;
-            const auto background = decl.palette().color(QPalette::Base).rgb();
+            const auto background = decl.backgroundColor().rgb();
             const auto color = decl.spectrumColor().rgb();
             auto &cached = spectrumImage;
             if (cached.spectrogram == spectrogram.get() && cached.scale == scale &&
@@ -536,12 +538,12 @@ namespace hello::daw {
         stdc_impl_t;
         QPainter painter(viewport());
         const auto area = viewport()->rect();
-        painter.fillRect(area, palette().color(QPalette::Base));
+        painter.fillRect(area, backgroundColor());
         const QRectF wave(0, axisHeight, area.width(), std::max(1, area.height() - axisHeight));
 
         // The time axis
-        const auto text = palette().color(QPalette::Text);
-        painter.setPen(palette().color(QPalette::Mid));
+        const auto text = textColor();
+        painter.setPen(lineColor());
         painter.drawLine(QPointF(0, axisHeight - 0.5), QPointF(area.width(), axisHeight - 0.5));
         if (impl.audio) {
             const double step = impl.axisStep();
@@ -549,13 +551,13 @@ namespace hello::daw {
             for (double time = std::floor(impl.viewStart / step) * step;
                  time <= timeAt(area.width()); time += step) {
                 const double x = std::round(xOf(time)) + 0.5;
-                painter.setPen(palette().color(QPalette::Mid));
+                painter.setPen(lineColor());
                 painter.drawLine(QPointF(x, axisHeight - 5), QPointF(x, axisHeight));
                 painter.setPen(text);
                 painter.drawText(QPointF(x + 3, axisHeight - 6), QString::number(time));
             }
         } else {
-            painter.setPen(palette().color(QPalette::PlaceholderText));
+            painter.setPen(placeholderColor());
             painter.drawText(wave, Qt::AlignCenter, tr("No audio"));
             return;
         }
@@ -593,11 +595,11 @@ namespace hello::daw {
                     painter.drawLine(QPointF(x + 0.5, yOfSample(c, high)),
                                      QPointF(x + 0.5, yOfSample(c, low)));
                 }
-                painter.setPen(palette().color(QPalette::Mid));
+                painter.setPen(lineColor());
                 const double zero = yOfSample(c, 0);
                 painter.drawLine(QPointF(0, zero), QPointF(right, zero));
             }
-            painter.setPen(palette().color(QPalette::Midlight));
+            painter.setPen(laneLineColor());
             const double lane = wave.height() / impl.laneCount();
             for (int c = 1; c < impl.laneCount(); ++c) {
                 const double y = std::round(wave.top() + c * lane) + 0.5;
@@ -620,7 +622,7 @@ namespace hello::daw {
             for (int note = int(std::ceil(impl.range.first / 12)) * 12; note < impl.range.second;
                  note += 12) {
                 const double y = std::round(yOfNote(note)) + 0.5;
-                painter.setPen(QPen(palette().color(QPalette::Mid), 1, Qt::DotLine));
+                painter.setPen(QPen(lineColor(), 1, Qt::DotLine));
                 painter.drawLine(QPointF(0, y), QPointF(area.width(), y));
                 painter.setPen(text);
                 painter.drawText(QRectF(0, y - 14, area.width() - 3, 13), Qt::AlignRight,
@@ -920,6 +922,64 @@ namespace hello::daw {
     void OtoWaveformView::setSpectrumColor(const QColor &color) {
         stdc_impl_t;
         impl.spectrumColor = color;
+        viewport()->update();
+    }
+
+    QColor OtoWaveformView::backgroundColor() const {
+        stdc_impl_t;
+        return impl.backgroundColor.isValid() ? impl.backgroundColor
+                                              : QColor::fromRgba(CanvasColors::base);
+    }
+
+    void OtoWaveformView::setBackgroundColor(const QColor &color) {
+        stdc_impl_t;
+        impl.backgroundColor = color;
+        viewport()->update();
+    }
+
+    QColor OtoWaveformView::textColor() const {
+        stdc_impl_t;
+        return impl.textColor.isValid() ? impl.textColor : QColor::fromRgba(CanvasColors::text);
+    }
+
+    void OtoWaveformView::setTextColor(const QColor &color) {
+        stdc_impl_t;
+        impl.textColor = color;
+        viewport()->update();
+    }
+
+    QColor OtoWaveformView::lineColor() const {
+        stdc_impl_t;
+        return impl.lineColor.isValid() ? impl.lineColor : QColor::fromRgba(CanvasColors::mid);
+    }
+
+    void OtoWaveformView::setLineColor(const QColor &color) {
+        stdc_impl_t;
+        impl.lineColor = color;
+        viewport()->update();
+    }
+
+    QColor OtoWaveformView::laneLineColor() const {
+        stdc_impl_t;
+        return impl.laneLineColor.isValid() ? impl.laneLineColor
+                                            : QColor::fromRgba(CanvasColors::midlight);
+    }
+
+    void OtoWaveformView::setLaneLineColor(const QColor &color) {
+        stdc_impl_t;
+        impl.laneLineColor = color;
+        viewport()->update();
+    }
+
+    QColor OtoWaveformView::placeholderColor() const {
+        stdc_impl_t;
+        return impl.placeholderColor.isValid() ? impl.placeholderColor
+                                               : QColor::fromRgba(CanvasColors::placeholderText);
+    }
+
+    void OtoWaveformView::setPlaceholderColor(const QColor &color) {
+        stdc_impl_t;
+        impl.placeholderColor = color;
         viewport()->update();
     }
 

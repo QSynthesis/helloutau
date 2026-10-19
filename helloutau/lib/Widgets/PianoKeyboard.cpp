@@ -5,6 +5,7 @@
 #include <QtGui/QPainter>
 #include <QtGui/QMouseEvent>
 
+#include "CanvasColors.h"
 #include "SceneView.h"
 
 namespace hello::daw {
@@ -74,6 +75,15 @@ namespace hello::daw {
         update();
     }
 
+    QColor PianoKeyboard::labelColor() const {
+        return m_labelColor.isValid() ? m_labelColor : QColor::fromRgba(CanvasColors::text);
+    }
+
+    void PianoKeyboard::setLabelColor(const QColor &color) {
+        m_labelColor = color;
+        update();
+    }
+
     QSize PianoKeyboard::sizeHint() const {
         return {DefaultWidth, 0};
     }
@@ -107,7 +117,7 @@ namespace hello::daw {
                 painter.drawLine(QPointF(0, bottom), QPointF(width(), bottom));
             }
             if (degree == 0 || key == m_hoveredKey) {
-                painter.setPen(palette().color(QPalette::Text));
+                painter.setPen(labelColor());
                 painter.drawText(QRectF(0, top, width() - LabelPadding, bottom - top),
                                  Qt::AlignRight | Qt::AlignVCenter, keyName(key));
             }

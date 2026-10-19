@@ -56,6 +56,7 @@ namespace hello::daw {
         Q_PROPERTY(QColor blackRowColor READ blackRowColor WRITE setBlackRowColor)
         Q_PROPERTY(QColor rowLineColor READ rowLineColor WRITE setRowLineColor)
         Q_PROPERTY(QColor labelColor READ labelColor WRITE setLabelColor)
+        Q_PROPERTY(QColor titleColor READ titleColor WRITE setTitleColor)
         Q_PROPERTY(QColor frameLineColor READ frameLineColor WRITE setFrameLineColor)
         Q_PROPERTY(QColor keyLineColor READ keyLineColor WRITE setKeyLineColor)
         Q_PROPERTY(QColor curveColor READ curveColor WRITE setCurveColor)
@@ -213,6 +214,9 @@ namespace hello::daw {
         void setRowLineColor(const QColor &color);
         QColor labelColor() const;
         void setLabelColor(const QColor &color);
+        /// The title in the title bar above the view
+        QColor titleColor() const;
+        void setTitleColor(const QColor &color);
         QColor frameLineColor() const;
         void setFrameLineColor(const QColor &color);
         QColor keyLineColor() const;

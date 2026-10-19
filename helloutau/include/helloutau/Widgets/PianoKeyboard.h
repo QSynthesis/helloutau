@@ -21,6 +21,7 @@ namespace hello::daw {
         Q_PROPERTY(QColor whiteKeyColor READ whiteKeyColor WRITE setWhiteKeyColor)
         Q_PROPERTY(QColor blackKeyColor READ blackKeyColor WRITE setBlackKeyColor)
         Q_PROPERTY(QColor lineColor READ lineColor WRITE setLineColor)
+        Q_PROPERTY(QColor labelColor READ labelColor WRITE setLabelColor)
     public:
         explicit PianoKeyboard(SceneView *view, QWidget *parent = nullptr);
         ~PianoKeyboard();
@@ -37,6 +38,10 @@ namespace hello::daw {
         void setBlackKeyColor(const QColor &color);
         QColor lineColor() const;
         void setLineColor(const QColor &color);
+
+        /// The names of the keys
+        QColor labelColor() const;
+        void setLabelColor(const QColor &color);
 
         QSize sizeHint() const override;
 
@@ -56,6 +61,7 @@ namespace hello::daw {
         QColor m_whiteKeyColor;
         QColor m_blackKeyColor;
         QColor m_lineColor;
+        QColor m_labelColor;
     };
 
 }

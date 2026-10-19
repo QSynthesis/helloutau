@@ -17,6 +17,7 @@
 #include <hellokit/AudioFile/Spectrogram.h>
 #include <hellokit/VoiceBank/FrequencyMapRevisionBuffer.h>
 
+#include <helloutau/Widgets/CanvasColors.h>
 #include <helloutau/Widgets/SceneGestures.h>
 #include <helloutau/Widgets/SceneLayer.h>
 
@@ -134,9 +135,9 @@ namespace hello::daw {
         bool updatingRange = false;
         // The milliseconds of a frame that the time axis was set for
         double frameTime = defaultFrameTime;
-        QColor whiteRowColor, blackRowColor, rowLineColor, labelColor, frameLineColor, keyLineColor,
-            curveColor, selectedCurveColor, savedColor, amplitudeColor, bandColor, correctionColor,
-            selectedCorrectionColor, correctionBackgroundColor;
+        QColor whiteRowColor, blackRowColor, rowLineColor, labelColor, titleColor, frameLineColor,
+            keyLineColor, curveColor, selectedCurveColor, savedColor, amplitudeColor, bandColor,
+            correctionColor, selectedCorrectionColor, correctionBackgroundColor;
 
         // The bar of the title and the ruler of milliseconds below it in the top margin of the
         // viewport
@@ -491,7 +492,7 @@ namespace hello::daw {
             painter.setPen(view->labelColor());
             painter.drawText(text, Qt::AlignRight | Qt::AlignVCenter | Qt::TextSingleLine, unit);
             const QRect title = text.adjusted(0, 0, -unitWidth - fontMetrics().height(), 0);
-            painter.setPen(palette().color(QPalette::Text));
+            painter.setPen(view->titleColor());
             painter.drawText(
                 title, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
                 fontMetrics().elidedText(m_impl->title, Qt::ElideRight, title.width()));
@@ -1309,16 +1310,17 @@ namespace hello::daw {
 
     // The rows and the labels follow the palette, which in a light theme gives the white and
     // the grays of frqeditor. The curves and the lines have the colors of frqeditor.
-    HELLO_COLOR_PROPERTY(whiteRowColor, setWhiteRowColor, palette().color(QPalette::Base))
+    HELLO_COLOR_PROPERTY(whiteRowColor, setWhiteRowColor, QColor::fromRgba(CanvasColors::base))
     HELLO_COLOR_PROPERTY(blackRowColor, setBlackRowColor,
-                         blend(palette().color(QPalette::Base), palette().color(QPalette::Text),
-                               0.25))
+                         blend(QColor::fromRgba(CanvasColors::base),
+                               QColor::fromRgba(CanvasColors::text), 0.25))
     HELLO_COLOR_PROPERTY(rowLineColor, setRowLineColor,
-                         blend(palette().color(QPalette::Base), palette().color(QPalette::Text),
-                               0.12))
+                         blend(QColor::fromRgba(CanvasColors::base),
+                               QColor::fromRgba(CanvasColors::text), 0.12))
     HELLO_COLOR_PROPERTY(labelColor, setLabelColor,
-                         blend(palette().color(QPalette::Base), palette().color(QPalette::Text),
-                               0.5))
+                         blend(QColor::fromRgba(CanvasColors::base),
+                               QColor::fromRgba(CanvasColors::text), 0.5))
+    HELLO_COLOR_PROPERTY(titleColor, setTitleColor, QColor::fromRgba(CanvasColors::text))
     HELLO_COLOR_PROPERTY(frameLineColor, setFrameLineColor, QColor(0, 255, 255))
     HELLO_COLOR_PROPERTY(keyLineColor, setKeyLineColor, QColor(255, 0, 0))
     HELLO_COLOR_PROPERTY(curveColor, setCurveColor, QColor(0, 0, 255))

@@ -281,7 +281,7 @@ namespace hello::daw {
         const auto [begin, end] =
             timeline->notesBetween(time.toTick(exposed.left()), time.toTick(exposed.right() + 1));
         const auto refs = m_state->notes();
-        painter.setPen(m_state->widget->palette().color(QPalette::Active, QPalette::Text));
+        painter.setPen(m_state->widget->parameterTextColor());
         for (int i = begin; i < end; ++i) {
             const auto &note = timeline->note(i);
             if (note.rest) {

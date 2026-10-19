@@ -40,6 +40,7 @@
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/PianoToneSource.h>
+#include <helloutau/Widgets/CanvasColors.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
@@ -1314,7 +1315,7 @@ namespace hello::daw {
         if (impl.restColor.isValid()) {
             return impl.restColor;
         }
-        auto color = palette().color(QPalette::Active, QPalette::Mid);
+        auto color = QColor::fromRgba(CanvasColors::mid);
         color.setAlphaF(0.4f);
         return color;
     }
@@ -1353,9 +1354,8 @@ namespace hello::daw {
 
     QColor PianoRoll::unsampledLyricColor() const {
         stdc_impl_t;
-        return impl.unsampledLyricColor.isValid()
-                   ? impl.unsampledLyricColor
-                   : palette().color(QPalette::Active, QPalette::Text);
+        return impl.unsampledLyricColor.isValid() ? impl.unsampledLyricColor
+                                                  : QColor::fromRgba(CanvasColors::text);
     }
 
     void PianoRoll::setUnsampledLyricColor(const QColor &color) {
@@ -1366,9 +1366,8 @@ namespace hello::daw {
 
     QColor PianoRoll::selectionColor() const {
         stdc_impl_t;
-        return impl.selectionColor.isValid()
-                   ? impl.selectionColor
-                   : palette().color(QPalette::Active, QPalette::WindowText);
+        return impl.selectionColor.isValid() ? impl.selectionColor
+                                             : QColor::fromRgba(CanvasColors::text);
     }
 
     void PianoRoll::setSelectionColor(const QColor &color) {
@@ -1412,8 +1411,7 @@ namespace hello::daw {
 
     QColor PianoRoll::pitchColor() const {
         stdc_impl_t;
-        return impl.pitchColor.isValid() ? impl.pitchColor
-                                         : palette().color(QPalette::Active, QPalette::Text);
+        return impl.pitchColor.isValid() ? impl.pitchColor : QColor::fromRgba(CanvasColors::text);
     }
 
     void PianoRoll::setPitchColor(const QColor &color) {
@@ -1443,7 +1441,7 @@ namespace hello::daw {
         if (impl.vibratoColor.isValid()) {
             return impl.vibratoColor;
         }
-        auto color = palette().color(QPalette::Active, QPalette::Text);
+        auto color = QColor::fromRgba(CanvasColors::text);
         color.setAlphaF(0.5f);
         return color;
     }
@@ -1481,9 +1479,8 @@ namespace hello::daw {
 
     QColor PianoRoll::intensityBorderColor() const {
         stdc_impl_t;
-        return impl.intensityBorderColor.isValid()
-                   ? impl.intensityBorderColor
-                   : palette().color(QPalette::Active, QPalette::Dark);
+        return impl.intensityBorderColor.isValid() ? impl.intensityBorderColor
+                                                   : QColor::fromRgba(CanvasColors::dark);
     }
 
     void PianoRoll::setIntensityBorderColor(const QColor &color) {
@@ -1492,10 +1489,22 @@ namespace hello::daw {
         impl.view->viewport()->update();
     }
 
+    QColor PianoRoll::parameterTextColor() const {
+        stdc_impl_t;
+        return impl.parameterTextColor.isValid() ? impl.parameterTextColor
+                                                 : QColor::fromRgba(CanvasColors::text);
+    }
+
+    void PianoRoll::setParameterTextColor(const QColor &color) {
+        stdc_impl_t;
+        impl.parameterTextColor = color;
+        impl.view->viewport()->update();
+    }
+
     QColor PianoRoll::faintPointColor() const {
         stdc_impl_t;
         return impl.faintPointColor.isValid() ? impl.faintPointColor
-                                              : palette().color(QPalette::Active, QPalette::Mid);
+                                              : QColor::fromRgba(CanvasColors::mid);
     }
 
     void PianoRoll::setFaintPointColor(const QColor &color) {
@@ -1533,7 +1542,7 @@ namespace hello::daw {
     QColor PianoRoll::renderWaitingColor() const {
         stdc_impl_t;
         const auto &color = impl.renderColors[0];
-        return color.isValid() ? color : palette().color(QPalette::Active, QPalette::Mid);
+        return color.isValid() ? color : QColor::fromRgba(CanvasColors::mid);
     }
 
     void PianoRoll::setRenderWaitingColor(const QColor &color) {
@@ -1581,7 +1590,7 @@ namespace hello::daw {
     QColor PianoRoll::whiteRowColor() const {
         stdc_impl_t;
         return impl.whiteRowColor.isValid() ? impl.whiteRowColor
-                                            : palette().color(QPalette::Active, QPalette::Base);
+                                            : QColor::fromRgba(CanvasColors::base);
     }
 
     void PianoRoll::setWhiteRowColor(const QColor &color) {
@@ -1592,9 +1601,8 @@ namespace hello::daw {
 
     QColor PianoRoll::blackRowColor() const {
         stdc_impl_t;
-        return impl.blackRowColor.isValid()
-                   ? impl.blackRowColor
-                   : palette().color(QPalette::Active, QPalette::AlternateBase);
+        return impl.blackRowColor.isValid() ? impl.blackRowColor
+                                            : QColor::fromRgba(CanvasColors::alternateBase);
     }
 
     void PianoRoll::setBlackRowColor(const QColor &color) {
@@ -1608,7 +1616,7 @@ namespace hello::daw {
         if (impl.lineColor.isValid()) {
             return impl.lineColor;
         }
-        auto color = palette().color(QPalette::Active, QPalette::Mid);
+        auto color = QColor::fromRgba(CanvasColors::mid);
         color.setAlphaF(0.35f);
         return color;
     }
@@ -1622,7 +1630,7 @@ namespace hello::daw {
     QColor PianoRoll::barLineColor() const {
         stdc_impl_t;
         return impl.barLineColor.isValid() ? impl.barLineColor
-                                           : palette().color(QPalette::Active, QPalette::Mid);
+                                           : QColor::fromRgba(CanvasColors::mid);
     }
 
     void PianoRoll::setBarLineColor(const QColor &color) {

@@ -22,6 +22,7 @@
 #include <hellokit/Synth/SampleTiming.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include <helloutau/Widgets/CanvasColors.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
 
@@ -119,20 +120,24 @@ private:
     }
 
 private Q_SLOTS:
-    void canvas_colors_use_the_active_palette_group() {
+    // The accent colors follow the active group of the palette. The other colors of the canvas
+    // are those of CanvasColors whatever the palette, so that the canvas stays light in the dark
+    // appearance of the system.
+    void the_accent_colors_follow_the_active_palette_group_and_the_others_do_not() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
         auto palette = roll.palette();
         palette.setColor(QPalette::Active, QPalette::Highlight, QColor(255, 0, 0));
         palette.setColor(QPalette::Inactive, QPalette::Highlight, QColor(0, 0, 255, 0));
         palette.setColor(QPalette::Active, QPalette::Text, QColor(0, 255, 0));
-        palette.setColor(QPalette::Inactive, QPalette::Text, QColor(0, 0, 0, 0));
+        palette.setColor(QPalette::Active, QPalette::Base, QColor(0, 0, 255));
         roll.setPalette(palette);
 
         QCOMPARE(roll.noteColor(), QColor(255, 0, 0));
         QCOMPARE(roll.parameterColor(), QColor(255, 0, 0));
-        QCOMPARE(roll.pitchColor(), QColor(0, 255, 0));
-        QCOMPARE(roll.unsampledLyricColor(), QColor(0, 255, 0));
+        QCOMPARE(roll.pitchColor(), QColor::fromRgba(CanvasColors::text));
+        QCOMPARE(roll.unsampledLyricColor(), QColor::fromRgba(CanvasColors::text));
+        QCOMPARE(roll.whiteRowColor(), QColor::fromRgba(CanvasColors::base));
     }
 
     void a_note_is_hit_where_it_is_drawn() {
@@ -1361,9 +1366,7 @@ private Q_SLOTS:
         kit::ProjectSession session(project);
         PianoRoll roll(&session);
         roll.setPitchVisible(false);
-        auto palette = roll.palette();
-        palette.setColor(QPalette::Active, QPalette::Text, QColor(0, 200, 0));
-        roll.setPalette(palette);
+        roll.setParameterTextColor(QColor(0, 200, 0));
         show(roll);
         QVERIFY(!roll.areParametersVisible());
 
@@ -2846,8 +2849,9 @@ private Q_SLOTS:
     }
 
     // The background of the intensity under the pointer defaults to the color of the white rows,
-    // and its border to the dark color of the palette. Both can be set.
-    void the_colors_of_the_intensity_follow_the_palette_until_set() {
+    // and its border to the dark color of CanvasColors, which the palette does not change. Both
+    // can be set.
+    void the_colors_of_the_intensity_have_defaults_until_set() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
         roll.setWhiteRowColor(QColor(1, 2, 3));
@@ -2855,7 +2859,7 @@ private Q_SLOTS:
         palette.setColor(QPalette::Active, QPalette::Dark, QColor(4, 5, 6));
         roll.setPalette(palette);
         QCOMPARE(roll.intensityBackgroundColor(), QColor(1, 2, 3));
-        QCOMPARE(roll.intensityBorderColor(), QColor(4, 5, 6));
+        QCOMPARE(roll.intensityBorderColor(), QColor::fromRgba(CanvasColors::dark));
 
         roll.setIntensityBackgroundColor(QColor(7, 8, 9));
         roll.setIntensityBorderColor(QColor(10, 11, 12));
