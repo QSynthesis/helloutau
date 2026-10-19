@@ -2,13 +2,13 @@
 # Packages a release build of HelloUtau for Linux into the release assets of
 # docs/Distribution.md, in the output directory:
 #
-#     helloutau-<version>-<triplet>.zip          the portable package, a folder HelloUtau
-#     helloutau-<version>-<triplet>-symbols.zip  the debug information of the binaries, a file
-#                                                <binary>.debug beside the path of each binary in
-#                                                the layout of the package, if the build records
-#                                                debug information
-#     SHA256SUMS                                 the digests of the files above, as sha256sum
-#                                                writes them
+#     helloutau-<version>-<triplet>.tar.xz          the portable package, a folder HelloUtau
+#     helloutau-<version>-<triplet>-symbols.tar.xz  the debug information of the binaries, a
+#                                                   file <binary>.debug beside the path of each
+#                                                   binary in the layout of the package, if the
+#                                                   build records debug information
+#     SHA256SUMS                                    the digests of the files above, as sha256sum
+#                                                   writes them
 #
 # A build of another channel than release follows the version with -<channel>.<commit>, see
 # common.sh. The build must be complete: this script does not build. Steps: cmake --install,
@@ -33,7 +33,7 @@ echo "Packaging $base from $build"
 staging="$output/HelloUtau"
 symbols="$output/symbols"
 rm -rf "$staging" "$symbols"
-rm -f "$output/$base.zip" "$output/$base-symbols.zip" "$output/SHA256SUMS"
+rm -f "$output/$base.tar.xz" "$output/$base-symbols.tar.xz" "$output/SHA256SUMS"
 
 echo "== Install"
 cmake --install "$build" --prefix "$staging"
@@ -66,15 +66,20 @@ while IFS= read -r -d '' file; do
 done < <(find "$staging" -type f -print0)
 echo "  $count of $total binaries have symbols"
 
-echo "== Create $base.zip"
-# --symlinks keeps the links of the libraries, which zip would otherwise store as copies
-(cd "$output" && zip -qr --symlinks "$base.zip" HelloUtau)
-assets=("$base.zip")
+# tar keeps the modes and the links of the libraries. The entries name no user or group of the
+# build machine, and xz compresses on every processor.
+archive() {
+    XZ_OPT=-T0 tar --owner=0 --group=0 --numeric-owner -cJf "$@"
+}
+
+echo "== Create $base.tar.xz"
+(cd "$output" && archive "$base.tar.xz" HelloUtau)
+assets=("$base.tar.xz")
 
 if [ "$count" -gt 0 ]; then
-    echo "== Create $base-symbols.zip"
-    (cd "$symbols" && zip -qr "$output/$base-symbols.zip" .)
-    assets+=("$base-symbols.zip")
+    echo "== Create $base-symbols.tar.xz"
+    (cd "$symbols" && archive "$output/$base-symbols.tar.xz" .)
+    assets+=("$base-symbols.tar.xz")
 fi
 
 (cd "$output" && sha256sum "${assets[@]}" > SHA256SUMS)

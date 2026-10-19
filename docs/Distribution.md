@@ -24,13 +24,14 @@
 
 | 附件 | 文件名 |
 |---|---|
-| 免安装版（Windows 与 Linux） | `helloutau-<version>-<triplet>.zip` |
+| 免安装版（Windows） | `helloutau-<version>-<triplet>.zip` |
+| 免安装版（Linux） | `helloutau-<version>-<triplet>.tar.xz` |
 | 安装包（仅 Windows） | `helloutau-<version>-<triplet>-setup.exe` |
 | 磁盘映像（仅 macOS） | `helloutau-<version>-<triplet>.dmg` |
-| 调试符号 | `helloutau-<version>-<triplet>-symbols.zip` |
+| 调试符号 | `helloutau-<version>-<triplet>-symbols.zip`，Linux 为 `-symbols.tar.xz` |
 | 校验文件 | `SHA256SUMS` |
 
-- 调试符号供分析崩溃转储使用，按安装目录的结构存放各个 exe 与 dll 的 PDB，包括 vcpkg 依赖的 PDB，Qt 的官方二进制不带 PDB（作者 2026-10-18 要求）。更新程序按完整的文件名挑选附件，不会选中它。MinGW 的构建以 llvm-mingw 生成 PDB，同样收入符号包。macOS 的符号包是各二进制的 dSYM，由 `dsymutil` 从构建的目标文件收集，放在二进制在 bundle 中的相对位置，例如 `HelloUtau.app/Contents/MacOS/HelloUtau.dSYM`。Linux 的符号包是各二进制的 `<文件名>.debug`，由 `objcopy --only-keep-debug` 分离，放在二进制在免安装版中的相对位置，例如 `HelloUtau/bin/HelloUtau.debug`，二进制只保留符号表与指向它的 `.gnu_debuglink`，解压到免安装版上 gdb 即可找到。没有调试信息的二进制（Qt 的库，以及从二进制缓存恢复、没有目标文件的 vcpkg 依赖）不收入。
+- 调试符号供分析崩溃转储使用，按安装目录的结构存放各个 exe 与 dll 的 PDB，包括 vcpkg 依赖的 PDB，Qt 的官方二进制不带 PDB（作者 2026-10-18 要求）。更新程序按完整的文件名挑选附件，不会选中它。MinGW 的构建以 llvm-mingw 生成 PDB，同样收入符号包。macOS 的符号包是各二进制的 dSYM，由 `dsymutil` 从构建的目标文件收集，放在二进制在 bundle 中的相对位置，例如 `HelloUtau.app/Contents/MacOS/HelloUtau.dSYM`。Linux 的符号包是各二进制的 `<文件名>.debug`，由 `objcopy --only-keep-debug` 分离，放在二进制在免安装版中的相对位置，例如 `HelloUtau/bin/helloutau.debug`，二进制只保留符号表与指向它的 `.gnu_debuglink`，解压到免安装版上 gdb 即可找到。没有调试信息的二进制（Qt 的库，以及从二进制缓存恢复、没有目标文件的 vcpkg 依赖）不收入。
 
 - `<version>` 为 `HELLO_VERSION` 的四段版本号。
 - `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x86_64` 或 `arm64`，系统为 `windows`、`linux` 或 `mac`，ABI 为 `msvc`、`mingw`、`gcc` 或 `appleclang`，例如 `x86_64-windows-msvc`。其余编译器取 CMake 编译器 ID 的小写，macOS 上 Xcode 的编译器因此为 `appleclang`，与 vcpkg 沿用的 CMake 编译器 ID 一致，macOS 版为 `arm64-mac-appleclang`（作者 2026-10-16 决定）。vcpkg 的 triplet 本身不含 ABI 段，HelloUtau 仍然保留这一段。架构与系统取用户熟悉的名称，不沿用 vcpkg 的写法（作者 2026-10-17 决定，当时尚未发布过带 triplet 的版本，无须迁移）：架构用 `x86_64` 而不用 `x64`，因为 `x64` 是微软的叫法，`x86_64` 不偏向任何一方；`arm64` 是苹果的叫法，照用；系统用 `mac` 而不用 `osx`，因为不少用户不知道 `osx` 指什么。vcpkg 自己的 triplet（如 `x64-windows`、`arm64-osx`）照旧，只用于安装依赖。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入缓存项 `HELLO_TRIPLET`，可以 `-DHELLO_TRIPLET=` 覆盖。
@@ -75,7 +76,7 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 - **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip、zlib 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
 - **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。release 变体的任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
 - **编译缓存**：sccache（`mozilla-actions/sccache-action`），以 GitHub Actions 的缓存逐项保存（作者 2026-10-18 要求）。每次检出的源文件时间都是新的，只靠 Ninja 会全部重新编译，sccache 对预处理结果与选项未变的目标文件直接取用缓存。sccache 不能缓存 MSVC 把调试信息写入共享 PDB（`/Zi`）的目标文件，因此 CI 以 CMP0141 与 `CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded` 把调试信息写入目标文件（`/Z7`），链接时仍生成每个二进制的 PDB。`hellokit/BuildInfo.h` 随每次提交改变，只有包含它的少数源文件每次重新编译。运行的摘要附上 sccache 的统计。
-- **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包、符号包与 `SHA256SUMS`。macOS 上 `dist/installer/macos/package.sh` 生成 DMG、符号包与 `SHA256SUMS`，Linux 上 `dist/installer/linux/package.sh` 生成 zip、符号包与 `SHA256SUMS`，两者的命名与检查共用 `dist/installer/common.sh`。每个附件是单独的 artifact，以 `actions/upload-artifact` 7 的 `archive: false` 原样上传，下载即是文件本身，与 release 的附件相同，artifact 名即文件名，渠道与提交写在文件名中。各附件的摘要写入运行的摘要。
+- **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包、符号包与 `SHA256SUMS`。macOS 上 `dist/installer/macos/package.sh` 生成 DMG、符号包与 `SHA256SUMS`，Linux 上 `dist/installer/linux/package.sh` 生成 tar.xz、符号包与 `SHA256SUMS`，两者的命名与检查共用 `dist/installer/common.sh`。每个附件是单独的 artifact，以 `actions/upload-artifact` 7 的 `archive: false` 原样上传，下载即是文件本身，与 release 的附件相同，artifact 名即文件名，渠道与提交写在文件名中。各附件的摘要写入运行的摘要。
 - **发布**：推送 `v` 开头的 tag 时渠道为 `release`。tag 须与 `HELLO_VERSION` 一致，否则构建失败。各系统都通过后创建 GitHub 的 release，附上各系统的附件（包括符号包，因为 artifact 会过期）与由下载的附件算出的一份 `SHA256SUMS`，标题为 `HelloUtau <version>`，说明取自 tag 所在提交的 `docs/changelog/<version>.md`，该文件不存在时不创建 release。以工作流的令牌创建的 release 不触发其他工作流，因此随后以 `gh workflow run` 启动 `sync-gitee-release.yml`。
 
 ## 目录
@@ -160,7 +161,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 - **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：
   - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
   - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。
-- **Linux**：只出 zip，即 `helloutau-<version>-x86_64-linux-gcc.zip`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装，发现新版本时打开下载页（作者 2026-10-18 决定），尚未实现。
+- **Linux**：只出 tar.xz 压缩包，即 `helloutau-<version>-x86_64-linux-gcc.tar.xz`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。最初为 zip，作者 2026-10-19 改为 tar.xz，因为 tar.xz 是 Linux 上通行的格式，原生保存文件权限与库的符号链接，压缩率也高于 zip。符号包同为 tar.xz。条目的属主写为 0，不带构建机的用户名。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装，发现新版本时打开下载页（作者 2026-10-18 决定），尚未实现。
 
 ## 应用图标
 

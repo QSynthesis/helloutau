@@ -116,8 +116,8 @@ jobs:
         shell: bash
         run: bash dist/installer/linux/package.sh "${{ steps.build.outputs.build-directory }}" build/package
 
-      # The paths of the assets: the package, the zip of Windows and Linux or the disk image of
-      # macOS that is not the symbols, the installer of Windows, and the symbols
+      # The paths of the assets: the package, the zip of Windows, the tar.xz of Linux or the disk
+      # image of macOS that is not the symbols, the installer of Windows, and the symbols
       - name: Assets
         id: assets
         shell: bash
@@ -125,12 +125,12 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           cd build/package
-          symbols=(*-symbols.zip)
+          symbols=(*-symbols.zip *-symbols.tar.xz)
           setup=(*-setup.exe)
           package=()
-          for file in *.zip *.dmg; do
+          for file in *.zip *.tar.xz *.dmg; do
             case "$file" in
-              *-symbols.zip) ;;
+              *-symbols.zip | *-symbols.tar.xz) ;;
               *) package+=("$file") ;;
             esac
           done
