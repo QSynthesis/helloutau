@@ -9,8 +9,9 @@ file(GLOB_RECURSE _hdr "${CMAKE_CURRENT_SOURCE_DIR}/../../../include/helloutau/T
 qm_find_qt(Core Gui Widgets Test)
 
 # Installed only if HELLO_INSTALL_TESTING is set, so that an installation for users carries
-# neither this library nor Qt Test.
-set(_install_option NO_INSTALL)
+# neither this library nor Qt Test. Otherwise it is built beside the tests, outside the bundle on
+# macOS, which cmake --install copies whole.
+set(_install_option TEST)
 if(HELLO_INSTALL_TESTING)
     set(_install_option)
 endif()
