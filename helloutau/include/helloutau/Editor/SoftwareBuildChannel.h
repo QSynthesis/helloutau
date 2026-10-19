@@ -18,7 +18,9 @@ namespace hello::daw {
 
         /// Returns the name of the build: the version for a release, such as \c 0.1.8.0 , and
         /// otherwise the version followed by the channel and the abbreviated commit, such as
-        /// <tt>0.1.8.0-ci.1a2b3c4</tt>. The channel is an identifier and is not translated.
+        /// <tt>0.1.8.0-ci.1a2b3c4</tt>. The commit is left out if the build records none, such as
+        /// a build of sources outside a git repository: <tt>0.1.8.0-dev</tt>. The channel is an
+        /// identifier and is not translated.
         static QString buildName();
 
         /// Returns the application name followed by buildName(), such as

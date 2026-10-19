@@ -15,7 +15,7 @@ class test_SoftwareBuildChannel : public QObject {
 private Q_SLOTS:
     // The name of the build follows the channel of the configuration: the version of a release,
     // or otherwise the version followed by the channel and the first seven digits of the commit
-    // hash, as in the names of the assets.
+    // hash, as in the names of the assets. The hash is left out if the build records none.
     void the_build_name_follows_the_channel() {
         const QString channel = QStringLiteral(HELLOKIT_BUILD_CHANNEL);
         QCOMPARE(SoftwareBuildChannel::isRelease(), channel == QLatin1String("release"));
@@ -27,11 +27,16 @@ private Q_SLOTS:
         const auto match =
             QRegularExpression(QLatin1Char('^') +
                                QRegularExpression::escape(QStringLiteral(HELLOKIT_VERSION)) +
-                               QStringLiteral("-(ci|dev)\\.([0-9a-f]{7})$"))
+                               QStringLiteral("-(ci|dev)(?:\\.([0-9a-f]{7}))?$"))
                 .match(name);
         QVERIFY2(match.hasMatch(), qPrintable(name));
         QCOMPARE(match.captured(1), channel);
-        QVERIFY(QStringLiteral(HELLOKIT_GIT_LAST_COMMIT_HASH).startsWith(match.captured(2)));
+        const QString commit = QStringLiteral(HELLOKIT_GIT_LAST_COMMIT_HASH);
+        if (QRegularExpression(QStringLiteral("^[0-9a-f]{7,}$")).match(commit).hasMatch()) {
+            QCOMPARE(match.captured(2), commit.left(7));
+        } else {
+            QVERIFY2(match.captured(2).isEmpty(), qPrintable(name));
+        }
     }
 
     void the_application_title_ends_with_the_build_name() {
