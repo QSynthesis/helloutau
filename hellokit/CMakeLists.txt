@@ -23,6 +23,7 @@ hellokit_init_buildsystem(HELLOKIT)
 # which the application selects the assets of a release, and the channel of the build
 qm_add_definition(HELLOKIT_VERSION ${PROJECT_VERSION} STRING_LITERAL)
 qm_add_definition(HELLOKIT_TRIPLET ${HELLO_TRIPLET} STRING_LITERAL)
+qm_add_definition(HELLOKIT_DEVELOPER "Team OpenVPI" STRING_LITERAL)
 qm_add_definition(HELLOKIT_BUILD_CHANNEL ${HELLO_BUILD_CHANNEL} STRING_LITERAL)
 
 add_subdirectory(lib)

@@ -32,6 +32,7 @@ namespace hello::daw {
         label->setText(
             tr("<h2>%1</h2>"
                "<p>A cross-platform editor for UTAU projects and voice banks.</p>"
+               "<p>Developed by %11.</p>"
                "<p>Licensed under the Apache License, Version 2.0. "
                "<a href=\"https://www.apache.org/licenses/LICENSE-2.0\">License</a>.</p>"
                "<h3>Build Information</h3>"
@@ -47,7 +48,8 @@ namespace hello::daw {
                      QStringLiteral(HELLOKIT_BUILD_TIME), QStringLiteral(HELLOKIT_COMPILER_ARCH),
                      QStringLiteral(HELLOKIT_COMPILER_ID),
                      QStringLiteral(HELLOKIT_COMPILER_VERSION), QStringLiteral(QT_VERSION_STR),
-                     QStringLiteral(HELLOKIT_TRIPLET)));
+                     QStringLiteral(HELLOKIT_TRIPLET))
+                .arg(QStringLiteral(HELLOKIT_DEVELOPER)));
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok, this);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);

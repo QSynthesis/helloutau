@@ -24,6 +24,7 @@ private Q_SLOTS:
         QVERIFY(label->text().contains(QStringLiteral("HelloTest")));
         QVERIFY(label->text().contains(QStringLiteral("9.8.7")));
         QVERIFY(label->text().contains(QStringLiteral(QT_VERSION_STR)));
+        QVERIFY(label->text().contains(QStringLiteral(HELLOKIT_DEVELOPER)));
         QVERIFY(label->text().contains(QStringLiteral("Target platform: ") +
                                        QStringLiteral(HELLOKIT_TRIPLET)));
     }

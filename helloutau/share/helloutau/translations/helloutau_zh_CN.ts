@@ -8,8 +8,8 @@
         <translation>关于 %1</translation>
     </message>
     <message>
-        <source>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;A cross-platform editor for UTAU projects and voice banks.&lt;/p&gt;&lt;p&gt;Licensed under the Apache License, Version 2.0. &lt;a href=&quot;https://www.apache.org/licenses/LICENSE-2.0&quot;&gt;License&lt;/a&gt;.&lt;/p&gt;&lt;h3&gt;Build Information&lt;/h3&gt;&lt;p&gt;Version: %2&lt;br&gt;Branch: %3&lt;br&gt;Commit: %4&lt;br&gt;Build date: %5&lt;br&gt;Toolchain: %6 %7 %8&lt;br&gt;Target platform: %10&lt;br&gt;Built with Qt %9.&lt;/p&gt;</source>
-        <translation>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;用于编辑 UTAU 工程和音源的跨平台编辑器。&lt;/p&gt;&lt;p&gt;遵循 Apache License 2.0 许可。&lt;a href=&quot;https://www.apache.org/licenses/LICENSE-2.0&quot;&gt;许可证&lt;/a&gt;。&lt;/p&gt;&lt;h3&gt;构建信息&lt;/h3&gt;&lt;p&gt;版本：%2&lt;br&gt;分支：%3&lt;br&gt;提交：%4&lt;br&gt;构建时间：%5&lt;br&gt;工具链：%6 %7 %8&lt;br&gt;目标平台：%10&lt;br&gt;使用 Qt %9 构建。&lt;/p&gt;</translation>
+        <source>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;A cross-platform editor for UTAU projects and voice banks.&lt;/p&gt;&lt;p&gt;Developed by %11.&lt;/p&gt;&lt;p&gt;Licensed under the Apache License, Version 2.0. &lt;a href=&quot;https://www.apache.org/licenses/LICENSE-2.0&quot;&gt;License&lt;/a&gt;.&lt;/p&gt;&lt;h3&gt;Build Information&lt;/h3&gt;&lt;p&gt;Version: %2&lt;br&gt;Branch: %3&lt;br&gt;Commit: %4&lt;br&gt;Build date: %5&lt;br&gt;Toolchain: %6 %7 %8&lt;br&gt;Target platform: %10&lt;br&gt;Built with Qt %9.&lt;/p&gt;</source>
+        <translation>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;用于编辑 UTAU 工程和音源的跨平台编辑器。&lt;/p&gt;&lt;p&gt;由 %11 开发。&lt;/p&gt;&lt;p&gt;本软件采用 Apache License 2.0 许可。&lt;a href=&quot;https://www.apache.org/licenses/LICENSE-2.0&quot;&gt;许可证&lt;/a&gt;。&lt;/p&gt;&lt;h3&gt;构建信息&lt;/h3&gt;&lt;p&gt;版本：%2&lt;br&gt;分支：%3&lt;br&gt;提交：%4&lt;br&gt;构建时间：%5&lt;br&gt;工具链：%6 %7 %8&lt;br&gt;目标平台：%10&lt;br&gt;使用 Qt %9 构建。&lt;/p&gt;</translation>
     </message>
 </context>
 <context>
