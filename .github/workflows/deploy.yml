@@ -83,7 +83,7 @@ jobs:
         if: env.CHANNEL == 'release'
         shell: bash
         run: |
-          cache="${{ steps.build.outputs.directory }}/CMakeCache.txt"
+          cache="${{ steps.build.outputs.build-directory }}/CMakeCache.txt"
           version="$(sed -n 's/^CMAKE_PROJECT_VERSION:[A-Z]*=//p' "$cache")"
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
             echo "The tag $GITHUB_REF_NAME does not name the version $version of the build."
@@ -104,17 +104,17 @@ jobs:
       - name: Package
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./dist/installer/windows/package.ps1 -BuildDir ${{ steps.build.outputs.directory }} -OutputDir build/package -Iscc $env:ISCC
+        run: ./dist/installer/windows/package.ps1 -BuildDir ${{ steps.build.outputs.build-directory }} -OutputDir build/package -Iscc $env:ISCC
 
       - name: Package
         if: runner.os == 'macOS'
         shell: bash
-        run: bash dist/installer/macos/package.sh "${{ steps.build.outputs.directory }}" build/package
+        run: bash dist/installer/macos/package.sh "${{ steps.build.outputs.build-directory }}" build/package
 
       - name: Package
         if: runner.os == 'Linux'
         shell: bash
-        run: bash dist/installer/linux/package.sh "${{ steps.build.outputs.directory }}" build/package
+        run: bash dist/installer/linux/package.sh "${{ steps.build.outputs.build-directory }}" build/package
 
       # The paths of the assets: the package, the zip of Windows and Linux or the disk image of
       # macOS that is not the symbols, the installer of Windows, and the symbols
