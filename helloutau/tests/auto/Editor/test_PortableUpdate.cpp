@@ -195,15 +195,18 @@ private Q_SLOTS:
             (common + QStringList{QStringLiteral("--launch"), QDir::toNativeSeparators(program)}));
     }
 
-    void the_updater_is_copied_from_the_directory_of_the_program() {
+    // The updater of the application is in the directory of the program. The copy of the updater
+    // of the build replaces an existing copy.
+    void the_updater_is_copied_into_the_directory() {
+        QCOMPARE(PortableUpdate::defaultUpdater(), QCoreApplication::applicationDirPath() +
+                                                       QLatin1Char('/') +
+                                                       PortableUpdate::updaterFileName());
+        const auto updater = QStringLiteral(TEST_PROGRAM_HELLO_UPDATER);
         const auto directory = m_root.filePath(QStringLiteral("updates"));
-        const auto copy = PortableUpdate::copyUpdater(directory);
+        const auto copy = PortableUpdate::copyUpdater(updater, directory);
         QCOMPARE(copy, directory + QLatin1Char('/') + PortableUpdate::updaterFileName());
-        QCOMPARE(QFileInfo(copy).size(),
-                 QFileInfo(QCoreApplication::applicationDirPath() + QLatin1Char('/') +
-                           PortableUpdate::updaterFileName())
-                     .size());
-        QCOMPARE(PortableUpdate::copyUpdater(directory), copy);
+        QCOMPARE(QFileInfo(copy).size(), QFileInfo(updater).size());
+        QCOMPARE(PortableUpdate::copyUpdater(updater, directory), copy);
     }
 
     void the_remnants_are_removed() {

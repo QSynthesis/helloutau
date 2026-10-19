@@ -6,11 +6,12 @@ qm_find_qt(Core)
 # hellokit_add_auto_test(<source> [link libraries...]
 #     [RESOURCES <files or directories...>]
 #     [RESOURCE_MACRO <macro>]
+#     [PROGRAMS <targets...>]
 # )
 #
-# Adds the test of \a source as a test executable of hellokit, see add_module_auto_test().
+# Adds the test of \a source as a test executable of hellokit, see add_auto_test().
 function(hellokit_add_auto_test)
-    add_module_auto_test(hellokit_add_executable ${ARGN})
+    add_auto_test(hellokit_add_executable ${ARGN})
 endfunction()
 
 add_subdirectory(Support)

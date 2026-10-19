@@ -48,6 +48,7 @@ private:
 
     std::unique_ptr<VoiceBankCheckScheduler> scheduler(int sweep = 0) {
         auto out = std::make_unique<VoiceBankCheckScheduler>();
+        out->setWatcherProgram(QStringLiteral(TEST_PROGRAM_HELLO_FSWATCHER));
         out->setDelay(50);
         out->setPollInterval(100);
         out->setSweepInterval(sweep);

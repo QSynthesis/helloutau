@@ -112,6 +112,11 @@ namespace hello::daw {
         ///         instance of kit::ExitLauncher
         bool schedule(bool relaunch);
 
+        /// The program that schedule() copies as hello-updater for the portable application,
+        /// PortableUpdate::defaultUpdater() unless setUpdater() specifies another
+        QString updater() const;
+        void setUpdater(const QString &updater);
+
         /// Removes the scheduled installation.
         void unschedule();
 
@@ -145,6 +150,7 @@ namespace hello::daw {
         QString m_errorString;
         QVersionNumber m_current;
         QString m_assetPrefix;
+        QString m_updater;
         kit::SoftwareReleaseQuery *m_query;
         kit::SoftwareReleaseDownload *m_download;
         PortableUpdate *m_portable;

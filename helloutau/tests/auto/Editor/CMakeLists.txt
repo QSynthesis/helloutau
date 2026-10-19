@@ -19,12 +19,9 @@ helloutau_add_auto_test(test_SoftwareBuildChannel.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_SynthToolTrust.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_UpdateChecker.cpp HelloUtauEditor)
 
-# The test writes its archives with libzip, and copies hello-updater from out/bin, where the
-# program must be built before the test runs.
-helloutau_add_auto_test(test_PortableUpdate.cpp HelloUtauEditor libzip::zip)
-add_auto_test_program(test_PortableUpdate hello-updater)
-helloutau_add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip)
-add_auto_test_program(test_UpdateTask hello-updater)
+# The tests write their archives with libzip, and give the update the updater of the build.
+helloutau_add_auto_test(test_PortableUpdate.cpp HelloUtauEditor libzip::zip PROGRAMS hello-updater)
+helloutau_add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip PROGRAMS hello-updater)
 helloutau_add_auto_test(test_UpdateTaskView.cpp HelloUtauEditor)
 
 add_subdirectory(Dialogs)

@@ -39,6 +39,9 @@ namespace hello::daw {
         /// Returns the file name of \c hello-updater, with \c .exe on Windows.
         static QString updaterFileName();
 
+        /// Returns the path of \c hello-updater in the directory of the program.
+        static QString defaultUpdater();
+
         QString installDirectory() const;
 
         /// The directory of the new version, <tt><installation>.new</tt>
@@ -75,11 +78,11 @@ namespace hello::daw {
         /// empty, hello-updater starts that program afterwards.
         QStringList updaterArguments(qint64 pid, const QString &log, const QString &launch) const;
 
-        /// Copies hello-updater from the directory of the program into \a directory, replacing an
+        /// Copies the program \a updater into \a directory as updaterFileName(), replacing an
         /// existing copy.
         ///
         /// \return the path of the copy, or an empty string if the copy failed
-        static QString copyUpdater(const QString &directory);
+        static QString copyUpdater(const QString &updater, const QString &directory);
 
         /// Removes newDirectory() and oldDirectory(), which remain after an update that failed
         /// or that hello-updater did not finish.

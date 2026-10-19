@@ -20,7 +20,7 @@ namespace hello::daw {
     UpdateTask::UpdateTask(AppSettings &settings, Kind kind, const QString &installDirectory,
                            QObject *parent)
         : QObject(parent), m_settings(settings), m_kind(kind),
-          m_query(new kit::SoftwareReleaseQuery(this)),
+          m_updater(PortableUpdate::defaultUpdater()), m_query(new kit::SoftwareReleaseQuery(this)),
           m_download(new kit::SoftwareReleaseDownload(this)),
           m_portable(new PortableUpdate(installDirectory, this)) {
         connect(m_query, &kit::SoftwareReleaseQuery::finished, this, [this] {
@@ -175,7 +175,8 @@ namespace hello::daw {
         if (m_kind == Installed) {
             launcher->setLaunch(key, m_assetFile, UpdateChecker::installerArguments(relaunch));
         } else {
-            const auto updater = PortableUpdate::copyUpdater(UpdateChecker::downloadDirectory());
+            const auto updater =
+                PortableUpdate::copyUpdater(m_updater, UpdateChecker::downloadDirectory());
             if (updater.isEmpty()) {
                 return false;
             }
@@ -190,6 +191,14 @@ namespace hello::daw {
             launcher->removeLaunch(QLatin1String(kit::ExitLauncher::restartKey));
         }
         return true;
+    }
+
+    QString UpdateTask::updater() const {
+        return m_updater;
+    }
+
+    void UpdateTask::setUpdater(const QString &updater) {
+        m_updater = updater;
     }
 
     void UpdateTask::unschedule() {

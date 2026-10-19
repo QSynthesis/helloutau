@@ -6,23 +6,31 @@
 
 qm_find_qt(Test)
 
-# add_auto_test(<target>
+# configure_auto_test(<target>
 #     [RESOURCES <files or directories...>]
 #     [RESOURCE_MACRO <macro>]
+#     [PROGRAMS <targets...>]
 # )
 #
 # Makes the executable \a target a test with the \c ctest case of the same name. A module creates
-# the target with its own <proj>_add_executable(), see add_module_auto_test(), so that the tests
-# are built as its programs are. The source declares one QObject whose private slots are the
-# cases, and ends with \c QTEST_APPLESS_MAIN and the include of its own \c .moc file.
+# the target with its own <proj>_add_executable(), see add_auto_test(), so that the tests are
+# built as its programs are. The source declares one QObject whose private slots are the cases,
+# and ends with \c QTEST_APPLESS_MAIN and the include of its own \c .moc file.
 #
 # Resources are copied to <target-file-directory>/<target-name>_data. The target receives that
 # directory through the \c TEST_RESOURCE_DIRECTORY compile definition. \c RESOURCE_MACRO replaces
 # the default definition name when supplied.
-function(add_auto_test _target)
+#
+# \c PROGRAMS names the programs that the code under test starts. Each is built before the test,
+# and the target receives its path through the compile definition \c TEST_PROGRAM_<NAME>, the
+# target name in upper case with each other character than a letter or a digit replaced by an
+# underscore: \c hello-fswatcher yields \c TEST_PROGRAM_HELLO_FSWATCHER. The test passes the path
+# to the code under test rather than relying on the directory of the running program, because
+# the tests are built elsewhere than the programs on macOS, beside the bundle.
+function(configure_auto_test _target)
     set(options)
     set(oneValueArgs RESOURCE_MACRO)
-    set(multiValueArgs RESOURCES)
+    set(multiValueArgs RESOURCES PROGRAMS)
     cmake_parse_arguments(FUNC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set_target_properties(${_target} PROPERTIES AUTOMOC ON)
@@ -46,6 +54,15 @@ function(add_auto_test _target)
         )
     endif()
 
+    foreach(_program IN LISTS FUNC_PROGRAMS)
+        add_dependencies(${_target} ${_program})
+        string(TOUPPER "${_program}" _macro)
+        string(MAKE_C_IDENTIFIER "${_macro}" _macro)
+        target_compile_definitions(${_target} PRIVATE
+            TEST_PROGRAM_${_macro}="$<TARGET_FILE:${_program}>"
+        )
+    endforeach()
+
     add_test(NAME ${_target} COMMAND $<TARGET_FILE:${_target}>)
 
     # Windows searches for a DLL beside the executable and then along PATH, and in a build tree
@@ -67,19 +84,20 @@ function(add_auto_test _target)
     endif()
 endfunction()
 
-# add_module_auto_test(<function> <source> [link libraries...]
+# add_auto_test(<function> <source> [link libraries...]
 #     [RESOURCES <files or directories...>]
 #     [RESOURCE_MACRO <macro>]
+#     [PROGRAMS <targets...>]
 # )
 #
 # Creates the test of \a source with \a function, the <proj>_add_executable() of a module, as a
 # test executable of the module: built into the test directory of the build, out/bin, and not
 # installed. The target and the \c ctest case take their name from \a source, so \c test_Foo.cpp
-# yields \c test_Foo. The remaining arguments are those of add_auto_test().
-function(add_module_auto_test _function _src)
+# yields \c test_Foo. The remaining arguments are those of configure_auto_test().
+function(add_auto_test _function _src)
     set(options)
     set(oneValueArgs RESOURCE_MACRO)
-    set(multiValueArgs RESOURCES)
+    set(multiValueArgs RESOURCES PROGRAMS)
     cmake_parse_arguments(FUNC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     get_filename_component(_name ${_src} NAME_WE)
@@ -95,23 +113,8 @@ function(add_module_auto_test _function _src)
     if(FUNC_RESOURCE_MACRO)
         list(APPEND _args RESOURCE_MACRO ${FUNC_RESOURCE_MACRO})
     endif()
-    add_auto_test(${_name} ${_args})
-endfunction()
-
-# add_auto_test_program(<test> <program>)
-#
-# Builds \a program, a program that the code under \a test starts from the directory of the
-# running program, before the test. On macOS the program is built into the bundle of the
-# application and the test beside the bundle, so the program is copied beside the test as well.
-# The tests stay out of the bundle, which holds what the application installs.
-function(add_auto_test_program _test _program)
-    add_dependencies(${_test} ${_program})
-
-    if(HELLO_MACOSX_BUNDLE_NAME)
-        add_custom_command(TARGET ${_test} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${_program}>
-                $<TARGET_FILE_DIR:${_test}>
-            VERBATIM
-        )
+    if(FUNC_PROGRAMS)
+        list(APPEND _args PROGRAMS ${FUNC_PROGRAMS})
     endif()
+    configure_auto_test(${_name} ${_args})
 endfunction()

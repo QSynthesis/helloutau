@@ -76,6 +76,7 @@ private:
     /// unless requested, so that the tests of the default observe it.
     std::unique_ptr<FileSystemWatcher> follow(bool fileEvents = false) {
         auto watcher = std::make_unique<FileSystemWatcher>();
+        watcher->setProgram(QStringLiteral(TEST_PROGRAM_HELLO_FSWATCHER));
         watcher->setDelay(50);
         if (fileEvents) {
             watcher->setFileEventsEnabled(true);
@@ -157,6 +158,7 @@ private Q_SLOTS:
 
     void a_root_that_does_not_exist_is_not_found() {
         FileSystemWatcher watcher;
+        watcher.setProgram(QStringLiteral(TEST_PROGRAM_HELLO_FSWATCHER));
         QSignalSpy notFound(&watcher, &FileSystemWatcher::rootNotFound);
         const QString missing = m_dir->path() + QStringLiteral("/nothing here");
         watcher.setRoots({missing});

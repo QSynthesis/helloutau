@@ -152,16 +152,18 @@ namespace hello::daw {
         return arguments;
     }
 
-    QString PortableUpdate::copyUpdater(const QString &directory) {
-        const auto source =
-            QCoreApplication::applicationDirPath() + QLatin1Char('/') + updaterFileName();
+    QString PortableUpdate::defaultUpdater() {
+        return QCoreApplication::applicationDirPath() + QLatin1Char('/') + updaterFileName();
+    }
+
+    QString PortableUpdate::copyUpdater(const QString &updater, const QString &directory) {
         const auto target = directory + QLatin1Char('/') + updaterFileName();
         if (!QDir().mkpath(directory)) {
             return {};
         }
         QFile::remove(target);
         // QFile::copy() keeps the permissions, the executable bit included.
-        return QFile::copy(source, target) ? target : QString();
+        return QFile::copy(updater, target) ? target : QString();
     }
 
     void PortableUpdate::removeRemnants() const {

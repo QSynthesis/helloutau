@@ -14,7 +14,5 @@ hellokit_add_auto_test(test_TranslationLoader.cpp HelloKitSupport)
 # writes.
 hellokit_add_auto_test(test_ZipExtractor.cpp HelloKitSupport libzip::zip)
 
-# The watcher starts the monitor program from the directory of the running program, which for a
-# test is the directory of the test, see add_auto_test_program().
-hellokit_add_auto_test(test_FileSystemWatcher.cpp HelloKitSupport)
-add_auto_test_program(test_FileSystemWatcher hello-fswatcher)
+# The test gives the watcher the monitor program of the build.
+hellokit_add_auto_test(test_FileSystemWatcher.cpp HelloKitSupport PROGRAMS hello-fswatcher)

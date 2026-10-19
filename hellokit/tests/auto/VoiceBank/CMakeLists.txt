@@ -18,6 +18,5 @@ hellokit_add_auto_test(test_FrequencyMapRevisionBuffer.cpp HelloKitVoiceBank)
 hellokit_add_auto_test(test_FrequencyMapCheck.cpp HelloKitVoiceBank)
 hellokit_add_auto_test(test_VoiceAliasRule.cpp HelloKitVoiceBank)
 
-# The test starts the watcher, whose monitor program must be built into the same directory.
-hellokit_add_auto_test(test_VoiceBankCheckScheduler.cpp HelloKitVoiceBank)
-add_auto_test_program(test_VoiceBankCheckScheduler hello-fswatcher)
+# The test gives the watcher of the scheduler the monitor program of the build.
+hellokit_add_auto_test(test_VoiceBankCheckScheduler.cpp HelloKitVoiceBank PROGRAMS hello-fswatcher)

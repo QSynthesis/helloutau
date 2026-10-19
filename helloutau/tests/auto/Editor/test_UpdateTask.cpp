@@ -14,6 +14,7 @@
 #include <hellokit/Support/TemporaryStorage.h>
 
 #include <helloutau/Editor/AppSettings.h>
+#include <helloutau/Editor/PortableUpdate.h>
 #include <helloutau/Editor/UpdateChecker.h>
 #include <helloutau/Editor/UpdateTask.h>
 
@@ -114,6 +115,8 @@ private Q_SLOTS:
 
     void the_portable_application_is_extracted_and_scheduled() {
         UpdateTask task(*m_settings, UpdateTask::Portable, installDirectory());
+        QCOMPARE(task.updater(), PortableUpdate::defaultUpdater());
+        task.setUpdater(QStringLiteral(TEST_PROGRAM_HELLO_UPDATER));
         task.offer(releaseOf(QStringLiteral("2.0")), QStringLiteral("app.zip"));
         const auto archive = writeRelease();
         QVERIFY(!archive.isEmpty());
