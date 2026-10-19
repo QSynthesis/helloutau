@@ -22,6 +22,8 @@
 
 #include <stdcorelib/path.h>
 
+#include <helloutau/Widgets/HeightForWidthFilter.h>
+
 #include "AppSettings.h"
 #include "SynthToolTrust.h"
 
@@ -244,6 +246,7 @@ namespace hello::daw {
         layout->addLayout(form);
         layout->addWidget(buttons);
         resize(600, 0);
+        new HeightForWidthFilter(this);
     }
 
     ProjectPropertiesDialog::~ProjectPropertiesDialog() = default;

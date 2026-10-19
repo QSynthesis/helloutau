@@ -17,6 +17,7 @@
 
 #include <stdutau/utaconst.h>
 
+#include <helloutau/Widgets/HeightForWidthFilter.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
 
 #include "NoteEntriesDialog.h"
@@ -221,6 +222,7 @@ namespace hello::daw {
         layout->addLayout(othersRow);
         layout->addWidget(buttons);
         resize(420, 0);
+        new HeightForWidthFilter(this);
     }
 
     NotePropertiesDialog::~NotePropertiesDialog() = default;
