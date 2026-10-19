@@ -89,13 +89,11 @@ set(HELLO_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 include(DetectTriplet)
 
 # The application is a bundle on macOS, HelloUtau.app. Both modules lay their build and their
-# installation out in it, as qmsetup does for <proj>_MACOSX_BUNDLE_NAME: the programs in
+# installation out in it, as qmsetup does for <proj>_MACOSX_BUNDLE_NAME on macOS: the programs in
 # Contents/MacOS, the libraries in Contents/Frameworks, the plugins in Contents/Plugins and the
-# data in Contents/Resources.
-set(HELLO_MACOSX_BUNDLE_NAME)
-if(APPLE AND HELLO_BUILD_APPLICATION)
-    set(HELLO_MACOSX_BUNDLE_NAME HelloUtau)
-endif()
+# data in Contents/Resources. A build without the application keeps the layout, and the name has
+# no effect on the other systems.
+set(HELLO_MACOSX_BUNDLE_NAME HelloUtau)
 
 # ----------------------------------
 # Find basic dependencies

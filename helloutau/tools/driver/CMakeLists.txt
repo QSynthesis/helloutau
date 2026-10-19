@@ -31,7 +31,7 @@ qm_add_win_manifest(${PROJECT_NAME} NAME "HelloUtau")
 # HelloUtau.app on macOS, whose name the root CMakeLists.txt gives as HELLO_MACOSX_BUNDLE_NAME.
 # qm_add_mac_bundle names the executable after the bundle. The icon is written from the drawings
 # of the icon as helloutau.ico is, see the application icon in docs/Distribution.md.
-if(HELLO_MACOSX_BUNDLE_NAME)
+if(APPLE)
     qm_add_mac_bundle(${PROJECT_NAME}
         NAME "${HELLO_MACOSX_BUNDLE_NAME}"
         DESCRIPTION "${PROJECT_DESCRIPTION}"
