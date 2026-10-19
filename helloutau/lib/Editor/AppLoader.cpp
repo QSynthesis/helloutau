@@ -41,10 +41,9 @@ namespace hello::daw {
         // of lib and share beside the bin directory elsewhere.
         bool isBundle(const QString &programDirectory) {
 #ifdef Q_OS_MACOS
-            const QDir directory(programDirectory);
-            return directory.dirName() == QLatin1String("MacOS") &&
-                   QFileInfo(directory.absoluteFilePath(QStringLiteral(".."))).fileName() ==
-                       QLatin1String("Contents");
+            // The path is cleaned first. The file name of Contents/MacOS/.. is .., not Contents.
+            return QDir::cleanPath(QDir(programDirectory).absolutePath())
+                .endsWith(QLatin1String("/Contents/MacOS"));
 #else
             Q_UNUSED(programDirectory);
             return false;

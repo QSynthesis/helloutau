@@ -131,6 +131,18 @@ private Q_SLOTS:
         AppSettings(directory.filePath(QStringLiteral("settings.json")))
             .appearance()
             .setLanguage(QStringLiteral("zh_CN"));
+#ifdef Q_OS_MACOS
+        // The tests run beside the bundle, which holds the translations of the application. They
+        // are copied into the translations of the user.
+        const QDir source(QStringLiteral(TEST_TRANSLATIONS_DIR));
+        const QDir target(directory.filePath(QStringLiteral("Extensions/translations")));
+        QVERIFY(target.mkpath(QStringLiteral(".")));
+        const auto files = source.entryList({QStringLiteral("*.qm")}, QDir::Files);
+        QVERIFY(!files.isEmpty());
+        for (const auto &file : files) {
+            QVERIFY(QFile::copy(source.filePath(file), target.filePath(file)));
+        }
+#endif
         {
             const AppLoader loader({QStringLiteral("helloutau"),
                                     QLatin1String(AppLoader::settingsOption), directory.path()});
@@ -552,9 +564,13 @@ private Q_SLOTS:
     }
 
     // The bundled core plugin, found beside the program, opens a new project. Its windows close
-    // when the plugin shuts down.
+    // when the plugin shuts down. On macOS the tests run beside the bundle, which holds the
+    // plugins, so the plugins are loaded from the directory of the build.
     void the_builtin_core_plugin_opens_a_window() {
         AppLoader loader(arguments());
+#ifdef Q_OS_MACOS
+        loader.setPluginPaths({QStringLiteral(TEST_BUILTIN_PLUGINS_DIR)});
+#endif
         QString error;
         QVERIFY2(loader.load(&error), qPrintable(error));
         // Every bundled plugin loads without error.

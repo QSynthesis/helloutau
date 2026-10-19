@@ -62,4 +62,6 @@ add_dependencies(test_AppLoader test_AppLoaderPlugin test_AppLoaderFailingPlugin
 target_compile_definitions(test_AppLoader PRIVATE
     TEST_APPLOADER_CORE="$<TARGET_FILE:test_AppLoaderPlugin>"
     TEST_APPLOADER_FAILING_CORE="$<TARGET_FILE:test_AppLoaderFailingPlugin>"
+    TEST_BUILTIN_PLUGINS_DIR="${HELLOUTAU_BUILD_PLUGINS_DIR}"
+    TEST_TRANSLATIONS_DIR="${HELLOUTAU_BUILD_DATA_DIR}/translations"
 )
