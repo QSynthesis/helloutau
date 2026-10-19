@@ -102,6 +102,7 @@ private Q_SLOTS:
 
     void an_offer_makes_the_release_available() {
         UpdateTask task(*m_settings, UpdateTask::Portable, installDirectory());
+        task.setUpdater(QStringLiteral(TEST_PROGRAM_HELLO_UPDATER));
         QCOMPARE(task.state(), UpdateTask::Idle);
         QSignalSpy states(&task, &UpdateTask::stateChanged);
         task.offer(releaseOf(QStringLiteral("2.0")), QStringLiteral("app.zip"));
@@ -142,6 +143,7 @@ private Q_SLOTS:
     // Canceling a prepared update removes the download and the extracted directory.
     void cancel_discards_the_prepared_update() {
         UpdateTask task(*m_settings, UpdateTask::Portable, installDirectory());
+        task.setUpdater(QStringLiteral(TEST_PROGRAM_HELLO_UPDATER));
         task.offer(releaseOf(QStringLiteral("2.0")), QStringLiteral("app.zip"));
         const auto archive = writeRelease();
         task.prepareFrom(archive);
@@ -156,6 +158,7 @@ private Q_SLOTS:
 
     void cancel_stops_the_extraction() {
         UpdateTask task(*m_settings, UpdateTask::Portable, installDirectory());
+        task.setUpdater(QStringLiteral(TEST_PROGRAM_HELLO_UPDATER));
         task.offer(releaseOf(QStringLiteral("2.0")), QStringLiteral("app.zip"));
         const auto archive = writeRelease();
         task.prepareFrom(archive);
@@ -170,6 +173,7 @@ private Q_SLOTS:
 
     void an_archive_without_the_program_fails() {
         UpdateTask task(*m_settings, UpdateTask::Portable, installDirectory());
+        task.setUpdater(QStringLiteral(TEST_PROGRAM_HELLO_UPDATER));
         task.offer(releaseOf(QStringLiteral("2.0")), QStringLiteral("other.zip"));
         const auto archive = UpdateChecker::downloadDirectory() + QStringLiteral("/other.zip");
         QDir().mkpath(UpdateChecker::downloadDirectory());
