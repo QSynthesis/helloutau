@@ -12,7 +12,7 @@
 #include <hellokit/Update/SoftwareReleaseQuery.h>
 
 #include "AppSettings.h"
-#include "PortableUpdate.h"
+#include "SoftwareTreeUpdate.h"
 #include "UpdateChecker.h"
 
 namespace hello::daw {
@@ -20,9 +20,10 @@ namespace hello::daw {
     UpdateTask::UpdateTask(AppSettings &settings, Kind kind, const QString &installDirectory,
                            QObject *parent)
         : QObject(parent), m_settings(settings), m_kind(kind),
-          m_updater(PortableUpdate::defaultUpdater()), m_query(new kit::SoftwareReleaseQuery(this)),
+          m_updater(SoftwareTreeUpdate::defaultUpdater()),
+          m_query(new kit::SoftwareReleaseQuery(this)),
           m_download(new kit::SoftwareReleaseDownload(this)),
-          m_portable(new PortableUpdate(installDirectory, this)) {
+          m_treeUpdate(new SoftwareTreeUpdate(installDirectory, this)) {
         connect(m_query, &kit::SoftwareReleaseQuery::finished, this, [this] {
             const auto &release = m_query->release();
             if (!release) {
@@ -49,12 +50,13 @@ namespace hello::daw {
             }
             prepareFrom(file);
         });
-        connect(m_portable, &PortableUpdate::progressChanged, this, &UpdateTask::progressChanged);
-        connect(m_portable, &PortableUpdate::finished, this, [this] {
-            if (!m_portable->errorString().isEmpty()) {
+        connect(m_treeUpdate, &SoftwareTreeUpdate::progressChanged, this,
+                &UpdateTask::progressChanged);
+        connect(m_treeUpdate, &SoftwareTreeUpdate::finished, this, [this] {
+            if (!m_treeUpdate->errorString().isEmpty()) {
                 // The archive is removed with the failure, as with a cancellation.
                 removeDownload();
-                fail(tr("Cannot extract the update: %1").arg(m_portable->errorString()));
+                fail(tr("Cannot extract the update: %1").arg(m_treeUpdate->errorString()));
                 return;
             }
             setState(Ready);
@@ -110,10 +112,10 @@ namespace hello::daw {
         if (!m_release || isRunning()) {
             return;
         }
-        if (m_kind == Portable && !m_portable->canReplace()) {
+        if (m_kind == Portable && !m_treeUpdate->canReplace()) {
             fail(tr("The folder that contains %1 cannot be written, so that the update cannot be "
                     "installed there. Download the new version from the page of the release.")
-                     .arg(QDir::toNativeSeparators(m_portable->installDirectory())));
+                     .arg(QDir::toNativeSeparators(m_treeUpdate->installDirectory())));
             return;
         }
         setState(Downloading);
@@ -132,7 +134,7 @@ namespace hello::daw {
         // The program, whose presence confirms that the archive is that of the application
         const auto program =
             QStringLiteral("bin/") + QFileInfo(QCoreApplication::applicationFilePath()).fileName();
-        m_portable->startExtraction(file, program, m_settings.updates().extractionThreadCount());
+        m_treeUpdate->startExtraction(file, program, m_settings.updates().extractionThreadCount());
     }
 
     void UpdateTask::cancel() {
@@ -147,13 +149,13 @@ namespace hello::daw {
                 setState(Available);
                 break;
             case Extracting:
-                m_portable->cancel();
+                m_treeUpdate->cancel();
                 removeDownload();
                 setState(Available);
                 break;
             case Ready:
                 unschedule();
-                m_portable->removeRemnants();
+                m_treeUpdate->removeRemnants();
                 removeDownload();
                 setState(Available);
                 break;
@@ -176,15 +178,15 @@ namespace hello::daw {
             launcher->setLaunch(key, m_assetFile, UpdateChecker::installerArguments(relaunch));
         } else {
             const auto updater =
-                PortableUpdate::copyUpdater(m_updater, UpdateChecker::downloadDirectory());
+                SoftwareTreeUpdate::copyUpdater(m_updater, UpdateChecker::downloadDirectory());
             if (updater.isEmpty()) {
                 return false;
             }
             launcher->setLaunch(
                 key, updater,
-                m_portable->updaterArguments(QCoreApplication::applicationPid(), updaterLog(),
-                                             relaunch ? QCoreApplication::applicationFilePath()
-                                                      : QString()));
+                m_treeUpdate->updaterArguments(QCoreApplication::applicationPid(), updaterLog(),
+                                               relaunch ? QCoreApplication::applicationFilePath()
+                                                        : QString()));
         }
         // The installation starts the application again itself.
         if (relaunch) {

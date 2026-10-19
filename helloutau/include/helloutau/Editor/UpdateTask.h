@@ -20,7 +20,7 @@ namespace hello::kit {
 namespace hello::daw {
 
     class AppSettings;
-    class PortableUpdate;
+    class SoftwareTreeUpdate;
 
     /// One update of the application, from the check to the scheduled installation. The task
     /// runs in the background, independent of the windows and of the update dialog, which only
@@ -113,7 +113,7 @@ namespace hello::daw {
         bool schedule(bool relaunch);
 
         /// The program that schedule() copies as hello-updater for the portable application,
-        /// PortableUpdate::defaultUpdater() unless setUpdater() specifies another
+        /// SoftwareTreeUpdate::defaultUpdater() unless setUpdater() specifies another
         QString updater() const;
         void setUpdater(const QString &updater);
 
@@ -153,7 +153,7 @@ namespace hello::daw {
         QString m_updater;
         kit::SoftwareReleaseQuery *m_query;
         kit::SoftwareReleaseDownload *m_download;
-        PortableUpdate *m_portable;
+        SoftwareTreeUpdate *m_treeUpdate;
     };
 
 }

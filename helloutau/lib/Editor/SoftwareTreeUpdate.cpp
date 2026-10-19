@@ -1,4 +1,4 @@
-#include "PortableUpdate.h"
+#include "SoftwareTreeUpdate.h"
 
 #include <filesystem>
 #include <system_error>
@@ -23,19 +23,19 @@ namespace hello::daw {
 
     }
 
-    PortableUpdate::PortableUpdate(const QString &installDirectory, QObject *parent)
+    SoftwareTreeUpdate::SoftwareTreeUpdate(const QString &installDirectory, QObject *parent)
         : QObject(parent), m_installDirectory(QDir::cleanPath(installDirectory)) {
     }
 
-    PortableUpdate::~PortableUpdate() {
+    SoftwareTreeUpdate::~SoftwareTreeUpdate() {
         stopExtraction();
     }
 
-    QString PortableUpdate::applicationInstallDirectory() {
+    QString SoftwareTreeUpdate::applicationInstallDirectory() {
         return QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/.."));
     }
 
-    QString PortableUpdate::updaterFileName() {
+    QString SoftwareTreeUpdate::updaterFileName() {
 #ifdef Q_OS_WINDOWS
         return QStringLiteral("hello-updater.exe");
 #else
@@ -43,19 +43,19 @@ namespace hello::daw {
 #endif
     }
 
-    QString PortableUpdate::installDirectory() const {
+    QString SoftwareTreeUpdate::installDirectory() const {
         return m_installDirectory;
     }
 
-    QString PortableUpdate::newDirectory() const {
+    QString SoftwareTreeUpdate::newDirectory() const {
         return m_installDirectory + QStringLiteral(".new");
     }
 
-    QString PortableUpdate::oldDirectory() const {
+    QString SoftwareTreeUpdate::oldDirectory() const {
         return m_installDirectory + QStringLiteral(".old");
     }
 
-    bool PortableUpdate::canReplace() const {
+    bool SoftwareTreeUpdate::canReplace() const {
         // A file stands for the directories, because creating either requires the permission
         // to write in the parent directory.
         QTemporaryFile probe(QDir::cleanPath(m_installDirectory + QStringLiteral("/..")) +
@@ -63,8 +63,8 @@ namespace hello::daw {
         return probe.open();
     }
 
-    void PortableUpdate::startExtraction(const QString &archive, const QString &program,
-                                         int threadCount) {
+    void SoftwareTreeUpdate::startExtraction(const QString &archive, const QString &program,
+                                             int threadCount) {
         stopExtraction();
         m_canceled = false;
         m_threadError.clear();
@@ -121,7 +121,7 @@ namespace hello::daw {
         m_thread->start();
     }
 
-    void PortableUpdate::cancel() {
+    void SoftwareTreeUpdate::cancel() {
         if (!m_thread) {
             return;
         }
@@ -129,16 +129,16 @@ namespace hello::daw {
         m_extractor->cancel();
     }
 
-    bool PortableUpdate::isRunning() const {
+    bool SoftwareTreeUpdate::isRunning() const {
         return m_thread != nullptr;
     }
 
-    QString PortableUpdate::errorString() const {
+    QString SoftwareTreeUpdate::errorString() const {
         return m_errorString;
     }
 
-    QStringList PortableUpdate::updaterArguments(qint64 pid, const QString &log,
-                                                 const QString &launch) const {
+    QStringList SoftwareTreeUpdate::updaterArguments(qint64 pid, const QString &log,
+                                                     const QString &launch) const {
         QStringList arguments{
             QStringLiteral("--pid"),         QString::number(pid),
             QStringLiteral("--target"),      QDir::toNativeSeparators(m_installDirectory),
@@ -152,11 +152,11 @@ namespace hello::daw {
         return arguments;
     }
 
-    QString PortableUpdate::defaultUpdater() {
+    QString SoftwareTreeUpdate::defaultUpdater() {
         return QCoreApplication::applicationDirPath() + QLatin1Char('/') + updaterFileName();
     }
 
-    QString PortableUpdate::copyUpdater(const QString &updater, const QString &directory) {
+    QString SoftwareTreeUpdate::copyUpdater(const QString &updater, const QString &directory) {
         const auto target = directory + QLatin1Char('/') + updaterFileName();
         if (!QDir().mkpath(directory)) {
             return {};
@@ -166,12 +166,12 @@ namespace hello::daw {
         return QFile::copy(updater, target) ? target : QString();
     }
 
-    void PortableUpdate::removeRemnants() const {
+    void SoftwareTreeUpdate::removeRemnants() const {
         QDir(newDirectory()).removeRecursively();
         QDir(oldDirectory()).removeRecursively();
     }
 
-    QString PortableUpdate::readLog(const QString &path) {
+    QString SoftwareTreeUpdate::readLog(const QString &path) {
         QFile file(path);
         if (!file.open(QIODevice::ReadOnly)) {
             return {};
@@ -179,7 +179,7 @@ namespace hello::daw {
         return QString::fromUtf8(file.readAll()).trimmed();
     }
 
-    void PortableUpdate::stopExtraction() {
+    void SoftwareTreeUpdate::stopExtraction() {
         if (!m_thread) {
             return;
         }
@@ -188,7 +188,7 @@ namespace hello::daw {
         m_thread.reset();
     }
 
-    void PortableUpdate::finishExtraction() {
+    void SoftwareTreeUpdate::finishExtraction() {
         m_thread->wait();
         m_thread.reset();
         if (m_canceled) {

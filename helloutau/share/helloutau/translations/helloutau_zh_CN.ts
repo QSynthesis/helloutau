@@ -2316,17 +2316,6 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
     </message>
 </context>
 <context>
-    <name>hello::daw::PortableUpdate</name>
-    <message>
-        <source>The folder %1 cannot be removed.</source>
-        <translation>无法删除文件夹 %1。</translation>
-    </message>
-    <message>
-        <source>The archive %1 does not contain the program %2.</source>
-        <translation>压缩包 %1 中没有程序 %2。</translation>
-    </message>
-</context>
-<context>
     <name>hello::daw::ProcessAudioFilesDialog</name>
     <message>
         <source>%1-bit float</source>
@@ -3243,6 +3232,17 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
     <message>
         <source>No matching settings</source>
         <translation>没有匹配的设置</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::SoftwareTreeUpdate</name>
+    <message>
+        <source>The folder %1 cannot be removed.</source>
+        <translation>无法删除文件夹 %1。</translation>
+    </message>
+    <message>
+        <source>The archive %1 does not contain the program %2.</source>
+        <translation>压缩包 %1 中没有程序 %2。</translation>
     </message>
 </context>
 <context>

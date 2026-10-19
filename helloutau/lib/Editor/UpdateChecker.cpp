@@ -23,7 +23,7 @@
 #endif
 
 #include "AppLoader.h"
-#include "PortableUpdate.h"
+#include "SoftwareTreeUpdate.h"
 #include "UpdateDialog.h"
 #include "UpdateTask.h"
 #include "UpdateTaskView.h"
@@ -248,7 +248,7 @@ namespace hello::daw {
                               ? UpdateTask::Installed
                               : UpdateTask::Portable;
         impl.task =
-            new UpdateTask(settings, kind, PortableUpdate::applicationInstallDirectory(), this);
+            new UpdateTask(settings, kind, SoftwareTreeUpdate::applicationInstallDirectory(), this);
         connect(impl.task, &UpdateTask::stateChanged, this, [this](UpdateTask::State state) {
             stdc_impl_t;
             if (impl.checking && state != UpdateTask::Checking) {
@@ -311,12 +311,12 @@ namespace hello::daw {
         const auto page = impl.settings.updates().pendingPage();
         impl.settings.updates().clearPendingInstallation();
         // Read before the removal of the download directory, which holds it
-        const auto log = PortableUpdate::readLog(UpdateTask::updaterLog());
+        const auto log = SoftwareTreeUpdate::readLog(UpdateTask::updaterLog());
         // Removed regardless of the result, so that no download remains in the temporary directory.
         // A failed update is downloaded again.
         QDir(downloadDirectory()).removeRecursively();
         if (impl.task->kind() == UpdateTask::Portable) {
-            PortableUpdate(PortableUpdate::applicationInstallDirectory()).removeRemnants();
+            SoftwareTreeUpdate(SoftwareTreeUpdate::applicationInstallDirectory()).removeRemnants();
         }
         const auto target = QVersionNumber::fromString(pending);
         if (QVersionNumber::compare(currentVersion().normalized(), target.normalized()) >= 0) {

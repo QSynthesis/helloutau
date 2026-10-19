@@ -8,7 +8,7 @@
 
 #include <zip.h>
 
-#include <helloutau/Editor/PortableUpdate.h>
+#include <helloutau/Editor/SoftwareTreeUpdate.h>
 
 using namespace hello::daw;
 
@@ -48,7 +48,7 @@ namespace {
 
 }
 
-class test_PortableUpdate : public QObject {
+class test_SoftwareTreeUpdate : public QObject {
     Q_OBJECT
 
 private:
@@ -81,11 +81,11 @@ private Q_SLOTS:
 
     void the_new_version_is_extracted_beside_the_installation() {
         QVERIFY(writeRelease());
-        PortableUpdate update(installDirectory());
+        SoftwareTreeUpdate update(installDirectory());
         QCOMPARE(update.newDirectory(), installDirectory() + QStringLiteral(".new"));
         QCOMPARE(update.oldDirectory(), installDirectory() + QStringLiteral(".old"));
-        QSignalSpy finished(&update, &PortableUpdate::finished);
-        QSignalSpy progress(&update, &PortableUpdate::progressChanged);
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
+        QSignalSpy progress(&update, &SoftwareTreeUpdate::progressChanged);
         update.startExtraction(archivePath(), QStringLiteral("bin/program"), 2);
         QVERIFY(update.isRunning());
         QVERIFY(finished.wait());
@@ -102,9 +102,9 @@ private Q_SLOTS:
 
     void an_existing_new_directory_is_replaced() {
         QVERIFY(writeRelease());
-        PortableUpdate update(installDirectory());
+        SoftwareTreeUpdate update(installDirectory());
         QVERIFY(writeFile(update.newDirectory() + QStringLiteral("/stale.txt"), "stale"));
-        QSignalSpy finished(&update, &PortableUpdate::finished);
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
         update.startExtraction(archivePath(), QStringLiteral("bin/program"), 1);
         QVERIFY(finished.wait());
         QVERIFY(update.errorString().isEmpty());
@@ -113,8 +113,8 @@ private Q_SLOTS:
 
     void a_missing_program_fails_and_removes_the_new_directory() {
         QVERIFY(writeRelease());
-        PortableUpdate update(installDirectory());
-        QSignalSpy finished(&update, &PortableUpdate::finished);
+        SoftwareTreeUpdate update(installDirectory());
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
         update.startExtraction(archivePath(), QStringLiteral("bin/other"), 1);
         QVERIFY(finished.wait());
         QVERIFY(!update.errorString().isEmpty());
@@ -126,9 +126,9 @@ private Q_SLOTS:
                                                 {"helloutau-2/bin/program", "new program"},
                                                 {"../evil.txt",             "evil"       }
         }));
-        PortableUpdate update(installDirectory());
+        SoftwareTreeUpdate update(installDirectory());
         QVERIFY(writeFile(update.newDirectory() + QStringLiteral("/stale.txt"), "stale"));
-        QSignalSpy finished(&update, &PortableUpdate::finished);
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
         update.startExtraction(archivePath(), QStringLiteral("bin/program"), 1);
         QVERIFY(finished.wait());
         QVERIFY(!update.errorString().isEmpty());
@@ -138,8 +138,8 @@ private Q_SLOTS:
 
     void cancel_removes_the_new_directory_without_finished() {
         QVERIFY(writeRelease());
-        PortableUpdate update(installDirectory());
-        QSignalSpy finished(&update, &PortableUpdate::finished);
+        SoftwareTreeUpdate update(installDirectory());
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
         update.startExtraction(archivePath(), QStringLiteral("bin/program"), 1);
         update.cancel();
         QTRY_VERIFY(!update.isRunning());
@@ -153,7 +153,7 @@ private Q_SLOTS:
         QVERIFY(writeRelease());
         QString newDirectory;
         {
-            PortableUpdate update(installDirectory());
+            SoftwareTreeUpdate update(installDirectory());
             newDirectory = update.newDirectory();
             update.startExtraction(archivePath(), QStringLiteral("bin/program"), 1);
         }
@@ -163,8 +163,8 @@ private Q_SLOTS:
 
     void a_restarted_extraction_reports_once() {
         QVERIFY(writeRelease());
-        PortableUpdate update(installDirectory());
-        QSignalSpy finished(&update, &PortableUpdate::finished);
+        SoftwareTreeUpdate update(installDirectory());
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
         update.startExtraction(archivePath(), QStringLiteral("bin/other"), 1);
         update.startExtraction(archivePath(), QStringLiteral("bin/program"), 1);
         QVERIFY(finished.wait());
@@ -174,12 +174,13 @@ private Q_SLOTS:
     }
 
     void the_directory_beside_the_installation_is_writable() {
-        QVERIFY(PortableUpdate(installDirectory()).canReplace());
-        QVERIFY(!PortableUpdate(m_root.filePath(QStringLiteral("missing/HelloUtau"))).canReplace());
+        QVERIFY(SoftwareTreeUpdate(installDirectory()).canReplace());
+        QVERIFY(
+            !SoftwareTreeUpdate(m_root.filePath(QStringLiteral("missing/HelloUtau"))).canReplace());
     }
 
     void the_updater_arguments_name_the_directories() {
-        PortableUpdate update(installDirectory());
+        SoftwareTreeUpdate update(installDirectory());
         const auto log = m_root.filePath(QStringLiteral("updater.log"));
         const QStringList common{
             QStringLiteral("--pid"),         QStringLiteral("42"),
@@ -198,19 +199,19 @@ private Q_SLOTS:
     // The updater of the application is in the directory of the program. The copy of the updater
     // of the build replaces an existing copy.
     void the_updater_is_copied_into_the_directory() {
-        QCOMPARE(PortableUpdate::defaultUpdater(), QCoreApplication::applicationDirPath() +
-                                                       QLatin1Char('/') +
-                                                       PortableUpdate::updaterFileName());
+        QCOMPARE(SoftwareTreeUpdate::defaultUpdater(), QCoreApplication::applicationDirPath() +
+                                                           QLatin1Char('/') +
+                                                           SoftwareTreeUpdate::updaterFileName());
         const auto updater = QStringLiteral(TEST_PROGRAM_HELLO_UPDATER);
         const auto directory = m_root.filePath(QStringLiteral("updates"));
-        const auto copy = PortableUpdate::copyUpdater(updater, directory);
-        QCOMPARE(copy, directory + QLatin1Char('/') + PortableUpdate::updaterFileName());
+        const auto copy = SoftwareTreeUpdate::copyUpdater(updater, directory);
+        QCOMPARE(copy, directory + QLatin1Char('/') + SoftwareTreeUpdate::updaterFileName());
         QCOMPARE(QFileInfo(copy).size(), QFileInfo(updater).size());
-        QCOMPARE(PortableUpdate::copyUpdater(updater, directory), copy);
+        QCOMPARE(SoftwareTreeUpdate::copyUpdater(updater, directory), copy);
     }
 
     void the_remnants_are_removed() {
-        PortableUpdate update(installDirectory());
+        SoftwareTreeUpdate update(installDirectory());
         QVERIFY(writeFile(update.newDirectory() + QStringLiteral("/bin/program"), "new"));
         QVERIFY(writeFile(update.oldDirectory() + QStringLiteral("/bin/program"), "old"));
         update.removeRemnants();
@@ -223,13 +224,13 @@ private Q_SLOTS:
     void the_log_is_read() {
         const auto log = m_root.filePath(QStringLiteral("updater.log"));
         QFile::remove(log);
-        QVERIFY(PortableUpdate::readLog(log).isEmpty());
+        QVERIFY(SoftwareTreeUpdate::readLog(log).isEmpty());
         QVERIFY(writeFile(log, "hello-updater: cannot rename a to b\n"));
-        QCOMPARE(PortableUpdate::readLog(log),
+        QCOMPARE(SoftwareTreeUpdate::readLog(log),
                  QStringLiteral("hello-updater: cannot rename a to b"));
     }
 };
 
-QTEST_GUILESS_MAIN(test_PortableUpdate)
+QTEST_GUILESS_MAIN(test_SoftwareTreeUpdate)
 
-#include "test_PortableUpdate.moc"
+#include "test_SoftwareTreeUpdate.moc"

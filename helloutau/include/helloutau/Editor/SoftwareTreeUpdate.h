@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_PORTABLEUPDATE_H
-#define HELLOUTAU_EDITOR_PORTABLEUPDATE_H
+#ifndef HELLOUTAU_EDITOR_SOFTWARETREEUPDATE_H
+#define HELLOUTAU_EDITOR_SOFTWARETREEUPDATE_H
 
 #include <atomic>
 #include <memory>
@@ -18,19 +18,20 @@ namespace hello::kit {
 
 namespace hello::daw {
 
-    /// The update of the portable application: the extraction of the new version into
+    /// The update that replaces the file tree of the installation as a whole, as the portable
+    /// application is updated: the extraction of the new version into
     /// <tt><installation>.new</tt> beside the installation directory, and the replacement of the
     /// installation directory by \c hello-updater after the application quits. See the update of
     /// the portable application in docs/Distribution.md.
-    class HELLOUTAU_EDITOR_EXPORT PortableUpdate : public QObject {
+    class HELLOUTAU_EDITOR_EXPORT SoftwareTreeUpdate : public QObject {
         Q_OBJECT
     public:
         /// Constructs the update of the installation in \a installDirectory, the parent of the
         /// directory of the program.
-        explicit PortableUpdate(const QString &installDirectory, QObject *parent = nullptr);
+        explicit SoftwareTreeUpdate(const QString &installDirectory, QObject *parent = nullptr);
 
         /// Cancels a running extraction and waits for it to end.
-        ~PortableUpdate();
+        ~SoftwareTreeUpdate();
 
         /// Returns the installation directory of the running application, the parent of the
         /// directory of the program.
@@ -115,4 +116,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_PORTABLEUPDATE_H
+#endif // HELLOUTAU_EDITOR_SOFTWARETREEUPDATE_H
