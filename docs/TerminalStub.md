@@ -117,3 +117,17 @@ socket 放在 HelloUtau 本次运行新建的私有目录中，目录权限为 0
 
 - **Qt Creator**（<https://github.com/qt-creator/qt-creator>，提交 `017979d`，副本位于 `.cache/qt-creator`，仅检出三个目录）：`src/libs/utils/terminalcommand.cpp`（已知终端的表与查找顺序）、`src/libs/utils/terminalinterface.cpp` 与 `src/tools/process_stub/main.cpp`（辅助程序经本地 socket 报告 `pid` 与 `exit`，socket 位于私有目录）、`src/libs/utils/externalterminalprocessimpl.cpp`（macOS 的 AppleScript，按窗口 id 关闭窗口，以及 macOS 14 上取不到窗口 id 的处理）。Qt Creator 采用 GPL-3.0 加 Qt 例外，**只参考设计，不复制代码**。
 - **QSynthesis**（`.cache/QSynthesis-Old/QSynthesis/Frontend/Dialogs/Extern/TerminalDialog.cpp`）：macOS 以 AppleScript 在 Terminal 中执行 `cd <目录> && ./temp.sh && exit`，每秒查询 `busy`。不沿用的原因有五项。取消时退出整个 Terminal，用户的其他会话随之关闭。路径未加引号即拼入 AppleScript 与 shell 命令。`./temp.sh` 要求执行权限。脚本失败时不执行 `exit`，窗口一直保留。拿不到脚本的返回码。Linux 上以 `/bin/bash` 在后台运行，不开窗口。
+
+## Codex review（2026-10-19）
+
+以下意见由 Codex 对本设计文档进行审查后追加，原有内容未修改。
+
+1. [第 35 行](TerminalStub.md:35) 将 `--cwd` 描述成连接 socket 后设置的工作目录。`--cwd` 是 stub 的启动参数，应在启动子进程前由 stub 调用 `chdir`，不属于 socket 协议。
+2. [第 95 行](TerminalStub.md:95) 声称所有进程都以参数向量启动且不经过 shell，但 macOS 的 AppleScript、`.command` 文件以及 Linux 的 `terminator -e` 都存在命令字符串或 shell 解释边界。实现时应分别记录这些边界及其转义规则。
+3. [第 37 行](TerminalStub.md:37) 说终端窗口会随 stub 退出，[第 89 行](TerminalStub.md:89) 又说窗口是否关闭取决于 Terminal 的用户设置。需要确定窗口生命周期，或者明确接受窗口保留。
+4. [第 68 至 80 行](TerminalStub.md:68) 的 Linux 终端适配表需要说明每种终端的参数形式、等待行为、退出状态和保持窗口能力。`x-terminal-emulator` 是 alternatives 链接，不能只按固定终端处理。
+5. [第 41 至 58 行](TerminalStub.md:41) 的 socket 协议需要补充消息长度上限、未知消息、重复或乱序消息、EOF、半包，以及 `error` 消息中换行的转义规则。
+6. [第 62 行](TerminalStub.md:62) 对 token 的安全作用表述过强。token 可以确认连接属于本次启动的 stub，不能防止同一用户读取命令行后伪造连接的恶意进程。
+7. [第 36 至 39 行](TerminalStub.md:36) 需要明确 stub、脚本 shell 和合成工具的进程组归属，以及工具自行创建进程组时取消和超时是否仍能清理完整。
+8. 文档没有说明多个经典渲染脚本同时运行时如何分配 socket、token 和终端窗口。需要明确是否允许并发，以及每个运行实例的资源边界。
+9. [第 101 至 103 行](TerminalStub.md:101) 的测试计划还应覆盖错误消息中的特殊字符、socket 提前关闭、终端被用户关闭、取消后的进程组清理、无效工作目录、并发 stub 和终端程序立即退出等情况。
