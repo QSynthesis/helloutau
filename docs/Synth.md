@@ -63,7 +63,7 @@ SynthRunner                 纯虚，render(plan, synth tools, observer, diagnos
 
 [Wavtool 页面](https://sinestriker.github.io/documents/QPitchEditor/book/Developers/UTAU-Tools/Wavtool.html)提到，**moresampler 会读取 `temp.bat` 的内容**，以判断当前调用是否为最后一次。因此对于某些合成工具，批处理文件的**文本本身**就是输入，而不只是启动方式。不写出批处理文件，这类合成工具就无法工作。
 
-控制台窗口也必须保留。官方 UTAU 使用可见的控制台，用户能直接看到脚本的输出；`stdc::Popen` 的 `startupInfo()` 支持 `STARTF_USESHOWWINDOW`，正是为此修改的。
+控制台窗口也必须保留。官方 UTAU 使用可见的控制台，用户能直接看到脚本的输出；`stdc::Popen` 的 `startupInfo()` 支持 `STARTF_USESHOWWINDOW`，正是为此修改的。macOS 与 Linux 上在终端窗口中运行 `temp.sh` 的设计见 [`TerminalStub.md`](TerminalStub.md)，尚未实现。
 
 ### 两种引用模式与安全默认值
 
