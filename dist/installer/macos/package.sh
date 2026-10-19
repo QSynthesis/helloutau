@@ -3,7 +3,8 @@
 # docs/Distribution.md, in the output directory:
 #
 #     helloutau-<version>-<triplet>.dmg          the disk image, with HelloUtau.app and a link
-#                                                to /Applications
+#                                                to /Applications, which shows the license
+#                                                before it opens
 #     helloutau-<version>-<triplet>-symbols.zip  the dSYMs of the binaries, in the layout of the
 #                                                bundle, if the build records debug information
 #     SHA256SUMS                                 the digests of the files above, as sha256sum
@@ -99,6 +100,14 @@ codesign --verify --deep --strict --verbose=2 "$app"
 echo "== Create $base.dmg"
 ln -s /Applications "$image/Applications"
 hdiutil create -volname HelloUtau -srcfolder "$image" -ov -format UDZO "$output/$base.dmg"
+
+# The license, which the Finder shows before it mounts the image, and which the user accepts
+# before the image opens. hdiutil reports udifrez as deprecated, and it is the only way that
+# hdiutil provides.
+echo "== Add the license agreement"
+python3 "$repository/dist/installer/macos/sla.py" "$app/Contents/Resources/LICENSE" \
+    "$output/sla.plist"
+hdiutil udifrez -xml "$output/sla.plist" '' -quiet "$output/$base.dmg"
 assets=("$base.dmg")
 
 if [ "$count" -gt 0 ]; then
