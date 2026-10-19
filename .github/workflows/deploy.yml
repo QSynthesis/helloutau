@@ -109,12 +109,12 @@ jobs:
       - name: Package
         if: runner.os == 'macOS'
         shell: bash
-        run: ./dist/installer/macos/package.sh "${{ steps.build.outputs.directory }}" build/package
+        run: bash dist/installer/macos/package.sh "${{ steps.build.outputs.directory }}" build/package
 
       - name: Package
         if: runner.os == 'Linux'
         shell: bash
-        run: ./dist/installer/linux/package.sh "${{ steps.build.outputs.directory }}" build/package
+        run: bash dist/installer/linux/package.sh "${{ steps.build.outputs.directory }}" build/package
 
       # The paths of the assets: the package, the zip of Windows and Linux or the disk image of
       # macOS that is not the symbols, the installer of Windows, and the symbols
