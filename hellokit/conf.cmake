@@ -18,7 +18,7 @@ set(HELLOKIT_INSTALL_CONFIG_TEMPLATE
 # described by the DESCRIPTION of the project() of its own directory, which the function reads in
 # the scope of that directory. project() without DESCRIPTION leaves PROJECT_DESCRIPTION empty.
 set(HELLOKIT_RC_DESCRIPTION "${PROJECT_DESCRIPTION}")
-set(HELLOKIT_RC_COPYRIGHT "Copyright (c) 2026-present SineStriker")
+set(HELLOKIT_RC_COPYRIGHT "Copyright (c) 2026-present Team OpenVPI")
 
 function(_hellokit_common_configure_target _target)
     set(_description "${HELLOKIT_RC_DESCRIPTION}")

@@ -27,7 +27,7 @@ set(HELLOUTAU_PLUGIN_IID "org.OpenVPI.HelloUtau.Plugin")
 # described by the DESCRIPTION of the project() of its own directory, which the function reads in
 # the scope of that directory. project() without DESCRIPTION leaves PROJECT_DESCRIPTION empty.
 set(HELLOUTAU_RC_DESCRIPTION "${PROJECT_DESCRIPTION}")
-set(HELLOUTAU_RC_COPYRIGHT "Copyright (c) 2026-present SineStriker")
+set(HELLOUTAU_RC_COPYRIGHT "Copyright (c) 2026-present Team OpenVPI")
 
 function(_helloutau_common_configure_target _target)
     set(_description "${HELLOUTAU_RC_DESCRIPTION}")
