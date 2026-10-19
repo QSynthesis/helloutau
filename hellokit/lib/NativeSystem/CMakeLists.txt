@@ -46,13 +46,6 @@ foreach(_variant dll static-crt)
 
     set_target_properties(${_target} PROPERTIES MSVC_RUNTIME_LIBRARY "${_runtime}")
 
-    # The archive is built in the library directory of the tests, which is the library directory
-    # itself without a bundle. A static library is no part of the bundle on macOS, which
-    # cmake --install copies whole, and codesign rejects an archive in it.
-    set_target_properties(${_target} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${HELLOKIT_BUILD_TEST_LIBRARY_DIR}
-    )
-
     if(WIN32)
         target_link_libraries(${_target} PRIVATE user32 advapi32)
     elseif(APPLE)
