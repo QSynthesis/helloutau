@@ -35,6 +35,9 @@ configure_file(share/helloutau/update/UpdateManifest.json
 if(HELLO_INSTALL)
     install(FILES share/helloutau/update/UpdateManifest.json
         DESTINATION ${HELLOUTAU_INSTALL_DATA_DIR}/update)
+
+    # The license in the data directory, so that every package and installation carries it
+    install(FILES ${HELLO_SOURCE_DIR}/LICENSE DESTINATION ${HELLOUTAU_INSTALL_DATA_DIR})
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS LinguistTools)

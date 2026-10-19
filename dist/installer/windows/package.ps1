@@ -29,6 +29,8 @@ param(
 #                             helloutau/CMakeLists.txt
 #     share/Qt/translations/  the translations of Qt, installed by helloutau/CMakeLists.txt
 #     share/helloutau/update/ UpdateManifest.json, installed by helloutau/CMakeLists.txt
+#     share/helloutau/LICENSE the license, installed by helloutau/CMakeLists.txt, which the
+#                             installer shows
 #
 # The build must be complete: this script does not build, because building requires the
 # environment of the compiler. Steps: cmake --install, which deploys Qt and the other libraries
