@@ -142,8 +142,8 @@ namespace hello::kit {
         virtual double hopOf(int sampleRate) const;
 
         /// Returns the name of the sidecar file of the audio file \a wav, the file beside \a wav
-        /// that holds its map alone, if the format keeps one; otherwise \c std::nullopt, which
-        /// the default implementation returns. A file that holds the maps of several audio
+        /// that holds its map alone if the format keeps one. Otherwise, the default implementation
+        /// returns \c std::nullopt. A file that holds the maps of several audio
         /// files, such as \c desc.mrq, is no sidecar file.
         virtual std::optional<std::filesystem::path>
             sidecarNameOf(const std::filesystem::path &wav) const;

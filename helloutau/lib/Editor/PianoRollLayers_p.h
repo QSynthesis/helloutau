@@ -61,9 +61,10 @@ namespace hello::daw {
         void paintNote(QPainter &painter, const QRect &exposed, const Placement &placement);
     };
 
-    /// The envelope of each sung note above its bar, as UTAU draws it: over the fragment of its
-    /// sample, which starts the pre-utterance before the note, from the top of the row of the note
-    /// upward, a volume of 100 one row high; its intensity at the start of the fragment.
+    /// The envelope of each sung note above its bar, as UTAU draws it. The envelope covers the
+    /// sample fragment that starts at the pre-utterance before the note. It extends upward from
+    /// the top of the note row, has a volume of 100 one row high, and uses the intensity at the
+    /// start of the fragment.
     class PianoRollState::NoteEnvelopeLayer : public SceneLayer {
     public:
         explicit NoteEnvelopeLayer(PianoRollState *state) : m_state(state) {

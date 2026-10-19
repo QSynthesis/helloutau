@@ -63,12 +63,12 @@ namespace hello::daw {
 
         /// Shows the messages that precede the windows, in message boxes of the system, which
         /// appear without the widgets of Qt, or on the standard output or error if no message
-        /// box can be shown:
-        /// - with \c --help, the usage of the command line;
-        /// - without \c --allow-root, a warning if the process has the privileges of the
-        ///   administrator (kit::NativeProcess::isElevated()), because the synth tools and the
-        ///   plugins that a project runs would have them as well. The warning has the buttons
-        ///   Continue and Quit, of which Quit is selected at first.
+        /// box can be shown. With \c --help, it shows the usage of the command line.
+        ///
+        /// Without \c --allow-root, it shows a warning if the process has the privileges of the
+        /// administrator (kit::NativeProcess::isElevated()), because the synth tools and the
+        /// plugins that a project runs would have them as well. The warning has the buttons
+        /// Continue and Quit, of which Quit is selected at first.
         ///
         /// The texts are in the language of the settings. The program calls the function after
         /// the constructor and before run().

@@ -117,7 +117,7 @@ namespace hello::daw {
         /// Returns the update task of the application, which the checker holds.
         UpdateTask *task() const;
 
-        /// Sets the function that closes every window as quitting does, asking the user to save,
+        /// Sets the function that closes every window as quitting does, including the save prompt,
         /// and returns whether every window was closed. Install Now calls it before the
         /// application quits for the installation.
         void setCloseWindows(const std::function<bool()> &closeWindows);

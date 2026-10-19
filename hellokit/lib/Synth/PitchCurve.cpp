@@ -12,7 +12,7 @@ namespace hello::kit {
 
     namespace {
 
-        // The shortest vibrato in milliseconds that UTAU draws on its own note; see
+        // The shortest vibrato in milliseconds that UTAU draws on its own note. See
         // SHORTEST_VIBRATO in stdutau synth.cpp for the measurements.
         constexpr double ShortestVibrato = 50;
 
@@ -242,7 +242,7 @@ namespace hello::kit {
         if (x > 0 && x < span) {
             y += vibrato.offset / 100.0 * vibrato.amplitude;
             // Fading in and out exclude each other, and a short vibrato reaching into a
-            // neighbor does not fade; see find_impact() in stdutau synth.cpp.
+            // neighbor does not fade. See find_impact() in stdutau synth.cpp.
             double ratio = 1;
             if (!longEnough) {
                 ratio = 1;

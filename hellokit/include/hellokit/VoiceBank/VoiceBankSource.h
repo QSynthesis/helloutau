@@ -223,8 +223,8 @@ namespace hello::kit {
         /// Queried on opening a voice bank, with every directory that selectCharset() would be
         /// queried for, in the order of the voice bank.
         ///
-        /// \return one encoding per directory in the same order, \c std::nullopt to leave that
-        ///         directory out; by default, the answers of selectCharset() for each
+        /// \return one encoding per directory in the same order. \c std::nullopt leaves that
+        ///         directory out. The default returns the answers of selectCharset() for each
         virtual QList<std::optional<QString>>
             selectCharsets(const QList<const VoiceBankDirectorySource *> &directories,
                            DiagnosticList &diagnostics);

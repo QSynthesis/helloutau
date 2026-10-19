@@ -1121,8 +1121,8 @@ namespace hello::daw {
             }
         }
 
-        // In the realtime mode, renders the track in the background, from the playhead first;
-        // in the prerender mode, nothing, and the playhead shows only where playback is. Any
+        // In the realtime mode, renders the track in the background, from the playhead first.
+        // In the prerender mode, renders nothing, and the playhead shows only where playback is. Any
         // condition that prevents rendering, such as a missing voice bank, is reported once the
         // user plays.
         void updateBackground() {

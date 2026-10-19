@@ -142,8 +142,8 @@ namespace hello::kit {
         ///
         /// Each candidate decodes the bytes, and the characters score by their category in text
         /// and in misread text. Kana, ideographs, Hangul and full-width punctuation count for
-        /// it; invalid bytes, control characters, the private use area, half-width katakana and
-        /// Latin-1 letters count against it; each non-ASCII character of valid UTF-8 counts
+        /// it. Invalid bytes, control characters, the private use area, half-width katakana and
+        /// Latin-1 letters count against it. Each non-ASCII character of valid UTF-8 counts
         /// for UTF-8 once more, since other bytes seldom form it. Japanese read as GBK thus
         /// loses its kana, Chinese read as Shift_JIS turns into half-width katakana and the
         /// private use area, and Big5 read as GBK into the private use area.

@@ -51,10 +51,10 @@ namespace hello::daw {
 
         /// Returns whether the installation of \a program in \a folder is recommended, which the
         /// button Install All installs. Only a plugin that comes with a playinplugin(.exe) starts
-        /// the program for a preview, so the recommendations are limited to these plugins:
-        /// - the installation, if the folder has a playinplugin(.exe) of the plugin and no
-        ///   installation;
-        /// - the update, if the installation is Outdated and kept the program of the plugin.
+        /// the program for a preview, so the recommendations are limited to these plugins.
+        /// It recommends installation if the folder has a playinplugin(.exe) of the plugin and no
+        /// installation. It recommends an update if the installation is Outdated and kept the
+        /// program of the plugin.
         static bool isRecommended(const std::filesystem::path &folder,
                                   const std::filesystem::path &program);
 

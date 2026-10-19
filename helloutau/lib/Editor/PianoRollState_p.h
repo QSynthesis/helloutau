@@ -503,9 +503,9 @@ namespace hello::daw {
         /// The vibrato of note index, as a gesture shows it if it does
         std::optional<kit::Vibrato> vibratoOf(int index) const;
 
-        /// Where the handles of a vibrato are drawn: its trapezoid, from the start of the
-        /// vibrato up to the end of its fade-in, along its top to the start of its fade-out, and
-        /// down to the end of the note; and the box of one period from its phase on
+        /// The shape of the vibrato handles. The shape is a trapezoid from the start of the
+        /// vibrato to the end of its fade-in, along its top to the start of its fade-out, and
+        /// down to the end of the note. It also contains the box of one period from its phase on.
         struct VibratoShape {
             QPointF start;
             QPointF fadeIn;

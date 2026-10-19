@@ -10,7 +10,7 @@ namespace hello::daw {
 
     // The layout, as the mrq library of the author of moresampler reads it
     // (https://github.com/Sleepwalking/mrq/blob/6b2df0d5965bc4dce8c99be6a3eb1325ba94718e/mrq.h and
-    // mrq.c): "mrq ", the int32 version and the int32 entry count; each entry the int32 length of
+    // mrq.c): "mrq ", the int32 version and the int32 entry count. Each entry contains the int32 length of
     // its name, the name in UTF-16, the int32 size of its data, then the int32 frame count, the
     // int32 sample rate, the int32 hop in samples, a float frequency per frame, and in version 2 a
     // timestamp and a flag. A deleted entry keeps its place with its name zeroed. moresampler

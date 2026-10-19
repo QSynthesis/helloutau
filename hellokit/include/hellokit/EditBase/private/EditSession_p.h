@@ -86,7 +86,7 @@ namespace hello::kit::edit {
         bool read = false;
 
         /// The steps that the commit in progress discards, the redoable ones, reported by
-        /// stepsDiscarded() before its stepChanged(); first is -1 if none
+        /// stepsDiscarded() before its stepChanged(). The first is -1 if none.
         int discardedFirst = -1;
         int discardedLast = -1;
 

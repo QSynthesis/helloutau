@@ -20,8 +20,8 @@ namespace hello::kit {
     class VoiceBank;
     class VoiceBankCharsetSelector;
 
-    /// Chooses the encoding of a UST that does not state it, by asking the user. Implemented by
-    /// the side that links QtWidgets, as \c VoiceBankCharsetSelector is.
+    /// Selects the encoding of a UST that does not state it. The implementation in the side that
+    /// links QtWidgets obtains the selection from the user, as \c VoiceBankCharsetSelector does.
     class HELLOKIT_EDIT_EXPORT UstCharsetSelector {
     public:
         virtual ~UstCharsetSelector();
