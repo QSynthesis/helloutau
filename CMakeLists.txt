@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.19)
 
-# The oldest macOS that the application supports, 13.3, which stdutau requires, set before
-# project() so that the compilers receive it. See the release of macOS in docs/Distribution.md.
-set(CMAKE_OSX_DEPLOYMENT_TARGET 13.3 CACHE STRING "The oldest macOS that the build supports")
+# The oldest macOS that the application supports, 13.0, that of Qt 6.11, set before project() so
+# that the compilers receive it. See the release of macOS in docs/Distribution.md.
+set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0 CACHE STRING "The oldest macOS that the build supports")
 
 project(helloutau
     VERSION 0.1.8.0
