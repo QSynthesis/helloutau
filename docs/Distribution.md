@@ -1,6 +1,6 @@
 # 发布、安装、更新与卸载
 
-本文档规定 HelloUtau 的发布物、安装包、用户目录、临时目录、自动更新与卸载。作者 2026-10-11 提出要求，本文为方案，已实现的部分见「实现状态」。本文规定与平台无关的部分和 Windows 的做法，macOS 与 Linux 的打包只有计划，见「macOS 与 Linux 的发布（计划）」。
+本文档规定 HelloUtau 的发布物、安装包、用户目录、临时目录、自动更新与卸载。作者 2026-10-11 提出要求，本文为方案，已实现的部分见「实现状态」。本文规定与平台无关的部分和 Windows 的做法，macOS 与 Linux 的打包见「macOS 与 Linux 的发布」，两者的自动更新只有计划。
 
 ## 实现状态
 
@@ -24,12 +24,13 @@
 
 | 附件 | 文件名 |
 |---|---|
-| 免安装版 | `helloutau-<version>-<triplet>.zip` |
+| 免安装版（Windows 与 Linux） | `helloutau-<version>-<triplet>.zip` |
 | 安装包（仅 Windows） | `helloutau-<version>-<triplet>-setup.exe` |
-| 调试符号（目前仅 Windows 的 PDB） | `helloutau-<version>-<triplet>-symbols.zip` |
+| 磁盘映像（仅 macOS） | `helloutau-<version>-<triplet>.dmg` |
+| 调试符号 | `helloutau-<version>-<triplet>-symbols.zip` |
 | 校验文件 | `SHA256SUMS` |
 
-- 调试符号供分析崩溃转储使用，按安装目录的结构存放各个 exe 与 dll 的 PDB，包括 vcpkg 依赖的 PDB，Qt 的官方二进制不带 PDB（作者 2026-10-18 要求）。更新程序按完整的文件名挑选附件，不会选中它。MinGW 的构建以 llvm-mingw 生成 PDB，同样收入符号包。其他系统的 `.debug` 以后随打包加入。
+- 调试符号供分析崩溃转储使用，按安装目录的结构存放各个 exe 与 dll 的 PDB，包括 vcpkg 依赖的 PDB，Qt 的官方二进制不带 PDB（作者 2026-10-18 要求）。更新程序按完整的文件名挑选附件，不会选中它。MinGW 的构建以 llvm-mingw 生成 PDB，同样收入符号包。macOS 的符号包是各二进制的 dSYM，由 `dsymutil` 从构建的目标文件收集，放在二进制在 bundle 中的相对位置，例如 `HelloUtau.app/Contents/MacOS/HelloUtau.dSYM`。Linux 的符号包是各二进制的 `<文件名>.debug`，由 `objcopy --only-keep-debug` 分离，放在二进制在免安装版中的相对位置，例如 `HelloUtau/bin/HelloUtau.debug`，二进制只保留符号表与指向它的 `.gnu_debuglink`，解压到免安装版上 gdb 即可找到。没有调试信息的二进制（Qt 的库，以及从二进制缓存恢复、没有目标文件的 vcpkg 依赖）不收入。
 
 - `<version>` 为 `HELLO_VERSION` 的四段版本号。
 - `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x86_64` 或 `arm64`，系统为 `windows`、`linux` 或 `mac`，ABI 为 `msvc`、`mingw`、`gcc` 或 `appleclang`，例如 `x86_64-windows-msvc`。其余编译器取 CMake 编译器 ID 的小写，macOS 上 Xcode 的编译器因此为 `appleclang`，与 vcpkg 沿用的 CMake 编译器 ID 一致，macOS 版为 `arm64-mac-appleclang`（作者 2026-10-16 决定）。vcpkg 的 triplet 本身不含 ABI 段，HelloUtau 仍然保留这一段。架构与系统取用户熟悉的名称，不沿用 vcpkg 的写法（作者 2026-10-17 决定，当时尚未发布过带 triplet 的版本，无须迁移）：架构用 `x86_64` 而不用 `x64`，因为 `x64` 是微软的叫法，`x86_64` 不偏向任何一方；`arm64` 是苹果的叫法，照用；系统用 `mac` 而不用 `osx`，因为不少用户不知道 `osx` 指什么。vcpkg 自己的 triplet（如 `x64-windows`、`arm64-osx`）照旧，只用于安装依赖。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入缓存项 `HELLO_TRIPLET`，可以 `-DHELLO_TRIPLET=` 覆盖。
@@ -63,7 +64,7 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 | `.github/workflows/sync-gitee-release.yml` | release 发布后由 `deploy.yml` 启动、手动 | 同步到 Gitee |
 
 - **系统**：两个工作流以 matrix 列出各系统，目前为 `x86_64-windows-msvc`、`x86_64-windows-mingw`、`x86_64-linux-gcc` 与 `arm64-mac-appleclang`。组合 action 不限于某一系统，系统的差别由输入（vcpkg 的 triplet、aqt 的 Qt 架构）与 `runner.os` 区分。matrix 中的 triplet 是 job 的名称，组合 action 检查它与构建的 triplet 相同，不同即失败，其后的步骤不使用它：组合 action 在配置后从 `CMakeCache.txt` 读出 `HELLO_TRIPLET`，作为输出 `triplet` 交给工作流命名 artifact，因此与程序、打包脚本所用的值必然一致，将来增加 mingw 等构建时也不会混淆（作者 2026-10-17 要求）。增加一个系统只需在 matrix 中增加一项，并补上该系统的打包步骤。
-- **Linux 与 macOS**（作者 2026-10-18 要求）：只编译与测试，尚无打包，因此在 `deploy.yml` 中属于 job `test`，构建 release、debug 与 asan 三种变体。asan 在 Linux 上由 GCC 构建，LeakSanitizer 照默认开启，在 macOS 上由 Apple clang 构建，都是 CMake 找到的编译器，只有 Windows 指定 clang。Linux 在 `ubuntu-24.04` 上以 GCC 构建，Qt 为 aqt 的 `linux_gcc_64`，依赖以 overlay 的 triplet `x64-linux` 安装，另以 apt 安装官方 Qt 所需的系统库（OpenGL、EGL、xkbcommon、fontconfig、PulseAudio）。macOS 在 `macos-15` 上以 Apple clang 构建，Qt 为 aqt 的 `clang_64`，triplet 为 `arm64-osx`。两者在 overworld（Ubuntu 22.04，GCC 11.4）与 Apple Silicon 的 Mac（Apple clang 14）上以同样的步骤验证过全部测试（2026-10-18），Linux 的 asan 同样全部通过。Mac 上的 Apple clang 14 在 macOS 26 上启动 AddressSanitizer 即失败（`sanitizer_malloc_mac.inc` 的检查），与本仓库无关，macOS 的 asan 以 CI 的 Xcode 为准。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
+- **Linux 与 macOS**（作者 2026-10-18 要求）：release 变体在 `deploy.yml` 的 job `package` 中构建、测试并打包（2026-10-19），debug 与 asan 变体在 job `test` 中构建与测试。asan 在 Linux 上由 GCC 构建，LeakSanitizer 照默认开启，在 macOS 上由 Apple clang 构建，都是 CMake 找到的编译器，只有 Windows 指定 clang。macOS 的 asan 不运行 `test_AppLoader`：载入过的测试插件的副本卸载之后，该测试再载入内置插件时，AddressSanitizer 的运行库内部出现 SEGV_ACCERR，关闭 ODR 检查后依然如此。Linux 在 `ubuntu-22.04` 上以 GCC 构建（作者 2026-10-19 决定），免安装版因此要求 glibc 2.35 以上，与 overworld 相同，以后考虑迁到 `ubuntu-24.04`。Qt 为 aqt 的 `linux_gcc_64`，依赖以 overlay 的 triplet `x64-linux` 安装，另以 apt 安装官方 Qt 所需的系统库（OpenGL、EGL、xkbcommon、fontconfig、PulseAudio）。macOS 在 `macos-15` 上以 Apple clang 构建，Qt 为 aqt 的 `clang_64`，triplet 为 `arm64-osx`。两者在 overworld（Ubuntu 22.04，GCC 11.4）与 Apple Silicon 的 Mac（Apple clang 14）上以同样的步骤验证过全部测试（2026-10-18），Linux 的 asan 同样全部通过。Mac 上的 Apple clang 14 在 macOS 26 上启动 AddressSanitizer 即失败（`sanitizer_malloc_mac.inc` 的检查），与本仓库无关，macOS 的 asan 以 CI 的 Xcode 为准。组合 action 的目录不能单独命名为 `build`，因为 `.gitignore` 忽略名为 `build` 的目录。
 - **MinGW**：以 llvm-mingw 17.0.6 构建（作者 2026-10-18 决定），即 Qt 6.11.1 的 llvm-mingw 构建（aqt 的架构 `win64_llvm_mingw`）所依赖的工具链 `qt.tools.win64_llvm_mingw1706`，由 install-qt-action 一并安装并加入 `PATH`。程序与 Qt 共用一份 `libc++.dll`，编译器因此与 Qt 的工具链一致。不用 GCC 的 MinGW，因为 GCC 只生成 DWARF，Windows 的调试器与崩溃转储的工具读不了，llvm-mingw 则以 `-gcodeview` 与 `-Wl,--pdb=` 生成 PDB（`cmake/ConfigureBuildTypes.cmake`）。依赖以 vcpkg 社区的 triplet `x64-mingw-dynamic` 安装，vcpkg 按 GCC 的名字在 `PATH` 中找到 llvm-mingw 的编译器。安装时的部署从编译器所在目录与目标的目录（llvm-mingw 以目标三元组命名，如 `x86_64-w64-mingw32/bin`）取得编译器的运行库（`libc++` 与 `libunwind`），不复制 Visual Studio 的运行库。AddressSanitizer 只以 MSVC 的 ABI 构建。依赖 Qt 的 QActionKit 与 substate 仍在开发，没有自己的 CI，它们在 MinGW 下能否构建由本仓库的 CI 检验（作者 2026-10-18 决定）。stdutau 与 winacp 的 CI 以 MSYS2 的 CLANG64 环境检验同一套工具链。
 - **分支**：日常提交在 `dev` 上，推送 `dev` 不构建。`git promote`（仓库的 Git 别名，同 qmsetup）推送当前分支，把 `main` 移到同一提交并推送 `main`。推送 `main` 只运行 `deploy.yml`，它在打包前运行同样的测试，因此同一次推送不编译两遍。
 - **变体**：组合 action 的输入 `variant` 选择构建的变体，每种变体在自己的构建目录中（作者 2026-10-17 决定）。
@@ -74,7 +75,7 @@ CI 构建、运行全部测试并打包（作者 2026-10-16 提出要求），�
 - **依赖**：每次克隆官方 vcpkg 与 `stdware/vcpkg-overlay` 的最新提交到 `build/vcpkg` 与 `build/vcpkg-overlay`，以 classic 模式与 overlay 的 triplet 安装 stdcorelib、stdcorelib.plugin、stdutau、substate、QActionKit、winacp、wolf-midi、r8brain-free-src、libzip、zlib 与 qmsetup。vcpkg 的二进制缓存以 `actions/cache` 保存，输入未变的包不重新构建。Qt 6.11.1 为官方的二进制，由 `jurplel/install-qt-action` 安装。依赖的仓库改动后须先推送，并以 `update-ports` 更新 overlay 的 port，CI 才能用到。
 - **测试**：`ctest --no-tests=error`，以 `QT_QPA_PLATFORM=offscreen` 运行界面的测试。release 变体的任何测试失败即不打包。运行的摘要列出渠道、提交、vcpkg 与 overlay 的提交和测试的结果，失败时同样写入。
 - **编译缓存**：sccache（`mozilla-actions/sccache-action`），以 GitHub Actions 的缓存逐项保存（作者 2026-10-18 要求）。每次检出的源文件时间都是新的，只靠 Ninja 会全部重新编译，sccache 对预处理结果与选项未变的目标文件直接取用缓存。sccache 不能缓存 MSVC 把调试信息写入共享 PDB（`/Zi`）的目标文件，因此 CI 以 CMP0141 与 `CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded` 把调试信息写入目标文件（`/Z7`），链接时仍生成每个二进制的 PDB。`hellokit/BuildInfo.h` 随每次提交改变，只有包含它的少数源文件每次重新编译。运行的摘要附上 sccache 的统计。
-- **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包、符号包与 `SHA256SUMS`。每个附件是单独的 artifact，以 `actions/upload-artifact` 7 的 `archive: false` 原样上传，下载即是文件本身，与 release 的附件相同，artifact 名即文件名，渠道与提交写在文件名中。各附件的摘要写入运行的摘要。
+- **打包**：Windows 上 Inno Setup 7.1.0 由官方 release 的安装程序静默安装，`package.ps1` 生成 zip、安装包、符号包与 `SHA256SUMS`。macOS 上 `dist/installer/macos/package.sh` 生成 DMG、符号包与 `SHA256SUMS`，Linux 上 `dist/installer/linux/package.sh` 生成 zip、符号包与 `SHA256SUMS`，两者的命名与检查共用 `dist/installer/common.sh`。每个附件是单独的 artifact，以 `actions/upload-artifact` 7 的 `archive: false` 原样上传，下载即是文件本身，与 release 的附件相同，artifact 名即文件名，渠道与提交写在文件名中。各附件的摘要写入运行的摘要。
 - **发布**：推送 `v` 开头的 tag 时渠道为 `release`。tag 须与 `HELLO_VERSION` 一致，否则构建失败。各系统都通过后创建 GitHub 的 release，附上各系统的附件（包括符号包，因为 artifact 会过期）与由下载的附件算出的一份 `SHA256SUMS`，标题为 `HelloUtau <version>`，说明取自 tag 所在提交的 `docs/changelog/<version>.md`，该文件不存在时不创建 release。以工作流的令牌创建的 release 不触发其他工作流，因此随后以 `gh workflow run` 启动 `sync-gitee-release.yml`。
 
 ## 目录
@@ -144,22 +145,22 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 
 现阶段不签名，首次运行时 Windows SmartScreen 会提示。以后取得证书时以 `SignTool` 签名安装包，并设 `SignedUninstaller=yes` 签名卸载程序。
 
-## macOS 与 Linux 的发布（计划）
+## macOS 与 Linux 的发布
 
-作者 2026-10-16 决定，有 macOS 与 Linux 的环境后实施，先完成 Windows 的正式部署。
+作者 2026-10-16 决定先完成 Windows 的正式部署。CI 自 2026-10-19 起打包 macOS 与 Linux（作者 2026-10-19 要求），两者的自动更新尚未实现。
 
-- **macOS 的发布物**：只出 arm64，最低系统版本为 13.0，与 Qt 6.11 相同（作者 2026-10-19 决定）。overlay 的 macOS 三元组以 `VCPKG_OSX_DEPLOYMENT_TARGET` 指定同一版本，否则依赖库按编译机 SDK 的版本构建，在较旧的系统上无法载入。以 DMG 发布，不另出 zip。
-- **macOS 的签名**：ad-hoc 签名（`codesign --sign -`），不申请 Apple 的 Developer ID，不公证，同 DiffScope。Apple Silicon 只运行带签名的代码，ad-hoc 签名满足这一条件，但 Gatekeeper 不信任它。用户第一次打开下载的应用时须在「系统设置 > 隐私与安全性」中选择「仍要打开」。
-- **bundle 与部署**：参照 DiffScope（`diffscope/diffscope-project`，`eb92abd4`）。bundle 由 qmsetup 的 `qm_add_mac_bundle()` 与 Info.plist 模板生成，模板声明 `.usth` 与 `.ust` 的文档类型。icns 在配置时以 `iconutil` 生成。Qt 与依赖以 `qm_deploy_directory()` 部署到 `Contents/Frameworks`，Qt 的插件放在 `Contents/Frameworks/Qt/plugins`，不用 macdeployqt。HelloUtau 另须处理以下几处：
-  - Qt 的插件目录由 `AppLoader::addQtPluginPaths()` 按 bundle 求出，不用 `qt.conf`（作者 2026-10-01 决定）。bundle 中为 `Contents/Frameworks/Qt/plugins`，而不是 Qt 自己会查找的 `Contents/PlugIns`，因为 qmsetup 的布局以 `Contents/Plugins` 存放应用的插件，两者在不区分大小写的文件系统上是同一个目录（作者 2026-10-17 决定）。`AppLoader` 已按此求出，尚未在 macOS 上构建验证。
-  - 翻译已按 bundle 求出（作者 2026-10-17 决定）：库的翻译在 `Contents/Resources/translations`（qmsetup 的 data 目录），Qt 的翻译在 `Contents/Resources/Qt/translations`，分别对应其他系统的 `share/helloutau/translations` 与 `share/Qt/translations`。
-  - 其余以 `applicationDirPath()/..` 为基准的路径（更新配置、hellokit 的辅助程序）在 bundle 中须改为 `Contents/Resources` 或 `Contents/MacOS`。
-  - 须设置 `HELLOUTAU_MACOSX_BUNDLE_NAME`。
-  - 从 Finder 打开文件经 `QFileOpenEvent` 传入，须处理该事件。
+- **macOS 的发布物**：只出 arm64，最低系统版本为 13.0，与 Qt 6.11 相同（作者 2026-10-19 决定）。overlay 的 macOS 三元组以 `VCPKG_OSX_DEPLOYMENT_TARGET` 指定同一版本，否则依赖库按编译机 SDK 的版本构建，在较旧的系统上无法载入。`Info.plist` 的 `LSMinimumSystemVersion` 取 `CMAKE_OSX_DEPLOYMENT_TARGET`。以 DMG 发布，不另出 zip。DMG 中为 `HelloUtau.app` 与指向 `/Applications` 的链接，不加背景（作者 2026-10-19 决定），由 `hdiutil create -format UDZO` 生成。
+- **macOS 的签名**：ad-hoc 签名（`codesign --sign -`），不申请 Apple 的 Developer ID，不公证，同 DiffScope。Apple Silicon 只运行带签名的代码，ad-hoc 签名满足这一条件，但 Gatekeeper 不信任它。用户第一次打开下载的应用时须在「系统设置 > 隐私与安全性」中选择「仍要打开」。部署改写了二进制的运行路径，原有的签名随之失效，打包脚本因此由内向外重新签名：framework 之外的二进制、各个 framework、bundle 本身，再以 `codesign --verify --deep --strict` 检查。
+- **bundle 与部署**：参照 DiffScope（`diffscope/diffscope-project`，`eb92abd4`）。bundle 由 qmsetup 的 `qm_add_mac_bundle()` 与 Info.plist 模板生成，模板声明 `.usth` 与 `.ust` 的文档类型。icns 为提交的 `helloutau.icns`。Qt 与依赖以 `qm_deploy_directory()` 部署到 `Contents/Frameworks`，Qt 的插件放在 `Contents/Frameworks/Qt/plugins`，不用 macdeployqt。HelloUtau 另有以下几处：
+  - Qt 的插件目录由 `AppLoader::addQtPluginPaths()` 按 bundle 求出，不用 `qt.conf`（作者 2026-10-01 决定）。bundle 中为 `Contents/Frameworks/Qt/plugins`，而不是 Qt 自己会查找的 `Contents/PlugIns`，因为 qmsetup 的布局以 `Contents/Plugins` 存放应用的插件，两者在不区分大小写的文件系统上是同一个目录（作者 2026-10-17 决定）。
+  - 翻译按 bundle 求出（作者 2026-10-17 决定）：库的翻译在 `Contents/Resources/translations`（qmsetup 的 data 目录），Qt 的翻译在 `Contents/Resources/Qt/translations`，分别对应其他系统的 `share/helloutau/translations` 与 `share/Qt/translations`。更新配置同样在 data 目录，由 `AppLoader::applicationDataPath()` 求出。hellokit 的辅助程序与主程序同在 `Contents/MacOS`。
+  - 两个模块的 `<模块>_MACOSX_BUNDLE_NAME` 取根目录的 `HELLO_MACOSX_BUNDLE_NAME`，即 `HelloUtau`，该名字在其他系统上不起作用。不构建应用时同样按 bundle 布局（作者 2026-10-19 决定）。
+  - `cmake --install` 整体复制构建中的 bundle，因此不随应用发布的文件不得输出到 bundle 中：测试与只供测试的库以 qmsetup 的 `TEST` 输出到 `out/bin` 与 `out/lib`，静态库的归档同样输出到 `out/lib`，bundle 中的归档还会使 codesign 拒绝签名。测试启动的辅助程序由 `PROGRAMS` 以路径传给测试，不复制到测试旁边（见 `cmake/AddAutoTest.cmake`）。
+  - 从 Finder 打开文件经 `QFileOpenEvent` 传入，须处理该事件，尚未实现。
 - **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：
   - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
   - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。
-- **Linux**：只出 zip，即 `helloutau-<version>-x86_64-linux-gcc.zip`，不出 AppImage 与发行版的包。
+- **Linux**：只出 zip，即 `helloutau-<version>-x86_64-linux-gcc.zip`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装，发现新版本时打开下载页（作者 2026-10-18 决定），尚未实现。
 
 ## 应用图标
 

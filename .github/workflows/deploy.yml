@@ -50,6 +50,15 @@ jobs:
             qt-arch: win64_llvm_mingw
             qt-tools: tools_llvm_mingw1706,qt.tools.win64_llvm_mingw1706
             compiler: x86_64-w64-mingw32-clang++
+          # The oldest Ubuntu of GitHub, whose glibc 2.35 the package requires at least
+          - triplet: x86_64-linux-gcc
+            os: ubuntu-22.04
+            vcpkg-triplet: x64-linux
+            qt-arch: linux_gcc_64
+          - triplet: arm64-mac-appleclang
+            os: macos-15
+            vcpkg-triplet: arm64-osx
+            qt-arch: clang_64
     env:
       INNO_SETUP_URL: https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe
     steps:
@@ -74,7 +83,8 @@ jobs:
         if: env.CHANNEL == 'release'
         shell: bash
         run: |
-          version="$(sed -n 's/^CMAKE_PROJECT_VERSION:[A-Z]*=//p' build/Release/CMakeCache.txt)"
+          cache="${{ steps.build.outputs.directory }}/CMakeCache.txt"
+          version="$(sed -n 's/^CMAKE_PROJECT_VERSION:[A-Z]*=//p' "$cache")"
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
             echo "The tag $GITHUB_REF_NAME does not name the version $version of the build."
             exit 1
@@ -94,22 +104,49 @@ jobs:
       - name: Package
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./dist/installer/windows/package.ps1 -BuildDir build/Release -OutputDir build/package -Iscc $env:ISCC
+        run: ./dist/installer/windows/package.ps1 -BuildDir ${{ steps.build.outputs.directory }} -OutputDir build/package -Iscc $env:ISCC
 
-      # The paths of the three assets. The portable package is the archive that is not the symbols.
+      - name: Package
+        if: runner.os == 'macOS'
+        shell: bash
+        run: ./dist/installer/macos/package.sh "${{ steps.build.outputs.directory }}" build/package
+
+      - name: Package
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./dist/installer/linux/package.sh "${{ steps.build.outputs.directory }}" build/package
+
+      # The paths of the assets: the package, the zip of Windows and Linux or the disk image of
+      # macOS that is not the symbols, the installer of Windows, and the symbols
       - name: Assets
         id: assets
         shell: bash
         run: |
           set -euo pipefail
+          shopt -s nullglob
           cd build/package
-          symbols="$(ls -- *-symbols.zip)"
-          setup="$(ls -- *-setup.exe)"
-          portable="$(ls -- *.zip | grep -v -- '-symbols\.zip$')"
+          symbols=(*-symbols.zip)
+          setup=(*-setup.exe)
+          package=()
+          for file in *.zip *.dmg; do
+            case "$file" in
+              *-symbols.zip) ;;
+              *) package+=("$file") ;;
+            esac
+          done
+          if [ "${#package[@]}" -ne 1 ] || [ "${#symbols[@]}" -ne 1 ]; then
+            echo "One package and one archive of symbols are expected in build/package."
+            ls -l
+            exit 1
+          fi
+          installer=""
+          if [ "${#setup[@]}" -gt 0 ]; then
+            installer="build/package/${setup[0]}"
+          fi
           {
-            echo "portable=build/package/$portable"
-            echo "setup=build/package/$setup"
-            echo "symbols=build/package/$symbols"
+            echo "package=build/package/${package[0]}"
+            echo "setup=$installer"
+            echo "symbols=build/package/${symbols[0]}"
           } >> "$GITHUB_OUTPUT"
 
       # Each asset is an artifact of its own and is not zipped again (archive: false), so that it
@@ -118,11 +155,12 @@ jobs:
       # The digests are in the summary of the run, and the job release computes SHA256SUMS.
       - uses: actions/upload-artifact@v7
         with:
-          path: ${{ steps.assets.outputs.portable }}
+          path: ${{ steps.assets.outputs.package }}
           archive: false
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v7
+        if: steps.assets.outputs.setup != ''
         with:
           path: ${{ steps.assets.outputs.setup }}
           archive: false
@@ -144,8 +182,8 @@ jobs:
             sed 's/^[0-9a-f]*  /- `/; s/$/`/' build/package/SHA256SUMS
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # The variants debug and asan, which only build and test, and the variants release and debug of
-  # the systems without a package so far, Linux and macOS
+  # The variants debug and asan, which only build and test. The variant release is built and
+  # tested by the job package.
   test:
     name: ${{ matrix.triplet }} ${{ matrix.variant }}
     runs-on: ${{ matrix.os }}
@@ -156,25 +194,15 @@ jobs:
         # As in the job package, for each variant. AddressSanitizer is not built for MinGW.
         include:
           - triplet: x86_64-linux-gcc
-            variant: release
-            os: ubuntu-24.04
-            vcpkg-triplet: x64-linux
-            qt-arch: linux_gcc_64
-          - triplet: x86_64-linux-gcc
             variant: debug
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             vcpkg-triplet: x64-linux
             qt-arch: linux_gcc_64
           - triplet: x86_64-linux-gcc
             variant: asan
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             vcpkg-triplet: x64-linux
             qt-arch: linux_gcc_64
-          - triplet: arm64-mac-appleclang
-            variant: release
-            os: macos-15
-            vcpkg-triplet: arm64-osx
-            qt-arch: clang_64
           - triplet: arm64-mac-appleclang
             variant: debug
             os: macos-15

@@ -36,7 +36,7 @@ jobs:
         include:
           # As in deploy.yml
           - triplet: x86_64-linux-gcc
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             vcpkg-triplet: x64-linux
             qt-arch: linux_gcc_64
           - triplet: arm64-mac-appleclang

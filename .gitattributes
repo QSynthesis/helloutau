@@ -1,0 +1,5 @@
+# cmd reads a batch file with LF line endings unreliably: a goto or a call can miss its label.
+*.bat text eol=crlf
+
+# bash rejects a script with CRLF line endings.
+*.sh text eol=lf
