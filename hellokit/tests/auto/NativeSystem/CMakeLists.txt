@@ -1,1 +1,1 @@
-add_auto_test(test_NativeMessageBox.cpp HelloKitNativeSystem)
+hellokit_add_auto_test(test_NativeMessageBox.cpp HelloKitNativeSystem)

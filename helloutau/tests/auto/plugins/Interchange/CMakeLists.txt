@@ -1,10 +1,10 @@
 # The library-level content of Interchange: the insertion of imported notes into a project, the
 # selector with the requests of the wizards, the service, and the decoding of the
 # text of an inspected file.
-add_auto_test(test_ImportMerge.cpp InterchangePlugin HelloKitEdit)
-add_auto_test(test_PresetSelector.cpp InterchangePlugin HelloKitInterchange)
-add_auto_test(test_InterchangeService.cpp InterchangePlugin)
-add_auto_test(test_SourcePreview.cpp InterchangePlugin HelloKitSupport)
+helloutau_add_auto_test(test_ImportMerge.cpp InterchangePlugin HelloKitEdit)
+helloutau_add_auto_test(test_PresetSelector.cpp InterchangePlugin HelloKitInterchange)
+helloutau_add_auto_test(test_InterchangeService.cpp InterchangePlugin)
+helloutau_add_auto_test(test_SourcePreview.cpp InterchangePlugin HelloKitSupport)
 
 # The plugin is in its own directory of the plugins, not beside the tests.
 foreach(_test test_ImportMerge test_PresetSelector test_InterchangeService

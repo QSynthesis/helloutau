@@ -6,31 +6,28 @@
 
 qm_find_qt(Test)
 
-# add_auto_test(<source> [extra link libraries...]
+# add_auto_test(<target>
 #     [RESOURCES <files or directories...>]
 #     [RESOURCE_MACRO <macro>]
 # )
 #
-# The target and the \c ctest case both take their name from \a source, so \c test_Foo.cpp yields
-# \c test_Foo. The source declares one QObject whose private slots are the cases, and ends with
-# \c QTEST_APPLESS_MAIN and the include of its own \c .moc file.
+# Makes the executable \a target a test with the \c ctest case of the same name. A module creates
+# the target with its own <proj>_add_executable(), see add_module_auto_test(), so that the tests
+# are built as its programs are. The source declares one QObject whose private slots are the
+# cases, and ends with \c QTEST_APPLESS_MAIN and the include of its own \c .moc file.
 #
 # Resources are copied to <target-file-directory>/<target-name>_data. The target receives that
 # directory through the \c TEST_RESOURCE_DIRECTORY compile definition. \c RESOURCE_MACRO replaces
 # the default definition name when supplied.
-function(add_auto_test _src)
+function(add_auto_test _target)
     set(options)
     set(oneValueArgs RESOURCE_MACRO)
     set(multiValueArgs RESOURCES)
     cmake_parse_arguments(FUNC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    get_filename_component(_name ${_src} NAME_WE)
-    add_executable(${_name} ${_src})
+    set_target_properties(${_target} PROPERTIES AUTOMOC ON)
 
-    set_target_properties(${_name} PROPERTIES AUTOMOC ON)
-
-    target_link_libraries(${_name} PRIVATE Qt${QT_VERSION_MAJOR}::Test
-        ${FUNC_UNPARSED_ARGUMENTS})
+    target_link_libraries(${_target} PRIVATE Qt${QT_VERSION_MAJOR}::Test)
 
     if(FUNC_RESOURCES)
         set(_resource_macro TEST_RESOURCE_DIRECTORY)
@@ -38,24 +35,24 @@ function(add_auto_test _src)
             set(_resource_macro ${FUNC_RESOURCE_MACRO})
         endif()
 
-        set(_resource_directory ${_name}_data)
-        qm_add_copy_command(${_name}
+        set(_resource_directory ${_target}_data)
+        qm_add_copy_command(${_target}
             SOURCES ${FUNC_RESOURCES}
             DESTINATION ${_resource_directory}
             SKIP_INSTALL
         )
-        target_compile_definitions(${_name} PRIVATE
-            ${_resource_macro}="$<TARGET_FILE_DIR:${_name}>/${_resource_directory}"
+        target_compile_definitions(${_target} PRIVATE
+            ${_resource_macro}="$<TARGET_FILE_DIR:${_target}>/${_resource_directory}"
         )
     endif()
 
-    add_test(NAME ${_name} COMMAND $<TARGET_FILE:${_name}>)
+    add_test(NAME ${_target} COMMAND $<TARGET_FILE:${_target}>)
 
     # Windows searches for a DLL beside the executable and then along PATH, and in a build tree
     # Qt is in neither location. Without this, a test that uses Qt terminates at load time with
     # 0xc0000135 and no message, which appears as a crash rather than as a missing library.
     if(WIN32 AND TARGET Qt${QT_VERSION_MAJOR}::Core)
-        set_tests_properties(${_name} PROPERTIES ENVIRONMENT_MODIFICATION
+        set_tests_properties(${_target} PROPERTIES ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:Qt${QT_VERSION_MAJOR}::Core>>"
         )
     endif()
@@ -64,10 +61,41 @@ function(add_auto_test _src)
     # output if the process has no console window, as on the runners of CI (qplaintestlogger.cpp
     # of Qt 6.11). The results of a failed test would then be missing from the output of ctest.
     if(WIN32)
-        set_property(TEST ${_name} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+        set_property(TEST ${_target} APPEND PROPERTY ENVIRONMENT_MODIFICATION
             "QT_FORCE_STDERR_LOGGING=set:1"
         )
     endif()
+endfunction()
+
+# add_module_auto_test(<function> <source> [link libraries...]
+#     [RESOURCES <files or directories...>]
+#     [RESOURCE_MACRO <macro>]
+# )
+#
+# Creates the test of \a source with \a function, the <proj>_add_executable() of a module, as a
+# test executable of the module: built into the test directory of the build, out/bin, and not
+# installed. The target and the \c ctest case take their name from \a source, so \c test_Foo.cpp
+# yields \c test_Foo. The remaining arguments are those of add_auto_test().
+function(add_module_auto_test _function _src)
+    set(options)
+    set(oneValueArgs RESOURCE_MACRO)
+    set(multiValueArgs RESOURCES)
+    cmake_parse_arguments(FUNC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    get_filename_component(_name ${_src} NAME_WE)
+    cmake_language(CALL ${_function} ${_name} TEST CONSOLE
+        SOURCES ${_src}
+        LINKS ${FUNC_UNPARSED_ARGUMENTS}
+    )
+
+    set(_args)
+    if(FUNC_RESOURCES)
+        list(APPEND _args RESOURCES ${FUNC_RESOURCES})
+    endif()
+    if(FUNC_RESOURCE_MACRO)
+        list(APPEND _args RESOURCE_MACRO ${FUNC_RESOURCE_MACRO})
+    endif()
+    add_auto_test(${_name} ${_args})
 endfunction()
 
 # add_auto_test_program(<test> <program>)

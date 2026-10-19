@@ -1,31 +1,31 @@
-add_auto_test(test_ActionLayoutsFile.cpp HelloUtauEditor QActionKit::Core)
-add_auto_test(test_AppSettings.cpp HelloUtauEditor)
-add_auto_test(test_FrequencyMapView.cpp HelloUtauEditor)
-add_auto_test(test_FrequencyMapWaveform.cpp HelloUtauEditor)
-add_auto_test(test_FrequencyViewKeyboardModifiers.cpp HelloUtauEditor)
-add_auto_test(test_KeymapFile.cpp HelloUtauEditor QActionKit::Core)
+helloutau_add_auto_test(test_ActionLayoutsFile.cpp HelloUtauEditor QActionKit::Core)
+helloutau_add_auto_test(test_AppSettings.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_FrequencyMapView.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_FrequencyMapWaveform.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_FrequencyViewKeyboardModifiers.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_KeymapFile.cpp HelloUtauEditor QActionKit::Core)
 # The editor of the test registers the formats dio, frc, mrq and pmk, as the SynthToolSupport
 # plugin does, whose library is in its own directory of the plugins.
-add_auto_test(test_Editor.cpp HelloUtauTestingEditor SynthToolSupportPlugin)
+helloutau_add_auto_test(test_Editor.cpp HelloUtauTestingEditor SynthToolSupportPlugin)
 set_property(TEST test_Editor APPEND PROPERTY ENVIRONMENT_MODIFICATION
     "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:SynthToolSupportPlugin>>"
 )
-add_auto_test(test_OtoWaveformKeyboardModifiers.cpp HelloUtauEditor)
-add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
-add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
-add_auto_test(test_Playback.cpp HelloUtauEditor)
-add_auto_test(test_SamplePreview.cpp HelloUtauEditor)
-add_auto_test(test_SoftwareBuildChannel.cpp HelloUtauEditor)
-add_auto_test(test_SynthToolTrust.cpp HelloUtauEditor)
-add_auto_test(test_UpdateChecker.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_OtoWaveformKeyboardModifiers.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_Playback.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_SamplePreview.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_SoftwareBuildChannel.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_SynthToolTrust.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_UpdateChecker.cpp HelloUtauEditor)
 
 # The test writes its archives with libzip, and copies hello-updater from out/bin, where the
 # program must be built before the test runs.
-add_auto_test(test_PortableUpdate.cpp HelloUtauEditor libzip::zip)
+helloutau_add_auto_test(test_PortableUpdate.cpp HelloUtauEditor libzip::zip)
 add_auto_test_program(test_PortableUpdate hello-updater)
-add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip)
+helloutau_add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip)
 add_auto_test_program(test_UpdateTask hello-updater)
-add_auto_test(test_UpdateTaskView.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_UpdateTaskView.cpp HelloUtauEditor)
 
 add_subdirectory(Dialogs)
 
@@ -38,7 +38,7 @@ qak_add_action_extension(_bank_contribution_src TestBankContribution.xml
     FUNCTION testBankContribution
     NAMESPACE hello::daw::test
 )
-add_auto_test(test_ActionContribution.cpp HelloUtauEditor QActionKit::Widgets)
+helloutau_add_auto_test(test_ActionContribution.cpp HelloUtauEditor QActionKit::Widgets)
 target_sources(test_ActionContribution PRIVATE ${_contribution_src} ${_bank_contribution_src})
 target_include_directories(test_ActionContribution PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -56,7 +56,7 @@ endforeach()
 unset(VCPKG_APPLOCAL_DEPS)
 target_compile_definitions(test_AppLoaderFailingPlugin PRIVATE TEST_APPLOADER_FAILS)
 
-add_auto_test(test_AppLoader.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_AppLoader.cpp HelloUtauEditor)
 add_dependencies(test_AppLoader test_AppLoaderPlugin test_AppLoaderFailingPlugin CorePlugin
     ClassicPluginHostPlugin SynthToolSupportPlugin InterchangePlugin)
 target_compile_definitions(test_AppLoader PRIVATE

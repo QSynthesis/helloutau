@@ -25,7 +25,7 @@ helloutau_add_native_plugin(TestActionPlugin
 unset(VCPKG_APPLOCAL_DEPS)
 target_include_directories(TestActionPlugin PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-add_auto_test(test_TestActionPlugin.cpp HelloUtauEditor QActionKit::Widgets)
+helloutau_add_auto_test(test_TestActionPlugin.cpp HelloUtauEditor QActionKit::Widgets)
 add_dependencies(test_TestActionPlugin TestActionPlugin CorePlugin)
 # The built plugins, in the bundle on macOS, where AppLoader::builtinPluginPath() of a test
 # beside the bundle finds nothing

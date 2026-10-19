@@ -3,6 +3,16 @@
 # shows which units are tested.
 qm_find_qt(Core)
 
+# hellokit_add_auto_test(<source> [link libraries...]
+#     [RESOURCES <files or directories...>]
+#     [RESOURCE_MACRO <macro>]
+# )
+#
+# Adds the test of \a source as a test executable of hellokit, see add_module_auto_test().
+function(hellokit_add_auto_test)
+    add_module_auto_test(hellokit_add_executable ${ARGN})
+endfunction()
+
 add_subdirectory(Support)
 add_subdirectory(AudioFile)
 add_subdirectory(Document)

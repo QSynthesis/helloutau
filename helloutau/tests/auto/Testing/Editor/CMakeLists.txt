@@ -1,1 +1,1 @@
-add_auto_test(test_TestingEditor.cpp HelloUtauTestingEditor)
+helloutau_add_auto_test(test_TestingEditor.cpp HelloUtauTestingEditor)

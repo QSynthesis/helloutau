@@ -1,10 +1,10 @@
 # The library-level content of Core: the pages of the settings that the plugin adds to the
 # catalog of the editor.
-add_auto_test(test_CoreSettingPages.cpp CorePlugin HelloUtauEditor)
-add_auto_test(test_KeyboardModifierSettingPage.cpp CorePlugin HelloUtauEditor)
-add_auto_test(test_KeymapSettingPage.cpp CorePlugin HelloUtauTestingEditor)
-add_auto_test(test_MenusSettingPage.cpp CorePlugin HelloUtauTestingEditor)
-add_auto_test(test_PluginSettingPage.cpp CorePlugin HelloUtauEditor)
+helloutau_add_auto_test(test_CoreSettingPages.cpp CorePlugin HelloUtauEditor)
+helloutau_add_auto_test(test_KeyboardModifierSettingPage.cpp CorePlugin HelloUtauEditor)
+helloutau_add_auto_test(test_KeymapSettingPage.cpp CorePlugin HelloUtauTestingEditor)
+helloutau_add_auto_test(test_MenusSettingPage.cpp CorePlugin HelloUtauTestingEditor)
+helloutau_add_auto_test(test_PluginSettingPage.cpp CorePlugin HelloUtauEditor)
 # The built plugins, in the bundle on macOS, where AppLoader::builtinPluginPath() of a test
 # beside the bundle finds nothing
 target_compile_definitions(test_PluginSettingPage PRIVATE
