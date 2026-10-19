@@ -89,9 +89,14 @@ runs:
         # On macOS, test_AppLoader loads and unloads its plugin in each test, and AddressSanitizer
         # reported an ODR violation of the global stdc_plugin_metadata of the plugin with itself:
         # both registrations named the same library and the same size. Level 1 reports an ODR
-        # violation only between globals of different sizes.
+        # violation only between globals of different sizes. On macOS the check itself then failed
+        # with SEGV_ACCERR in __asan_register_globals while a copy of the plugin was loaded, which
+        # indicates that the registrations of an unloaded copy remain and refer to unmapped memory.
+        # Level 0 turns the check off there.
         options=
-        if [ "$asan" = ON ] && [ "$RUNNER_OS" != "Windows" ]; then
+        if [ "$asan" = ON ] && [ "$RUNNER_OS" = "macOS" ]; then
+          options="detect_odr_violation=0"
+        elif [ "$asan" = ON ] && [ "$RUNNER_OS" != "Windows" ]; then
           options="detect_odr_violation=1"
         fi
         {
