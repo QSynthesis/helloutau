@@ -206,10 +206,16 @@ runs:
         export QT_DIR="$QT_ROOT_DIR/lib/cmake/Qt6"
         export Qt6_DIR="$QT_DIR"
         export VCPKG_KEEP_ENV_VARS="QT_DIR;Qt6_DIR"
+        # qiconmaker writes the icons of Windows and macOS at build time, see cmake/AddIcon.cmake.
+        # It builds against the Qt above as well.
+        icons=()
+        if [ "$RUNNER_OS" != "Linux" ]; then
+          icons=(qiconmaker)
+        fi
         "$VCPKG_ROOT/vcpkg" install --triplet "${{ inputs.vcpkg-triplet }}" \
           "--overlay-ports=$VCPKG_OVERLAY/ports" "--overlay-triplets=$VCPKG_OVERLAY/triplets" \
           qmsetup stdcorelib stdcorelib-plugin stdutau substate "qactionkit[core,widgets]" \
-          winacp wolf-midi r8brain-free-src libzip zlib
+          winacp wolf-midi r8brain-free-src libzip zlib "${icons[@]}"
 
     # vcpkg reports a failed port by the paths of its logs, which stay on the runner. The end of each
     # log of the configuration and of the build is printed instead.

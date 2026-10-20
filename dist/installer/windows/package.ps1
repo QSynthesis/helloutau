@@ -31,6 +31,9 @@ param(
 #     share/helloutau/update/ UpdateManifest.json, installed by helloutau/CMakeLists.txt
 #     share/helloutau/LICENSE the license, installed by helloutau/CMakeLists.txt, which the
 #                             installer shows
+#     share/helloutau/icons/  the icon of the application, installed by
+#                             helloutau/tools/driver/CMakeLists.txt, which is also the icon
+#                             of the installer
 #
 # The build must be complete: this script does not build, because building requires the
 # environment of the compiler. Steps: cmake --install, which deploys Qt and the other libraries

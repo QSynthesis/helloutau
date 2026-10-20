@@ -119,6 +119,14 @@ _hello_find_external(libzip
     "Install libzip, for example with vcpkg, and pass -Dlibzip_DIR=<prefix>/share/libzip."
     libzip::zip)
 
+# The program that writes the icons of the application and of its file types, the .ico files of
+# Windows and the .icns files of macOS, from drawings at build time (cmake/AddIcon.cmake). Linux
+# installs no icon files. See the icons in docs/Distribution.md.
+if(HELLO_BUILD_APPLICATION AND (WIN32 OR APPLE))
+    _hello_find_external(qiconmaker
+        "Build https://github.com/stdware/qiconmaker and pass -Dqiconmaker_DIR=<prefix>/lib/cmake/qiconmaker.")
+endif()
+
 # The DLL of zlib, which the DLL of libzip loads. The package configuration of a shared libzip does
 # not find zlib, so its DLL is deployed only if found here. On other systems the dynamic loader
 # locates zlib among the shared libraries of the system.

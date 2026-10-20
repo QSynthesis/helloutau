@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
   <title>HelloUtau</title>
-  <!-- Two notes of the piano roll joined by the portamento into one band, with the pitch points
-       at its ends cut out, on a light plate. The drawing for 36 px and above. -->
+  <!-- The drawing of app.svg on the pixel grid of 48 px, for 36 px to 48 px. -->
   <defs>
     <linearGradient id="plate" x1="1" y1="0" x2="0" y2="1">
       <stop offset=".5" stop-color="#fbfbfb"/>

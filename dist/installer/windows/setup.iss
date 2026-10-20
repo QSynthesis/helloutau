@@ -4,8 +4,9 @@
 ;   AppVersion           HELLO_VERSION, such as 0.1.6.0
 ;   AppVerName           the name of the build, such as HelloUtau 0.1.6.0, or HelloUtau CI 1a2b3c4
 ;                        for a build of another channel than release, as the window titles show it
-;   SourceDir            the deployed installation, which holds bin and lib, and the license that
-;                        the installer shows in share/helloutau
+;   SourceDir            the deployed installation, which holds bin and lib, the license that the
+;                        installer shows in share/helloutau, and the icon of the installer in
+;                        share/helloutau/icons
 ;   OutputDir            the directory of the installer
 ;   OutputBaseFilename   the file name of the installer without .exe
 
@@ -33,7 +34,6 @@
 #define AppURL "https://github.com/QSynthesis/helloutau"
 #define AppExeName "helloutau.exe"
 #define AppExe "bin\" + AppExeName
-#define RepositoryDir SourcePath + "..\..\.."
 
 [Setup]
 ; Windows names the uninstall entry after the identifier, and an installer of the same identifier
@@ -61,7 +61,7 @@ PrivilegesRequiredOverridesAllowed=dialog
 SetupArchitecture=x64
 ChangesAssociations=yes
 LicenseFile={#SourceDir}\share\helloutau\LICENSE
-SetupIconFile={#RepositoryDir}\helloutau\tools\driver\helloutau.ico
+SetupIconFile={#SourceDir}\share\helloutau\icons\app.ico
 UninstallDisplayIcon={app}\{#AppExe}
 OutputDir={#OutputDir}
 OutputBaseFilename={#OutputBaseFilename}

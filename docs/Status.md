@@ -72,6 +72,7 @@
 - **r8brain-free-src 6.5**：`HelloKitAudioFile` 的 `WaveAudio::resampled()` 与 `HelloUtauAudio` 的 `StreamSource` 的采样率转换，私有依赖。由 DiffScope 的 vcpkg 端口构建为静态库，本机取自 `E:/GitHub/diffscope-project/vcpkg`，通过 `-Dunofficial-r8brain-free-src_DIR=` 指定。
 - **libzip**：`kit::ZipExtractor` 的解压，`HelloKitSupport` 的私有依赖，取自 vcpkg，动态链接，通过 `-Dlibzip_DIR=` 指定。动态版的包配置不查找 zlib，因此在 Windows 上另需 `-DZLIB_DIR=`，以便把 zlib 的 DLL 复制到程序旁。
 - **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
+- **qiconmaker**：构建时由 SVG 写出 Windows 的 `.ico` 与 macOS 的 `.icns`（`stdware/qiconmaker`），只在这两个系统上构建应用时需要，通过 `-Dqiconmaker_DIR=` 指定。本机安装在 `E:/GitHub/qiconmaker/build/install`。见 `Distribution.md`「应用图标」。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 
 上述路径均记录在 `.vscode/settings.json` 中，该文件已被 gitignore。
