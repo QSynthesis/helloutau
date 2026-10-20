@@ -44,14 +44,19 @@ namespace hello::daw {
         /// \c plugins folder of the UTAU folder of \a settings if that is set.
         static QList<std::filesystem::path> pluginFolders(const AppSettings &settings);
 
-        /// Opens \a folder in the file manager, and creates the folder if necessary.
-        static void openFolder(const std::filesystem::path &folder);
+        /// Opens \a folder in the file manager. The folder is created if necessary only if it is
+        /// userDirectory() of \a settings, because the other folders belong to UTAU. A missing
+        /// folder of UTAU is reported in a message box over \a parent.
+        static void openFolder(QWidget *parent, const AppSettings &settings,
+                               const std::filesystem::path &folder);
 
     private:
         void fill(QMenu *menu, ProjectWindow *window);
         void refresh(ProjectWindow *window);
 
         QList<ClassicPlugin> m_plugins;
+        // The folders and plugins that the last discovery could not read
+        kit::DiagnosticList m_diagnostics;
 
         // The UTAU folder in the settings at the last discovery, or \c std::nullopt before the
         // first discovery

@@ -53,12 +53,40 @@
         <source>plugin.txt cannot be opened.</source>
         <translation>无法打开 plugin.txt。</translation>
     </message>
+    <message>
+        <source>The plugin folder &quot;%1&quot; cannot be read, because macOS denies HelloUtau access to it. Allow the access to the folder in System Settings, Privacy &amp; Security, Files and Folders.</source>
+        <translation>无法读取插件文件夹「%1」，因为 macOS 不允许 HelloUtau 访问它。请在「系统设置」的「隐私与安全性」中的「文件与文件夹」里允许访问该文件夹。</translation>
+    </message>
+    <message>
+        <source>The plugin folder &quot;%1&quot; cannot be read: %2</source>
+        <translation>无法读取插件文件夹「%1」：%2</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::ClassicPluginContribution</name>
     <message>
+        <source>Open Plugin Folder</source>
+        <translation>打开插件文件夹</translation>
+    </message>
+    <message>
+        <source>The folder &quot;%1&quot; cannot be opened, because macOS denies HelloUtau access to it. Allow the access to the folder in System Settings, Privacy &amp; Security, Files and Folders.</source>
+        <translation>无法打开文件夹「%1」，因为 macOS 不允许 HelloUtau 访问它。请在「系统设置」的「隐私与安全性」中的「文件与文件夹」里允许访问该文件夹。</translation>
+    </message>
+    <message>
+        <source>The folder &quot;%1&quot; does not exist.</source>
+        <translation>文件夹「%1」不存在。</translation>
+    </message>
+    <message>
         <source>No Plugins</source>
         <translation>无插件</translation>
+    </message>
+    <message>
+        <source>Some Plugins Cannot Be Read...</source>
+        <translation>部分插件无法读取...</translation>
+    </message>
+    <message>
+        <source>Classic Plugins</source>
+        <translation>经典插件</translation>
     </message>
     <message>
         <source>&amp;Refresh</source>

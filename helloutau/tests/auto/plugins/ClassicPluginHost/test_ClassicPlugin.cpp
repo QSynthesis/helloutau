@@ -49,9 +49,10 @@ private Q_SLOTS:
         const auto folder =
             plugin("json", "name=Old\r\nexecute=old.bat\r\nnotes=all\r\nustversion=1.00\r\n",
                    {"old.bat", "new.bat"}, "manifests");
-        manifest(folder, R"({"name": "新しい", "execute": "new.bat", "shell": true, )"
-                         R"("notes": "selection", "charset": "UTF-8", "ustversion": "1.10", )"
-                         R"("hostData": {"ClassicPluginHost": {"playinplugin": {"original": null}}}})");
+        manifest(folder,
+                 R"({"name": "新しい", "execute": "new.bat", "shell": true, )"
+                 R"("notes": "selection", "charset": "UTF-8", "ustversion": "1.10", )"
+                 R"("hostData": {"ClassicPluginHost": {"playinplugin": {"original": null}}}})");
         kit::DiagnosticList diagnostics;
         const auto read = ClassicPlugin::read(folder, diagnostics);
         QVERIFY(read);
@@ -139,6 +140,33 @@ private Q_SLOTS:
 
         // Without a name, the folder name is used.
         QCOMPARE(plugins[2].name, QStringLiteral("d"));
+    }
+
+    // A directory that cannot be read is reported, as macOS keeps the Documents folder from the
+    // application until the user allows the access. The other directories are discovered.
+    void an_unreadable_directory_is_reported() {
+#ifdef Q_OS_WINDOWS
+        QSKIP("The permissions of std::filesystem do not deny reading on Windows.");
+#else
+        plugin("p", "name=Readable\r\nexecute=p.sh\r\n", {"p.sh"}, "open");
+        plugin("q", "name=Locked\r\nexecute=q.sh\r\n", {"q.sh"}, "locked");
+        fs::permissions(root() / "locked", fs::perms::none);
+        std::error_code error;
+        fs::directory_iterator probe(root() / "locked", error);
+        if (!error) {
+            fs::permissions(root() / "locked", fs::perms::owner_all);
+            QSKIP("The user reads a directory without permissions, as root does.");
+        }
+
+        kit::DiagnosticList diagnostics;
+        const auto plugins =
+            ClassicPlugin::discover({root() / "locked", root() / "open"}, diagnostics);
+        fs::permissions(root() / "locked", fs::perms::owner_all);
+        QCOMPARE(plugins.size(), 1);
+        QCOMPARE(plugins[0].name, QStringLiteral("Readable"));
+        QCOMPARE(diagnostics.size(), 1);
+        QVERIFY(diagnostics[0].message.contains(QStringLiteral("locked")));
+#endif
     }
 
     // The program must be inside the plugin folder. An absolute path, any .. component, or a

@@ -104,8 +104,9 @@ namespace hello::daw {
                 QDir::toNativeSeparators(QString::fromStdU16String(folder.u16string())), row);
             path->setReadOnly(true);
             auto open = new QPushButton(tr("Open"), row);
-            connect(open, &QPushButton::clicked, row,
-                    [folder] { ClassicPluginContribution::openFolder(folder); });
+            connect(open, &QPushButton::clicked, row, [this, open, folder] {
+                ClassicPluginContribution::openFolder(open, m_settings, folder);
+            });
             rowLayout->addWidget(path, 1);
             rowLayout->addWidget(open);
             m_folders->layout()->addWidget(row);
@@ -222,6 +223,14 @@ namespace hello::daw {
         kit::DiagnosticList diagnostics;
         const auto plugins = ClassicPlugin::discover(
             ClassicPluginContribution::pluginFolders(m_settings), diagnostics);
+        // The folders that cannot be read, such as one in the Documents folder that macOS keeps
+        // from the application, above the plugins of the other folders
+        for (const auto &diagnostic : std::as_const(diagnostics)) {
+            auto label = new QLabel(diagnostic.message, m_previews);
+            label->setWordWrap(true);
+            label->setTextFormat(Qt::PlainText);
+            m_previews->layout()->addWidget(label);
+        }
         if (plugins.isEmpty()) {
             m_previews->layout()->addWidget(new QLabel(tr("No plugin is found."), m_previews));
             return;

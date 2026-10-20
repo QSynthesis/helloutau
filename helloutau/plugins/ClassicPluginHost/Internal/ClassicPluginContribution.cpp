@@ -2,16 +2,19 @@
 
 #include <system_error>
 
+#include <QtCore/QDir>
 #include <QtCore/QPointer>
 #include <QtCore/QUrl>
 #include <QtGui/QAction>
 #include <QtGui/QCursor>
 #include <QtGui/QDesktopServices>
 #include <QtWidgets/QMenu>
+#include <QtWidgets/QMessageBox>
 
 #include <QAKWidgets/widgetactioncontext.h>
 
 #include <helloutau/Editor/AppSettings.h>
+#include <helloutau/Editor/Dialogs/DiagnosticBox.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
@@ -43,11 +46,33 @@ namespace hello::daw {
         return folders;
     }
 
-    void ClassicPluginContribution::openFolder(const std::filesystem::path &folder) {
+    void ClassicPluginContribution::openFolder(QWidget *parent, const AppSettings &settings,
+                                               const std::filesystem::path &folder) {
+        const auto text = QString::fromStdU16String(folder.u16string());
         std::error_code error;
-        std::filesystem::create_directories(folder, error);
-        QDesktopServices::openUrl(
-            QUrl::fromLocalFile(QString::fromStdU16String(folder.u16string())));
+        if (folder == userDirectory(settings)) {
+            std::filesystem::create_directories(folder, error);
+        }
+        // is_directory() reports no error for a missing folder, and EPERM for a folder in the
+        // Documents folder that macOS keeps from the application.
+        if (!std::filesystem::is_directory(folder, error)) {
+            const auto shown = QDir::toNativeSeparators(text);
+#ifdef Q_OS_MACOS
+            if (error == std::errc::operation_not_permitted) {
+                QMessageBox::warning(
+                    parent, tr("Open Plugin Folder"),
+                    tr("The folder \"%1\" cannot be opened, because macOS denies HelloUtau "
+                       "access to it. Allow the access to the folder in System Settings, Privacy "
+                       "& Security, Files and Folders.")
+                        .arg(shown));
+                return;
+            }
+#endif
+            QMessageBox::warning(parent, tr("Open Plugin Folder"),
+                                 tr("The folder \"%1\" does not exist.").arg(shown));
+            return;
+        }
+        QDesktopServices::openUrl(QUrl::fromLocalFile(text));
     }
 
     ClassicPluginContribution::ClassicPluginContribution() = default;
@@ -113,25 +138,39 @@ namespace hello::daw {
             menu->addAction(tr("No Plugins"))->setEnabled(false);
         }
 
+        // A folder or a plugin that cannot be read, such as a folder in the Documents folder that
+        // macOS keeps from the application, is reported on request, because a message box
+        // would appear each time the menu opens.
+        if (!m_diagnostics.isEmpty()) {
+            QObject::connect(menu->addAction(tr("Some Plugins Cannot Be Read...")),
+                             &QAction::triggered, window, [window, diagnostics = m_diagnostics] {
+                                 DiagnosticBox::report(window, tr("Classic Plugins"), diagnostics);
+                             });
+        }
+
         menu->addSeparator();
         QObject::connect(menu->addAction(tr("&Refresh")), &QAction::triggered, window,
                          [this, window] { refresh(window); });
         const auto &settings = window->editor()->settings();
         QObject::connect(menu->addAction(tr("&Open Plugin Folder")), &QAction::triggered, window,
-                         [folder = userDirectory(settings)] { openFolder(folder); });
+                         [window, folder = userDirectory(settings)] {
+                             openFolder(window, window->editor()->settings(), folder);
+                         });
         const auto utauPlugins = pluginsOf(settings.utau().directory());
         if (!utauPlugins.empty()) {
             QObject::connect(menu->addAction(tr("Open &UTAU Plugin Folder")), &QAction::triggered,
-                             window, [utauPlugins] { openFolder(utauPlugins); });
+                             window, [window, utauPlugins] {
+                                 openFolder(window, window->editor()->settings(), utauPlugins);
+                             });
         }
     }
 
     void ClassicPluginContribution::refresh(ProjectWindow *window) {
         const auto &settings = window->editor()->settings();
         // A folder that does not exist yields no plugins, and a folder whose plugin.txt cannot
-        // be read is skipped, as in UTAU.
-        kit::DiagnosticList diagnostics;
-        m_plugins = ClassicPlugin::discover(pluginFolders(settings), diagnostics);
+        // be read is left out of the menu, as in UTAU. The menu offers the reasons.
+        m_diagnostics.clear();
+        m_plugins = ClassicPlugin::discover(pluginFolders(settings), m_diagnostics);
         m_utauDirectory = settings.utau().directory();
     }
 

@@ -46,7 +46,8 @@ namespace hello::daw {
 
         /// Returns the plugins in the immediate subfolders of each of \a directories , ordered
         /// by directory and then by folder name, as UTAU discovers them in its \c plugins
-        /// folder.
+        /// folder. A directory that does not exist is skipped, and a directory that exists or
+        /// may exist but cannot be read is reported in \a diagnostics .
         static QList<ClassicPlugin> discover(const QList<std::filesystem::path> &directories,
                                              kit::DiagnosticList &diagnostics);
 
