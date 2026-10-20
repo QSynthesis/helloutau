@@ -3,7 +3,8 @@
 <!--
   The Info.plist of HelloUtau.app, which CMake configures with the MACOSX_BUNDLE properties that
   helloutau/tools/driver/CMakeLists.txt sets. The minimum system version is that of
-  CMAKE_OSX_DEPLOYMENT_TARGET in the root CMakeLists.txt.
+  CMAKE_OSX_DEPLOYMENT_TARGET in the root CMakeLists.txt. The localizations are English and the
+  languages of the translations, HELLOUTAU_LANGUAGES in helloutau/CMakeLists.txt.
 
   A project of HelloUtau, .usth, is a type that the application declares and owns. A sequence of
   UTAU, .ust, is a type of UTAU, which declares no identifier, so the application imports it and
@@ -14,6 +15,10 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		${HELLOUTAU_BUNDLE_LOCALIZATIONS}
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
 	<key>CFBundleGetInfoString</key>

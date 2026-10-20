@@ -32,6 +32,16 @@ qm_add_win_manifest(${PROJECT_NAME} NAME "HelloUtau")
 # qm_add_mac_bundle names the executable after the bundle. The icon is written from the drawings
 # of the icon as helloutau.ico is, see the application icon in docs/Distribution.md.
 if(APPLE)
+    # The localizations of the bundle, English and the languages of the translations. macOS gives
+    # the application the current locale in the preferred language of the user only if the
+    # bundle lists that language, and gives a bundle that lists English alone an English locale
+    # such as en_CN, in which the translations are not loaded and the panels of the system are in
+    # English.
+    set(HELLOUTAU_BUNDLE_LOCALIZATIONS "<string>en</string>")
+    foreach(_language IN LISTS HELLOUTAU_LANGUAGES)
+        string(APPEND HELLOUTAU_BUNDLE_LOCALIZATIONS "\n\t\t<string>${_language}</string>")
+    endforeach()
+
     qm_add_mac_bundle(${PROJECT_NAME}
         NAME "${HELLO_MACOSX_BUNDLE_NAME}"
         DESCRIPTION "${PROJECT_DESCRIPTION}"
