@@ -2557,6 +2557,10 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
         <translation>指向 %1</translation>
     </message>
     <message>
+        <source>The project wavtool is invalid.</source>
+        <translation>工程中的合成器不合法。</translation>
+    </message>
+    <message>
         <source>The project uses the resampler from the settings as its wavtool.</source>
         <translation>工程将设置中的重采样器用作合成器。</translation>
     </message>
@@ -2567,6 +2571,10 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
     <message>
         <source>The project wavtool is untrusted.</source>
         <translation>工程中的合成器未信任。</translation>
+    </message>
+    <message>
+        <source>The project resampler is invalid.</source>
+        <translation>工程中的重采样器不合法。</translation>
     </message>
     <message>
         <source>The project uses the resampler from the settings.</source>
@@ -2622,6 +2630,10 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
     <message>
         <source>Duration of the selected notes</source>
         <translation>所选音符的时长</translation>
+    </message>
+    <message>
+        <source>Set a valid wavtool and resampler in the project properties first.</source>
+        <translation>请先在工程属性中指定合法的合成器与重采样器。</translation>
     </message>
     <message>
         <source>%1 sec</source>
@@ -2704,10 +2716,6 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
     <message>
         <source>Preparing notes (%1/%2)</source>
         <translation>正在准备音符（%1/%2）</translation>
-    </message>
-    <message>
-        <source>Set an existing wavtool and resampler in the project properties first.</source>
-        <translation>请先在工程属性中指定存在的合成器与重采样器。</translation>
     </message>
     <message>
         <source>Select the notes to render first.</source>

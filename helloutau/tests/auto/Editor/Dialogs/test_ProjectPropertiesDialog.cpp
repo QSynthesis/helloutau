@@ -326,6 +326,35 @@ private Q_SLOTS:
         QVERIFY(colorsOf(dialog, false).isEmpty());
     }
 
+    // An empty or missing synth tool is shown as invalid in the untrusted color, without the
+    // warning, also if the synth tool of the settings is the same empty or missing path.
+    void an_invalid_synth_tool_is_shown_as_invalid() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        ProjectPropertiesDialog dialog(kit::Project(), settings);
+        const auto untrusted = dialog.untrustedColor().name();
+        const auto shows = [&dialog](const char *text) {
+            const auto labels = dialog.findChildren<QLabel *>();
+            return std::any_of(labels.cbegin(), labels.cend(), [&](const QLabel *label) {
+                return label->isVisibleTo(&dialog) && label->text().contains(QLatin1String(text));
+            });
+        };
+        QCOMPARE(colorsOf(dialog, true), (QStringList{untrusted, untrusted}));
+        QVERIFY(colorsOf(dialog, false).isEmpty());
+        QVERIFY(shows("The project wavtool is invalid."));
+        QVERIFY(shows("The project resampler is invalid."));
+
+        const auto missing = textOf(pathIn(dir, "missing.exe"));
+        settings.rendering().setWavtool(missing);
+        settings.rendering().setResampler(missing);
+        dialog.wavtoolEdit()->setText(missing);
+        dialog.resamplerEdit()->setText(missing);
+        QCOMPARE(colorsOf(dialog, true), (QStringList{untrusted, untrusted}));
+        QVERIFY(colorsOf(dialog, false).isEmpty());
+        QVERIFY(shows("The project wavtool is invalid."));
+        QVERIFY(shows("The project resampler is invalid."));
+    }
+
     void the_states_follow_the_color_properties() {
         QTemporaryDir dir;
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));

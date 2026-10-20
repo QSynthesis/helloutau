@@ -155,7 +155,7 @@ namespace hello::daw {
             for (const auto &value : values) {
                 if (!SynthToolTrust::exists(value, utau)) {
                     *message = ClassicPluginPreviewText::tr(
-                        "Set an existing wavtool and resampler in the project "
+                        "Set a valid wavtool and resampler in the project "
                         "properties first.");
                     return std::nullopt;
                 }

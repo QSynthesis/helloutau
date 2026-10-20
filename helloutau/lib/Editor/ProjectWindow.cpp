@@ -754,7 +754,7 @@ namespace hello::daw {
                 if (!title.isEmpty()) {
                     kit::DiagnosticList diagnostics;
                     diagnostics.push_back({kit::Diagnostic::Error,
-                                           ProjectWindow::tr("Set an existing wavtool and "
+                                           ProjectWindow::tr("Set a valid wavtool and "
                                                              "resampler in the project properties "
                                                              "first."),
                                            std::nullopt});

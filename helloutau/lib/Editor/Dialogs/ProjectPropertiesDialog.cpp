@@ -315,6 +315,7 @@ namespace hello::daw {
         // One complete sentence for each synth tool and state, so that a translation is not
         // assembled from fragments
         struct Texts {
+            QString invalid;
             QString same;
             QString swapped;
             QString trusted;
@@ -322,9 +323,13 @@ namespace hello::daw {
         };
         const auto utau = m_settings.utau().directory();
         bool untrusted = false;
+        // An empty or invalid path is reported as invalid before any comparison, because trust
+        // applies only to an existing synth tool.
         const auto describe = [&](QLabel *label, const QString &value, const QString &own,
                                   const QString &other, const Texts &texts) {
-            if (SynthToolTrust::samePath(value, own, utau)) {
+            if (!SynthToolTrust::exists(value, utau)) {
+                label->setText(colored(texts.invalid, m_untrustedColor, true));
+            } else if (SynthToolTrust::samePath(value, own, utau)) {
                 label->setText(colored(texts.same, m_trustedColor, true));
             } else if (SynthToolTrust::samePath(value, other, utau)) {
                 label->setText(colored(texts.swapped, m_trustedColor, true));
@@ -337,12 +342,14 @@ namespace hello::daw {
         };
         describe(m_wavtoolTrust, m_wavtool->text(), m_settings.rendering().wavtool(),
                  m_settings.rendering().resampler(),
-                 {tr("The project uses the wavtool from the settings."),
+                 {tr("The project wavtool is invalid."),
+                  tr("The project uses the wavtool from the settings."),
                   tr("The project uses the resampler from the settings as its wavtool."),
                   tr("The project wavtool is trusted."), tr("The project wavtool is untrusted.")});
         describe(m_resamplerTrust, m_resampler->text(), m_settings.rendering().resampler(),
                  m_settings.rendering().wavtool(),
-                 {tr("The project uses the resampler from the settings."),
+                 {tr("The project resampler is invalid."),
+                  tr("The project uses the resampler from the settings."),
                   tr("The project uses the wavtool from the settings as its resampler."),
                   tr("The project resampler is trusted."),
                   tr("The project resampler is untrusted.")});

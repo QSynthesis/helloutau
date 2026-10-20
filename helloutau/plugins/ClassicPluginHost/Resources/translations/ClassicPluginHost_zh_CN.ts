@@ -83,8 +83,8 @@
 <context>
     <name>hello::daw::ClassicPluginPreview</name>
     <message>
-        <source>Set an existing wavtool and resampler in the project properties first.</source>
-        <translation>请先在工程属性中指定存在的合成器与重采样器。</translation>
+        <source>Set a valid wavtool and resampler in the project properties first.</source>
+        <translation>请先在工程属性中指定合法的合成器与重采样器。</translation>
     </message>
     <message>
         <source>The synth tools of the project are not trusted. Play the project once and trust them, then preview again.</source>
