@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The project file of HelloUtau, see docs/UsthFormat.md -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-usth">
+    <comment>HelloUtau Project</comment>
+    <comment xml:lang="zh_CN">HelloUtau 工程</comment>
+    <comment xml:lang="zh_TW">HelloUtau 專案</comment>
+    <comment xml:lang="ja">HelloUtau プロジェクト</comment>
+    <sub-class-of type="application/json"/>
+    <glob pattern="*.usth"/>
+  </mime-type>
+</mime-info>

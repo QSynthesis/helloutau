@@ -15,6 +15,8 @@ int main(int argc, char *argv[]) {
     QApplication::setOrganizationName(QStringLiteral(HELLOUTAU_ORGANIZATION_NAME));
     QApplication::setApplicationName(QStringLiteral(HELLOUTAU_APPLICATION_NAME));
     QApplication::setApplicationVersion(QStringLiteral(HELLOKIT_VERSION));
+    // The desktop entry on Linux, from which the desktop takes the icon of the windows
+    QApplication::setDesktopFileName(QStringLiteral(HELLOUTAU_APPLICATION_ID));
 
     // The core plugin creates the editor and opens the windows. Before it, the files go to the
     // process that already runs with the same settings directory, after which the program ends.

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The project file of UTAU, which HelloUtau opens and saves as UTAU does -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-ust">
+    <comment>UTAU Project</comment>
+    <comment xml:lang="zh_CN">UTAU 工程</comment>
+    <comment xml:lang="zh_TW">UTAU 專案</comment>
+    <comment xml:lang="ja">UTAU プロジェクト</comment>
+    <sub-class-of type="text/plain"/>
+    <glob pattern="*.ust"/>
+  </mime-type>
+</mime-info>

@@ -129,7 +129,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 
 ### 标识与安装模式
 
-- `AppId` 一经发布不得更改，因为 Inno Setup 以它命名卸载信息的注册表键（`Software\Microsoft\Windows\CurrentVersion\Uninstall\<AppId>_is1`），并以它判断新的安装包是否为同一程序的升级。取值为全小写的反向域名 `org.openvpi.helloutau`（作者 2026-10-11 决定）。Windows 注册表的键名不区分大小写，大小写对 Inno Setup 没有影响，但 macOS 的 bundle identifier 与 Linux 的应用 ID 将来使用同一个标识，全小写可避免各平台写法不一。
+- `AppId` 一经发布不得更改，因为 Inno Setup 以它命名卸载信息的注册表键（`Software\Microsoft\Windows\CurrentVersion\Uninstall\<AppId>_is1`），并以它判断新的安装包是否为同一程序的升级。取值为全小写的反向域名 `org.openvpi.helloutau`（作者 2026-10-11 决定）。Windows 注册表的键名不区分大小写，大小写对 Inno Setup 没有影响，但 macOS 的 bundle identifier 与 Linux 的桌面项及应用图标的名称使用同一个标识（`helloutau/CMakeLists.txt` 的 `HELLOUTAU_APPLICATION_ID`），全小写可避免各平台写法不一。
 - `PrivilegesRequiredOverridesAllowed=dialog`：由用户在安装时选择「为所有用户安装」或「只为我安装」，同 diffscope。前者为管理员安装模式，安装到 `{commonpf}`，注册表写入 HKLM。后者为非管理员安装模式，安装到 `{userpf}`（Windows 7 及以后为 `%LOCALAPPDATA%\Programs`），注册表写入 HKCU，不需要提升权限。
 - `DefaultDirName={autopf}\OpenVPI\HelloUtau`，`{autopf}` 按安装模式取上述两者之一。注册表一律写在 `HKA` 下，`HKA` 在管理员安装模式下为 HKLM，否则为 HKCU。
 - `UsePreviousAppDir`、`UsePreviousTasks`、`UsePreviousGroup` 与 `UsePreviousPrivileges` 保持默认值 `yes`：升级时沿用上一次安装的目录、所选任务、开始菜单文件夹与安装模式，不再询问。
@@ -162,6 +162,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
   - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
   - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。
 - **Linux**：只出 tar.xz 压缩包，即 `helloutau-<version>-x86_64-linux-gcc.tar.xz`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。最初为 zip，作者 2026-10-19 改为 tar.xz，因为 tar.xz 是 Linux 上通行的格式，原生保存文件权限与库的符号链接，压缩率也高于 zip。符号包同为 tar.xz。条目的属主写为 0，不带构建机的用户名。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装，发现新版本时打开下载页（作者 2026-10-18 决定），尚未实现。
+- **Linux 的桌面登记**（作者 2026-10-21 要求）：免安装版没有安装步骤，而桌面项的 `Exec` 须为程序的绝对路径，因此包的根目录附两个脚本，由 `package.sh` 放入，不由 `cmake --install` 安装，因为装到 `/usr` 时 `share` 中的文件已在系统的位置。`register-desktop.sh` 把所在的文件夹登记到当前用户的桌面：应用菜单中的项与桌面上的快捷方式默认都创建（作者 2026-10-21 决定），分别以 `--no-menu` 与 `--no-desktop` 关闭。`--no-menu` 只把桌面项标为 `NoDisplay`，桌面项本身仍然写入，因为桌面按它为窗口取图标，并为文件类型找到程序。文件类型同 Windows 安装包，默认只在 `.usth` 的「打开方式」中列出 HelloUtau，`--ust` 与 `--uar` 另加，`--no-usth` 去掉，任何类型的默认程序都不改变。桌面项写到 `~/.local/share/applications`，程序的路径按 Desktop Entry Specification 的规则转义，图标复制到 `~/.local/share/icons/hicolor`，所选类型的声明复制到 `~/.local/share/mime/packages`，之后更新桌面的缓存。快捷方式写到 `xdg-user-dir DESKTOP` 所指的目录，设为可执行，并以 `gio` 标为可信，因为 GNOME 只启动可信的快捷方式。文件夹移动后再运行一次即更新，最后一次运行的选项取代以前的选项。`unregister-desktop.sh` 删除这些文件，不论由哪个文件夹登记，用户的设置、音源与插件不受影响。
 
 ## 应用图标
 
@@ -171,7 +172,8 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 - **源稿**：在 `helloutau/tools/driver/Resources/icons/app` 中。主稿 `app.svg` 画在 256 格上，用于 60 像素及以上。16、20、24、32 与 48 像素各有一张对齐像素网格的小稿 `app-<尺寸>.svg`，因为 Microsoft 要求小尺寸单独绘制，而不由大图缩小。主稿即 48 格小稿按 16/3 放大，两者图形相同。
 - **构建时生成**：图标由 qiconmaker（`stdware/qiconmaker`）在构建时从源稿写出，仓库只保存源稿（作者 2026-10-20 决定加入这一依赖，取代 10-16 只提交生成的 `helloutau.ico`、不提交小稿的做法）。`cmake/AddIcon.cmake` 的 `add_icon()` 生成一个图标，qiconmaker 由 `third-party/Dependencies.cmake` 查找，只在 Windows 与 macOS 上构建应用时需要。小稿的分配：24 像素的小稿也用于 30 像素，48 像素的小稿也用于 36 与 40 像素，其余尺寸由主稿渲染，`.icns` 只取 16 与 32 像素的小稿。Windows 上 qiconmaker 需要 Qt 的 DLL，自定义命令把 Qt 的 `bin` 设为 `PATH`。改为 256 格主稿后，60 像素及以上各帧与原先由 48 格主稿生成的帧只在边缘抗锯齿上有差别，以 qiconmaker 的 `--png-dir` 对比确认。32 像素以下底板铺满画布，缎带为纯色，16 像素的控制点各为一个像素。缎带的曲线在两端放缓，以免粗线内侧的半径小于线宽的一半，在衔接处出现折角。
 - **`app.ico`**（编进 `helloutau.exe` 的资源，也装到 `share/helloutau/icons`，作者 2026-10-20 要求）共 14 帧：16、20、24、30、32、36、40、48、60、64、72、80、96 与 256，即[应用图标构造](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction)一页中标题栏、任务栏与开始菜单在各缩放比例下所用尺寸的并集。30 像素用 24 像素的小稿，36 像素起用主稿。各帧由 QtSvg 渲染，256 像素帧以 PNG 压缩，其余帧为 32 位 BGRA 位图。qmsetup 的 `qm_add_win_rc()` 把图标列为资源脚本的依赖与配置依赖，换了图标后 Ninja、Makefile 与 Visual Studio 都会重新编译资源。
-- macOS 需要另做一个满幅方形、由系统加圆角的版本，Linux 安装 `helloutau.svg` 到 `hicolor/scalable/apps`，两者在补充相应平台的打包时再做。
+- **Linux**：源稿原样装进 `share/icons/hicolor`，名为 `org.openvpi.helloutau.svg`。主稿在 `scalable/apps`，16、24、32 与 48 像素的小稿在各尺寸的 `apps` 目录，因为图标主题的各尺寸目录都接受 SVG，所以 Linux 不需要 qiconmaker。hicolor 没有 20 像素的目录，20 像素的小稿不安装。桌面按桌面项为窗口取图标，程序以 `setDesktopFileName()` 声明桌面项的名称。没有桌面项时，X11 显示程序以 `setWindowIcon()` 设置的图标，由同一组源稿构成。桌面项与图标如何进入用户目录，见「macOS 与 Linux 的发布」。
+- macOS 需要另做一个满幅方形、由系统加圆角的版本，尚未做。
 
 ## 文件图标
 
@@ -181,7 +183,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 - **位置**：量 VS Code 的 `json.ico` 与 `cpp.ico`，其中心图形水平居中，64 像素及以上的竖直中心在页高的 0.50 至 0.52，小尺寸在 0.54 至 0.60。缎带的中心在小尺寸放在约 0.56，48 像素及以上为下方的扩展名留出位置，放在 0.47，因此缎带不与折角重叠。
 - **扩展名**：从 48 像素起写在下方。字母画成路径，不依赖字体，只用到 U、S、T、H、A、R。
 - **角标**：`.ust` 是 UTAU 图标的矢量版（淡紫圆角块、白色圆盘与八分音符，小于 10 像素时省去圆盘），`.uar` 是挖空出箭头与托盘的深绿块，`.usth` 没有角标（作者 2026-10-20 决定）。角标在每个尺寸都有，位于缎带右下、高音符的下方，与缎带重叠处在缎带上挖出一圈空隙，同应用图标以挖空表现细节。
-- **安装**：每个图标以其目录命名，在 Windows 上与 `app.ico` 一起装到 `share/helloutau/icons`，安装包把三个文件图标登记为三个 ProgId 的 `DefaultIcon`。三种类型都只登记为「打开方式」中的程序，因此只有用户把 HelloUtau 设为默认程序时才显示其图标。macOS 上图标装到 `Contents/Resources`，`.usth` 与 `.ust` 由 `Info.plist` 的 `CFBundleTypeIconFile` 指定，`.uar` 尚未声明为文档类型。打开 `.uar` 的安装界面尚未实现，在此之前以 HelloUtau 打开 `.uar` 时，Core 插件把它当作工程打开并报告错误。
+- **安装**：每个图标以其目录命名，在 Windows 上与 `app.ico` 一起装到 `share/helloutau/icons`，安装包把三个文件图标登记为三个 ProgId 的 `DefaultIcon`。三种类型都只登记为「打开方式」中的程序，因此只有用户把 HelloUtau 设为默认程序时才显示其图标。macOS 上图标装到 `Contents/Resources`，`.usth` 与 `.ust` 由 `Info.plist` 的 `CFBundleTypeIconFile` 指定，`.uar` 尚未声明为文档类型。Linux 上图标装到 `share/icons/hicolor` 各尺寸的 `mimetypes` 目录，名为 `application-x-<类型>.svg`，三种类型由 `share/mime/packages` 中各自的声明定义：`application/x-usth` 是 `application/json` 的子类型，`application/x-ust` 是 `text/plain` 的子类型，`application/x-uar` 是 `application/zip` 的子类型。打开 `.uar` 的安装界面尚未实现，在此之前以 HelloUtau 打开 `.uar` 时，Core 插件把它当作工程打开并报告错误。
 
 ## 卸载
 

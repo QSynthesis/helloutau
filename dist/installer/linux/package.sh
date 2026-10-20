@@ -42,6 +42,13 @@ echo "== Remove the development files"
 rm -rf "$staging/include" "$staging/lib/cmake"
 find "$staging" -name '*.a' -type f -delete
 
+# The scripts that register the folder with the desktop of the user and remove the registration,
+# in the root of the package rather than in the installation, because an installation into /usr
+# needs neither
+echo "== Add the scripts of the desktop"
+install -m 755 "$repository/dist/installer/linux/register-desktop.sh" \
+    "$repository/dist/installer/linux/unregister-desktop.sh" "$staging"
+
 # The debug information of each binary moves into <binary>.debug at the path of the binary
 # relative to the output directory, and the binary keeps its symbol table and a .gnu_debuglink to
 # that file. gdb finds the file beside the binary once the symbols are extracted over the package.

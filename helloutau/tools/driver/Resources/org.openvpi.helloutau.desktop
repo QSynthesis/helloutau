@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=HelloUtau
+GenericName=Singing Voice Synthesis Editor
+GenericName[zh_CN]=歌声合成编辑器
+GenericName[zh_TW]=歌聲合成編輯器
+GenericName[ja]=歌声合成エディター
+Comment=Cross-platform third-party editor of UTAU
+Comment[zh_CN]=跨平台的第三方 UTAU 编辑器
+Comment[zh_TW]=跨平台的第三方 UTAU 編輯器
+Comment[ja]=クロスプラットフォームのサードパーティ製 UTAU エディター
+Icon=org.openvpi.helloutau
+Exec=helloutau %F
+TryExec=helloutau
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=UTAU;Singing;Vocal;Synthesizer;
+MimeType=application/x-usth;application/x-ust;application/x-uar;
+StartupNotify=true
+StartupWMClass=HelloUtau

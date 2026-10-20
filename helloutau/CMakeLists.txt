@@ -25,6 +25,12 @@ helloutau_init_buildsystem(HELLOUTAU)
 qm_add_definition(HELLOUTAU_APPLICATION_NAME "HelloUtau" STRING_LITERAL)
 qm_add_definition(HELLOUTAU_ORGANIZATION_NAME "OpenVPI" STRING_LITERAL)
 
+# The identifier of the application: the AppId of the installer of Windows, the bundle identifier
+# of macOS, and on Linux the name of the desktop entry and of the icon, which the program sets as
+# the desktop file name. It never changes after the first release, see docs/Distribution.md.
+set(HELLOUTAU_APPLICATION_ID org.openvpi.helloutau)
+qm_add_definition(HELLOUTAU_APPLICATION_ID "${HELLOUTAU_APPLICATION_ID}" STRING_LITERAL)
+
 # The repositories of the releases and the identifiers of the assets and of the installer, which
 # UpdateChecker reads from update in the data directory of qmsetup, share/helloutau or
 # Contents/Resources of a macOS bundle, in the build as in the installation. See the automatic

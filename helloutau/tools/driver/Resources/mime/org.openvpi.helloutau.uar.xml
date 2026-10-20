@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The installation archive of UTAU, a zip archive of a voice bank or a plugin, see
+     docs/ArchiveInstall.md -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-uar">
+    <comment>UTAU Installation Archive</comment>
+    <comment xml:lang="zh_CN">UTAU 安装包</comment>
+    <comment xml:lang="zh_TW">UTAU 安裝套件</comment>
+    <comment xml:lang="ja">UTAU インストールアーカイブ</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.uar"/>
+  </mime-type>
+</mime-info>

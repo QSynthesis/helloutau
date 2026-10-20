@@ -14,6 +14,8 @@
 #include <QtCore/QPointer>
 #include <QtCore/QtDebug>
 #include <QtGui/QFileOpenEvent>
+#include <QtGui/QIcon>
+#include <QtGui/QPixmap>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
 
@@ -29,6 +31,8 @@
 #include <hellokit/Support/SingleProcessPeer.h>
 #include <hellokit/Support/TemporaryStorage.h>
 #include <hellokit/Support/TranslationLoader.h>
+
+#include "helloutau/Config.h"
 
 #include "AppSettings.h"
 #include "Editor.h"
@@ -101,6 +105,24 @@ namespace hello::daw {
                                                        ? QStringLiteral("Resources")
                                                        : QStringLiteral("share"));
         }
+
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MACOS)
+        // Returns the icon of the application from the icon theme that the installation holds on
+        // Linux, one pixmap for each drawing in the directories of the theme. QPixmap renders an
+        // SVG file at the size of its view box, the master at 256 px.
+        QIcon applicationIcon(const QString &programDirectory) {
+            const QDir theme(sharePath(programDirectory) + QStringLiteral("/icons/hicolor"));
+            const auto file = QStringLiteral("/apps/" HELLOUTAU_APPLICATION_ID ".svg");
+            QIcon icon;
+            for (const auto &directory : theme.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                const QPixmap pixmap(theme.filePath(directory + file));
+                if (!pixmap.isNull()) {
+                    icon.addPixmap(pixmap);
+                }
+            }
+            return icon;
+        }
+#endif
 
     }
 
@@ -540,6 +562,11 @@ namespace hello::daw {
 
     int AppLoader::run() {
         stdc_impl_t;
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MACOS)
+        // The icon that X11 shows if the desktop has no entry of the application. Windows and
+        // macOS take the icon from the program and from the bundle.
+        QApplication::setWindowIcon(applicationIcon(QCoreApplication::applicationDirPath()));
+#endif
         QString error;
         if (!load(&error)) {
             QMessageBox::critical(nullptr, QApplication::applicationName(),

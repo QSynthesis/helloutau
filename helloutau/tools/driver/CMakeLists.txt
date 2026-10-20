@@ -48,6 +48,40 @@ if(WIN32)
     install(FILES "${_app_icon}" ${_file_icons} DESTINATION "${HELLOUTAU_INSTALL_DATA_DIR}/icons")
 endif()
 
+# The desktop entry, the icons and the file types on Linux, in share as the specifications of
+# freedesktop.org lay them out, so that an installation into /usr works as it is. The scripts of
+# the package copy them into the data directory of the user, see dist/installer/linux. The drawings
+# are installed as they are, because an icon theme accepts SVG in the directory of each size.
+# hicolor has no directory of 20 px.
+if(UNIX AND NOT APPLE)
+    set(_share "${HELLOUTAU_INSTALL_SHARE_DIR}")
+    install(FILES "Resources/${HELLOUTAU_APPLICATION_ID}.desktop"
+        DESTINATION "${_share}/applications"
+    )
+    foreach(_type IN ITEMS app usth ust uar)
+        if(_type STREQUAL "app")
+            set(_context apps)
+            set(_name "${HELLOUTAU_APPLICATION_ID}")
+        else()
+            set(_context mimetypes)
+            set(_name "application-x-${_type}")
+            install(FILES "Resources/mime/${HELLOUTAU_APPLICATION_ID}.${_type}.xml"
+                DESTINATION "${_share}/mime/packages"
+            )
+        endif()
+        set(_drawings "${CMAKE_CURRENT_SOURCE_DIR}/Resources/icons/${_type}/${_type}")
+        install(FILES "${_drawings}.svg"
+            DESTINATION "${_share}/icons/hicolor/scalable/${_context}" RENAME "${_name}.svg"
+        )
+        foreach(_size IN ITEMS 16 24 32 48)
+            install(FILES "${_drawings}-${_size}.svg"
+                DESTINATION "${_share}/icons/hicolor/${_size}x${_size}/${_context}"
+                RENAME "${_name}.svg"
+            )
+        endforeach()
+    endforeach()
+endif()
+
 # The resource with the icon and the product name, which conf.cmake leaves to an application
 qm_add_win_rc(${PROJECT_NAME}
     NAME "HelloUtau"
@@ -85,7 +119,7 @@ if(APPLE)
     # The identifier is the AppId of the installer of Windows, and the short version has the
     # three parts that macOS shows, where qm_add_mac_bundle sets two.
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        MACOSX_BUNDLE_GUI_IDENTIFIER "org.openvpi.helloutau"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "${HELLOUTAU_APPLICATION_ID}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING
             "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
     )
