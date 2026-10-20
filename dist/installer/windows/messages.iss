@@ -2,6 +2,7 @@
 ; of [Languages] in setup.iss.
 
 [CustomMessages]
+english.CreateStartMenuIcon=Create a &Start menu shortcut
 english.FileAssociations=File associations:
 english.UsthFile=HelloUtau Project
 english.UstFile=UTAU Project
@@ -13,6 +14,7 @@ english.RemoveUserData=Remove the settings and the temporary files
 english.RemoveUserDataNote=The voice banks and the plugins in the documents folder are kept in either case.
 english.UninstallButton=&Uninstall
 
+chinesesimplified.CreateStartMenuIcon=创建开始菜单快捷方式(&S)
 chinesesimplified.FileAssociations=文件关联：
 chinesesimplified.UsthFile=HelloUtau 工程
 chinesesimplified.UstFile=UTAU 工程
@@ -24,6 +26,7 @@ chinesesimplified.RemoveUserData=删除设置与临时文件
 chinesesimplified.RemoveUserDataNote=无论是否勾选，文档文件夹中的音源与插件都会保留。
 chinesesimplified.UninstallButton=卸载(&U)
 
+chinesetraditional.CreateStartMenuIcon=建立開始功能表捷徑 (&S)
 chinesetraditional.FileAssociations=檔案關聯：
 chinesetraditional.UsthFile=HelloUtau 專案
 chinesetraditional.UstFile=UTAU 專案
@@ -35,6 +38,7 @@ chinesetraditional.RemoveUserData=刪除設定與暫存檔案
 chinesetraditional.RemoveUserDataNote=無論是否勾選，文件資料夾中的音源與外掛程式都會保留。
 chinesetraditional.UninstallButton=解除安裝(&U)
 
+japanese.CreateStartMenuIcon=スタート メニューにアイコンを作成する(&S)
 japanese.FileAssociations=ファイルの関連付け:
 japanese.UsthFile=HelloUtau プロジェクト
 japanese.UstFile=UTAU プロジェクト

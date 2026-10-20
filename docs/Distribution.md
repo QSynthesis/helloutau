@@ -138,7 +138,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 ### 安装内容
 
 - `[Files]` 以 `recursesubdirs` 复制 `cmake --install` 与打包脚本产出的整个目录。
-- 开始菜单快捷方式，以及可选的桌面快捷方式（任务，默认不选）。
+- 开始菜单快捷方式与桌面快捷方式，各为一个任务，都默认勾选（作者 2026-10-21 决定）。开始菜单的快捷方式直接放在「程序」之下，不建文件夹，也不放卸载程序的快捷方式（作者 2026-10-21 决定）。快捷方式的右键菜单中的「卸载」经 Windows 的设置运行同一个卸载程序，卸载选项页照样显示。不使用 Inno Setup 的开始菜单文件夹页，因此开始菜单是附加快捷方式中的一个任务，任务的文字 `CreateStartMenuIcon` 由 `messages.iss` 提供，Inno Setup 只提供桌面快捷方式的文字。取消勾选的任务在升级时由 `[InstallDelete]` 删除上一次安装创建的快捷方式，因为 Inno Setup 只创建所选任务的快捷方式，不删除以前创建的快捷方式。
 - 文件关联（任务）：`.usth`、`.ust` 与 `.uar`，只有 `.usth` 默认勾选（作者 2026-10-20 决定），因为另外两种是 UTAU 的格式，用户可能希望仍由 UTAU 打开。按 Inno Setup 向导生成的写法注册 ProgID，在扩展名的 `OpenWithProgids` 下加入该 ProgID，不改写扩展名的默认值，因为 `.ust` 与 `.uar` 可能已由 UTAU 关联。设置 `ChangesAssociations=yes`，安装与卸载结束时由 Inno Setup 调用 `SHChangeNotify(SHCNE_ASSOCCHANGED, ...)` 通知资源管理器。ProgID 为 `HelloUtau.usth`、`HelloUtau.ust`（作者 2026-10-11 决定）与 `HelloUtau.uar`。Microsoft 规定的格式为 `<厂商或应用>.<组件>.<版本>`，不需要并存多个版本时省去版本，同 VS Code 的 `<应用名>.<扩展名>`（`build/win32/code.iss` 中的 `{#RegValueName}.go`）。
 - 安装模式下的卸载信息由 Inno Setup 写入：`DisplayName`、`DisplayVersion`（取自 `AppVersion`，即 `HELLO_VERSION`）、`Publisher`、`DisplayIcon`、`InstallLocation`、`UninstallString` 等。
 

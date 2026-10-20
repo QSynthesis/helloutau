@@ -76,7 +76,9 @@ Name: "chinesetraditional"; MessagesFile: "compiler:Languages\ChineseTraditional
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; Both shortcuts are created by default (author 2026-10-21).
+Name: "startmenuicon"; Description: "{cm:CreateStartMenuIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 ; Only .usth is associated by default. .ust is the format of UTAU, and .uar the installation
 ; archive of UTAU, which the user may want UTAU to keep.
 Name: "associateusth"; Description: "{cm:AssocFileExtension,{#AppName},.usth}"; GroupDescription: "{cm:FileAssociations}"
@@ -112,8 +114,15 @@ Root: HKA; Subkey: "Software\Classes\HelloUtau.uar\DefaultIcon"; ValueType: stri
 Root: HKA; Subkey: "Software\Classes\HelloUtau.uar\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: associateuar
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
+; The shortcut of the Start menu is placed outside a folder, without a shortcut of the uninstaller,
+; which the context menu of the shortcut reaches through the settings of Windows.
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: startmenuicon
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
+
+[InstallDelete]
+; The shortcuts of an earlier installation, which Setup keeps if their task is cleared
+Type: files; Name: "{autoprograms}\{#AppName}.lnk"; Tasks: not startmenuicon
+Type: files; Name: "{autodesktop}\{#AppName}.lnk"; Tasks: not desktopicon
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
