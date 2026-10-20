@@ -134,7 +134,9 @@ namespace hello::daw {
         /// their own plugins.
         void setPluginPaths(const QStringList &paths);
 
-        /// Returns the files specified on the command line, which the core plugin opens.
+        /// Returns the files that the core plugin opens: those specified on the command line, and
+        /// those that the system asked to open by a QFileOpenEvent before the plugins were
+        /// initialized. A file that the system asks to open later opens in the editor directly.
         QStringList files() const;
 
         /// Returns the settings directory: AppSettings::defaultDirectory(), or the directory of

@@ -8,15 +8,19 @@
 #include <QtCore/QLibraryInfo>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
+#include <QtCore/QUrl>
+#include <QtGui/QFileOpenEvent>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 
+#include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Support/JsonInterop.h>
 #include <hellokit/Support/TemporaryStorage.h>
 #include <hellokit/Support/TranslationLoader.h>
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/AppSettings.h>
+#include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
 using namespace hello;
@@ -579,6 +583,59 @@ private Q_SLOTS:
 
         loader.shutdown();
         QCOMPARE(projectWindowCount(), 0);
+    }
+
+    // A file that the system asks to open before the plugins are initialized joins the files of
+    // the command line, which the core plugin opens. A local file name is required.
+    void a_file_opened_by_the_system_before_loading_joins_the_files() {
+        const AppLoader loader(arguments({QStringLiteral("a.ust")}));
+        QFileOpenEvent event(QStringLiteral("b.ust"));
+        QVERIFY(QCoreApplication::sendEvent(qApp, &event));
+        QFileOpenEvent remote(QUrl(QStringLiteral("https://example.com/c.ust")));
+        QCoreApplication::sendEvent(qApp, &remote);
+        QCOMPARE(loader.files(), (QStringList{QStringLiteral("a.ust"), QStringLiteral("b.ust")}));
+    }
+
+    // After the plugins are initialized, a file that the system asks to open takes the window
+    // of the untouched new project of the launch, and a further file opens in a window of its
+    // own.
+    void a_file_opened_by_the_system_later_opens_in_the_editor() {
+        QTemporaryDir dir;
+        const auto writeUst = [&dir](const char *name) {
+            const auto fileName = dir.filePath(QLatin1String(name));
+            QFile file(fileName);
+            if (file.open(QIODevice::WriteOnly)) {
+                file.write("[#VERSION]\r\nUST Version1.2\r\nCharset=UTF-8\r\n[#SETTING]\r\n"
+                           "Tempo=120\r\n[#0000]\r\nLength=480\r\nLyric=a\r\nNoteNum=60\r\n"
+                           "[#TRACKEND]\r\n");
+            }
+            return fileName;
+        };
+        const auto first = writeUst("first.ust");
+        const auto second = writeUst("second.ust");
+        const auto sourceOf = [](const ProjectWindow *window) {
+            return QDir::cleanPath(
+                QString::fromStdU16String(window->document()->sourcePath().u16string()));
+        };
+
+        AppLoader loader(arguments());
+#ifdef Q_OS_MACOS
+        loader.setPluginPaths({QStringLiteral(TEST_BUILTIN_PLUGINS_DIR)});
+#endif
+        QString error;
+        QVERIFY2(loader.load(&error), qPrintable(error));
+        QCOMPARE(loader.editor()->windows().size(), 1);
+
+        QFileOpenEvent event(first);
+        QVERIFY(QCoreApplication::sendEvent(qApp, &event));
+        QCOMPARE(loader.editor()->windows().size(), 1);
+        QCOMPARE(sourceOf(loader.editor()->windows().first()), QDir::cleanPath(first));
+
+        QFileOpenEvent another(second);
+        QVERIFY(QCoreApplication::sendEvent(qApp, &another));
+        QCOMPARE(loader.editor()->windows().size(), 2);
+        QCOMPARE(loader.files(), QStringList());
+        loader.shutdown();
     }
 };
 

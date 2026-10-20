@@ -3,7 +3,9 @@
 #include <cassert>
 #include <cstdio>
 #include <filesystem>
+#include <functional>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include <QtCore/QDir>
@@ -11,6 +13,7 @@
 #include <QtCore/QLibraryInfo>
 #include <QtCore/QPointer>
 #include <QtCore/QtDebug>
+#include <QtGui/QFileOpenEvent>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
 
@@ -24,10 +27,12 @@
 #include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/TemporaryStorage.h>
+#include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Support/TranslationLoader.h>
 
 #include "AppSettings.h"
 #include "Editor.h"
+#include "ProjectWindow.h"
 
 namespace hello::daw {
 
@@ -56,6 +61,41 @@ namespace hello::daw {
             Q_UNUSED(programDirectory);
             return false;
 #endif
+        }
+
+        // Passes the files that the system asks the application to open to a function. The
+        // Finder on macOS opens a file by a QFileOpenEvent to the application rather than on the
+        // command line, also when the file launches the application.
+        class FileOpenFilter : public QObject {
+        public:
+            explicit FileOpenFilter(std::function<void(const QString &)> open)
+                : m_open(std::move(open)) {
+            }
+
+        protected:
+            bool eventFilter(QObject *watched, QEvent *event) override {
+                if (event->type() == QEvent::FileOpen) {
+                    // A URL that is no local file has no file name, and is not opened.
+                    if (const auto file = static_cast<QFileOpenEvent *>(event)->file();
+                        !file.isEmpty()) {
+                        m_open(file);
+                        return true;
+                    }
+                }
+                return QObject::eventFilter(watched, event);
+            }
+
+        private:
+            std::function<void(const QString &)> m_open;
+        };
+
+        // Returns whether window holds a new project that the user has not edited, such as the
+        // project that a launch without files opens
+        bool isUntouched(const ProjectWindow *window) {
+            const auto document = window->document();
+            const auto session = document->session();
+            return document->sourcePath().empty() && !document->isModified() &&
+                   !session->canUndo() && !session->canRedo();
         }
 
         // Returns path relative to the parent of the directory of the program, the installation
@@ -94,9 +134,32 @@ namespace hello::daw {
         // the pending changes
         std::optional<kit::SettingsFile> pluginFile;
         bool loaded = false;
+        // Whether the plugins are initialized, after which the core plugin has opened the files
+        bool pluginsLoaded = false;
         bool allowsRoot = false;
         bool showsHelp = false;
         QPointer<Editor> editor;
+        // Declared last, so that it is destroyed first and calls no member of a destroyed loader
+        std::optional<FileOpenFilter> fileOpenFilter;
+
+        // Opens a file that the system asks the application to open. Before the plugins are
+        // initialized, the file joins the files of the command line, which the core plugin
+        // opens with every registration of the plugins in place. Afterwards the editor opens it,
+        // in the window of an untouched new project if that window is the only window, because
+        // the system asks for the file only after the launch has opened that window.
+        void openRequestedFile(const QString &file) {
+            if (!pluginsLoaded) {
+                files.push_back(file);
+                return;
+            }
+            if (!editor) {
+                return;
+            }
+            const auto windows = editor->windows();
+            const auto from =
+                windows.size() == 1 && isUntouched(windows.first()) ? windows.first() : nullptr;
+            editor->openFile(std::filesystem::path(file.toStdU16String()), from);
+        }
 
         // Settings rejected by the library are reported and ignored. Every plugin then follows
         // its metadata until the next change replaces the settings.
@@ -169,6 +232,11 @@ namespace hello::daw {
         }
         // A restart starts the program again with the options and without the files.
         impl.exitLauncher.emplace(impl.options);
+        if (const auto application = QCoreApplication::instance()) {
+            impl.fileOpenFilter.emplace(
+                [&impl](const QString &file) { impl.openRequestedFile(file); });
+            application->installEventFilter(&*impl.fileOpenFilter);
+        }
 
         // A settings directory given by the option also holds the voice banks and the plugins of
         // the user, so that it is self-contained.
@@ -414,6 +482,7 @@ namespace hello::daw {
             impl.system.setPluginSettings(stdc::pluginsystem::PluginSystem::Local,
                                           impl.pluginSettings);
             impl.system.loadPlugins();
+            impl.pluginsLoaded = true;
         }
 
         for (const auto &message : errors()) {
