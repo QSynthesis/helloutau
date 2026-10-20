@@ -9,6 +9,7 @@
 #include <QtCore/QCryptographicHash>
 
 #include <hellokit/Support/FileName.h>
+#include <hellokit/Support/FolderAccess.h>
 #include <hellokit/Support/TextCodec.h>
 
 namespace hello::kit {
@@ -370,6 +371,14 @@ namespace hello::kit {
         std::error_code error;
         if (!fs::is_directory(root, error)) {
             fail(diagnostics, tr("\"%1\" is not a folder.").arg(displayed(root)));
+            return std::nullopt;
+        }
+        // The listing skips the folders that cannot be read, so that a folder that cannot be read
+        // at all would read as an empty voice bank. macOS denies the Documents folder, which
+        // holds the voice banks of the user, until the user allows the access.
+        if (const auto reason = FolderAccess::unreadableReason(root)) {
+            fail(diagnostics, tr("The voice bank folder \"%1\" cannot be read: %2")
+                                  .arg(displayed(root), *reason));
             return std::nullopt;
         }
 

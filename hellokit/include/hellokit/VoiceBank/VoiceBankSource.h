@@ -305,6 +305,10 @@ namespace hello::kit {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankSource)
     public:
         /// Traverses \a root and reads its contents.
+        ///
+        /// \return the contents, or \c std::nullopt with the reason in \a diagnostics if
+        ///         \a root is no folder or cannot be listed. A subfolder that cannot be listed
+        ///         is skipped.
         static std::optional<VoiceBankSource> open(const std::filesystem::path &root,
                                                    DiagnosticList &diagnostics,
                                                    const VoiceBankLimits &limits = {});

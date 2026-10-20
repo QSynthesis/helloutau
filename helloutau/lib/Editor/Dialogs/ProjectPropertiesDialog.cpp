@@ -22,6 +22,8 @@
 
 #include <stdcorelib/path.h>
 
+#include <hellokit/Support/FolderAccess.h>
+
 #include <helloutau/Widgets/HeightForWidthFilter.h>
 
 #include "AppSettings.h"
@@ -123,7 +125,16 @@ namespace hello::daw {
         m_voiceDir->setInsertPolicy(QComboBox::NoInsert);
         m_voiceDirInvalid = addInvalidMark(m_voiceDir->lineEdit(), warningIcon);
         const auto locations = m_settings.voiceBanks().locations();
+        // A voice bank folder that cannot be listed, such as the folder of the user in the
+        // Documents folder that macOS denies, is reported below the box, because its voice banks
+        // are missing from the items.
+        QStringList unreadable;
         for (const auto &root : locations.voiceBankFolders()) {
+            if (const auto reason = kit::FolderAccess::unreadableReason(root)) {
+                unreadable.push_back(tr("The voice bank folder \"%1\" cannot be read: %2")
+                                         .arg(textOf(root), *reason));
+                continue;
+            }
             const auto folders =
                 QDir(textOf(root)).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
             for (const auto &folder : folders) {
@@ -203,6 +214,13 @@ namespace hello::daw {
         voiceField->setSpacing(2);
         voiceField->addLayout(withBrowse(m_voiceDir, this, [this] { browseVoiceDir(); }));
         voiceField->addWidget(m_voiceDirResolved);
+        if (!unreadable.isEmpty()) {
+            auto label = new QLabel(unreadable.join(QLatin1Char('\n')));
+            label->setObjectName(QStringLiteral("unreadableVoiceBankFolders"));
+            label->setWordWrap(true);
+            label->setTextFormat(Qt::PlainText);
+            voiceField->addWidget(label);
+        }
         form->addRow(tr("&Voice folder:"), voiceField);
         form->addRow(tr("&Output file:"), withBrowse(m_outputFile, this, [this] {
                          const auto chosen = QFileDialog::getSaveFileName(

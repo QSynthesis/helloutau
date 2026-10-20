@@ -199,6 +199,31 @@ private Q_SLOTS:
         QVERIFY(!VoiceBankSource::open(path, diagnostics).has_value());
         QVERIFY(hasError(diagnostics));
     }
+
+    // A folder that cannot be listed is refused rather than read as an empty voice bank, as
+    // macOS denies the Documents folder until the user allows the access.
+    void a_folder_that_cannot_be_listed_is_refused() {
+#ifdef Q_OS_WINDOWS
+        QSKIP("The permissions of std::filesystem do not deny reading on Windows.");
+#else
+        namespace fs = std::filesystem;
+        write(QStringLiteral("bank/oto.ini"), "a.wav=a,0,0,0,0,0\r\n");
+        const auto bank = root() / "bank";
+        fs::permissions(bank, fs::perms::none);
+        std::error_code error;
+        fs::directory_iterator probe(bank, error);
+        if (!error) {
+            fs::permissions(bank, fs::perms::owner_all);
+            QSKIP("The user reads a directory without permissions, as root does.");
+        }
+
+        DiagnosticList diagnostics;
+        const auto source = VoiceBankSource::open(bank, diagnostics);
+        fs::permissions(bank, fs::perms::owner_all);
+        QVERIFY(!source.has_value());
+        QVERIFY(hasError(diagnostics));
+#endif
+    }
 };
 
 QTEST_APPLESS_MAIN(test_VoiceBankSource)

@@ -13,6 +13,8 @@
 
 #include <QAKWidgets/widgetactioncontext.h>
 
+#include <hellokit/Support/FolderAccess.h>
+
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Dialogs/DiagnosticBox.h>
 #include <helloutau/Editor/Editor.h>
@@ -49,27 +51,24 @@ namespace hello::daw {
     void ClassicPluginContribution::openFolder(QWidget *parent, const AppSettings &settings,
                                                const std::filesystem::path &folder) {
         const auto text = QString::fromStdU16String(folder.u16string());
+        const auto shown = QDir::toNativeSeparators(text);
+        const auto warn = [parent](const QString &message) {
+            QMessageBox::warning(parent, tr("Open Plugin Folder"), message);
+        };
+        // The creation fails with EPERM in the Documents folder that macOS denies until the user
+        // allows the access.
         std::error_code error;
-        if (folder == userDirectory(settings)) {
-            std::filesystem::create_directories(folder, error);
+        if (folder == userDirectory(settings) &&
+            !std::filesystem::create_directories(folder, error) && error) {
+            warn(tr("The folder \"%1\" cannot be created: %2")
+                     .arg(shown, kit::FolderAccess::reasonOf(error)));
+            return;
         }
-        // is_directory() reports no error for a missing folder, and EPERM for a folder in the
-        // Documents folder that macOS keeps from the application.
+        // is_directory() reports no error for a missing folder.
         if (!std::filesystem::is_directory(folder, error)) {
-            const auto shown = QDir::toNativeSeparators(text);
-#ifdef Q_OS_MACOS
-            if (error == std::errc::operation_not_permitted) {
-                QMessageBox::warning(
-                    parent, tr("Open Plugin Folder"),
-                    tr("The folder \"%1\" cannot be opened, because macOS denies HelloUtau "
-                       "access to it. Allow the access to the folder in System Settings, Privacy "
-                       "& Security, Files and Folders.")
-                        .arg(shown));
-                return;
-            }
-#endif
-            QMessageBox::warning(parent, tr("Open Plugin Folder"),
-                                 tr("The folder \"%1\" does not exist.").arg(shown));
+            warn(error ? tr("The folder \"%1\" cannot be opened: %2")
+                             .arg(shown, kit::FolderAccess::reasonOf(error))
+                       : tr("The folder \"%1\" does not exist.").arg(shown));
             return;
         }
         QDesktopServices::openUrl(QUrl::fromLocalFile(text));

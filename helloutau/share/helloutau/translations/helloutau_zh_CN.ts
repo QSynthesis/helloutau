@@ -2560,6 +2560,10 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
         <translation>输出文件不是有效的文件名。</translation>
     </message>
     <message>
+        <source>The voice bank folder &quot;%1&quot; cannot be read: %2</source>
+        <translation>无法读取音源文件夹「%1」：%2</translation>
+    </message>
+    <message>
         <source>Resolves to %1</source>
         <translation>指向 %1</translation>
     </message>
@@ -4913,6 +4917,13 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     </message>
 </context>
 <context>
+    <name>hello::kit::FolderAccess</name>
+    <message>
+        <source>macOS denies %1 the access. Allow the access to the folder in System Settings, Privacy &amp; Security, Files and Folders.</source>
+        <translation>macOS 不允许 %1 访问。请在「系统设置」的「隐私与安全性」中的「文件与文件夹」里允许访问该文件夹。</translation>
+    </message>
+</context>
+<context>
     <name>hello::kit::FrequencyFormat</name>
     <message>
         <source>&quot;%1&quot; could not be read.</source>
@@ -6175,6 +6186,10 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>&quot;%1&quot; is not a folder.</source>
         <translation>「%1」不是文件夹。</translation>
+    </message>
+    <message>
+        <source>The voice bank folder &quot;%1&quot; cannot be read: %2</source>
+        <translation>无法读取音源文件夹「%1」：%2</translation>
     </message>
     <message>
         <source>This folder exceeds the size or depth limit of a voice bank, so only part of it was read.</source>

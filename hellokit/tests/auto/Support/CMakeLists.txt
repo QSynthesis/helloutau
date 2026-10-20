@@ -1,5 +1,6 @@
 hellokit_add_auto_test(test_BinaryStream.cpp HelloKitSupport)
 hellokit_add_auto_test(test_FileName.cpp HelloKitSupport)
+hellokit_add_auto_test(test_FolderAccess.cpp HelloKitSupport)
 hellokit_add_auto_test(test_JsonInterop.cpp HelloKitSupport)
 hellokit_add_auto_test(test_SettingsFile.cpp HelloKitSupport)
 hellokit_add_auto_test(test_TextCodec.cpp HelloKitSupport)

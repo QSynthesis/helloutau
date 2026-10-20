@@ -13,6 +13,7 @@
 #include <stdutau/utaconst.h>
 
 #include <hellokit/Support/FileName.h>
+#include <hellokit/Support/FolderAccess.h>
 #include <hellokit/Support/TextCodec.h>
 
 namespace hello::daw {
@@ -148,36 +149,18 @@ namespace hello::daw {
                                                  kit::DiagnosticList &diagnostics) {
         QList<ClassicPlugin> plugins;
         for (const auto &directory : directories) {
-            std::error_code error;
-            std::filesystem::directory_iterator entries(directory, error);
             // A directory that does not exist yields no plugins, as in UTAU. A directory that
-            // cannot be read is reported. macOS denies the access to the Documents folder, which
-            // holds the folder of the user, until the user allows it, and the access fails with
-            // EPERM rather than EACCES.
-            if (error) {
-                if (error == std::errc::no_such_file_or_directory ||
-                    error == std::errc::not_a_directory) {
-                    continue;
-                }
-#ifdef Q_OS_MACOS
-                if (error == std::errc::operation_not_permitted) {
-                    diagnostics.push_back(
-                        {kit::Diagnostic::Warning,
-                         tr("The plugin folder \"%1\" cannot be read, because macOS denies "
-                            "HelloUtau access to it. Allow the access to the folder in System "
-                            "Settings, Privacy & Security, Files and Folders.")
-                             .arg(textOf(directory))});
-                    continue;
-                }
-#endif
+            // cannot be read is reported, such as the folder of the user in the Documents folder,
+            // which macOS denies until the user allows the access.
+            if (const auto reason = kit::FolderAccess::unreadableReason(directory)) {
                 diagnostics.push_back(
-                    {kit::Diagnostic::Warning,
-                     tr("The plugin folder \"%1\" cannot be read: %2")
-                         .arg(textOf(directory), QString::fromLocal8Bit(error.message()))});
+                    {kit::Diagnostic::Warning, tr("The plugin folder \"%1\" cannot be read: %2")
+                                                   .arg(textOf(directory), *reason)});
                 continue;
             }
+            std::error_code error;
             std::vector<std::filesystem::path> folders;
-            for (const auto &entry : entries) {
+            for (const auto &entry : std::filesystem::directory_iterator(directory, error)) {
                 std::error_code entryError;
                 if (entry.is_directory(entryError)) {
                     folders.push_back(directory / kit::FileName::listed(entry.path().filename()));
