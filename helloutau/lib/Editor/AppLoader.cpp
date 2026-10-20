@@ -35,6 +35,14 @@ namespace hello::daw {
 
         AppLoader *currentAppLoader = nullptr;
 
+        // The title that Qt gives the settings item of the application menu of macOS, which
+        // holds the action of the settings. qtbase translates the title as 首选项 (Preferences),
+        // whereas the untranslated title appears as Settings on macOS 13 and later. The
+        // translation of this application, which is installed after that of Qt and is therefore
+        // looked up first, gives the item the name of the action.
+        [[maybe_unused]] constexpr const char *preferencesMenuTitle =
+            QT_TRANSLATE_NOOP("MAC_APPLICATION_MENU", "Preferences...");
+
         // Returns whether the program in programDirectory is that of a macOS bundle, in
         // Contents/MacOS. The other directories of the bundle are Contents/Frameworks for the
         // libraries and the plugins of Qt, and Contents/Resources for the data, the counterparts

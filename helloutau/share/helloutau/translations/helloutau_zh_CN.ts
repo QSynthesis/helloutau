@@ -2,6 +2,13 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
+    <name>MAC_APPLICATION_MENU</name>
+    <message>
+        <source>Preferences...</source>
+        <translation>设置...</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::AboutDialog</name>
     <message>
         <source>About %1</source>
