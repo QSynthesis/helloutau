@@ -3903,6 +3903,66 @@ Lyrics:
     </message>
 </context>
 <context>
+    <name>hello::daw::UtauFolderSearch</name>
+    <message>
+        <source>Installer</source>
+        <translation>安装记录</translation>
+    </message>
+    <message>
+        <source>Common location</source>
+        <translation>常见位置</translation>
+    </message>
+    <message>
+        <source>Run history</source>
+        <translation>运行记录</translation>
+    </message>
+    <message>
+        <source>Wine</source>
+        <translation>Wine</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::UtauFolderSearchDialog</name>
+    <message>
+        <source>Search for UTAU Folders</source>
+        <translation>搜索 UTAU 文件夹</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation>版本</translation>
+    </message>
+    <message>
+        <source>Found in</source>
+        <translation>来源</translation>
+    </message>
+    <message>
+        <source>Use This Folder</source>
+        <translation>使用此文件夹</translation>
+    </message>
+    <message>
+        <source>The folders that hold utau.exe on this computer. Choose the folder of the UTAU whose synth tools, voice banks and plugins HelloUtau uses.</source>
+        <translation>本机中含有 utau.exe 的文件夹。请选择一个 UTAU，HelloUtau 将使用其中的合成工具、音源与插件。</translation>
+    </message>
+    <message>
+        <source>Searching...</source>
+        <translation>正在搜索...</translation>
+    </message>
+    <message>
+        <source>No UTAU folder was found. Close this dialog and choose the folder with Browse...</source>
+        <translation>未找到 UTAU 文件夹。请关闭此对话框，用「浏览...」选择文件夹。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n folder(s) found.</source>
+        <translation>
+            <numerusform>找到 %n 个文件夹。</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::UtauSettingPage</name>
     <message>
         <source>The location of the UTAU folder and the resolution of voice bank and synth tool paths.</source>
@@ -3911,6 +3971,10 @@ Lyrics:
     <message>
         <source>Folder</source>
         <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>S&amp;earch...</source>
+        <translation>搜索(&amp;E)...</translation>
     </message>
     <message>
         <source>&amp;UTAU folder:</source>

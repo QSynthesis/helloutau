@@ -43,6 +43,12 @@ helloutau_add_library(${PROJECT_NAME} SHARED
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
+# The installations of Windows Installer and the version resource of utau.exe, which
+# UtauFolderSearch reads
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE msi version)
+endif()
+
 # Where AppLoader finds the plugins that come with the application, relative to the directory of
 # the program: ../lib/helloutau/plugins, or ../Plugins in a macOS bundle. The build and the
 # installation lay them out alike.

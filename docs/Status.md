@@ -131,6 +131,7 @@
 - 音符属性对话框中 UTAU 的 Others 栏（手写 `$patch`、`$direct` 等条目）日后以官方插件提供，现在不做（作者 2026-10-09 决定）。
 - ~~关联文件的图标~~：`.usth`、`.ust` 与 `.uar` 已接入 Windows 安装包与 macOS 的 bundle，见 `Distribution.md`「文件图标」。
 - ~~音源与插件安装包的安装~~（2026-10-21）：`InstallArchiveDialog`，入口为拖放、「工具」菜单、设置页的安装按钮与打开文件（关联、命令行、第二次启动），见 `ArchiveInstall.md`。打开对话框不列出 `.uar`（作者 2026-10-20 决定）。
+- ~~搜索 UTAU 文件夹~~（2026-10-21）：UTAU 设置页的「搜索...」，`UtauFolderSearch` 与 `UtauFolderSearchDialog`，来源为安装记录、常见位置、运行记录与 Wine，见 `UtauSearch.md`。
 - ~~库的翻译的位置~~：已迁移到 `helloutau/share/helloutau/translations/`，与安装布局一致，同 Qt Creator 的 `share/qtcreator/translations/`，生成的 `.qm` 不再嵌入 HelloUtauEditor（作者 2026-10-17 决定，见 `Distribution.md`「安装目录」）。插件的翻译仍嵌入插件自身。
 
 ## 已知问题

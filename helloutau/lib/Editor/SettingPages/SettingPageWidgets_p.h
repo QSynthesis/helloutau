@@ -3,6 +3,7 @@
 
 #include <optional>
 
+#include <QtCore/QList>
 #include <QtCore/QString>
 
 class QComboBox;
@@ -16,10 +17,11 @@ namespace hello::daw {
     /// Returns the path in \a edit with forward slashes, trimmed.
     QString pathText(const QLineEdit *edit);
 
-    /// Adds a row to \a form with a line edit and a button that browses for a directory if
-    /// \a directory is true, or for a program otherwise, and returns the line edit.
+    /// Adds a row to \a form with a line edit, \a buttons, and a button that browses for a
+    /// directory if \a directory is true, or for a program otherwise, and returns the line edit.
     QLineEdit *addPathRow(QFormLayout *form, QWidget *owner, const QString &label,
-                          const QString &text, bool directory);
+                          const QString &text, bool directory,
+                          const QList<QWidget *> &buttons = {});
 
     /// Returns a label with wrapped \a text, for an explanation below a setting.
     QLabel *note(const QString &text);

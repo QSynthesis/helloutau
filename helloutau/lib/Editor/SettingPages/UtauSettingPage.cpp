@@ -13,6 +13,7 @@
 #include "AppSettings.h"
 #include "InstallArchiveDialog.h"
 #include "SettingPageWidgets_p.h"
+#include "UtauFolderSearchDialog.h"
 
 namespace hello::daw {
 
@@ -30,9 +31,21 @@ namespace hello::daw {
         auto layout = new QVBoxLayout(widget);
         auto utauGroup = new QGroupBox(tr("Folder"), widget);
         auto utauForm = new QFormLayout(utauGroup);
-        m_utauDirectory =
-            addPathRow(utauForm, widget, tr("&UTAU folder:"),
-                       QString::fromStdU16String(m_settings.utau().directory().u16string()), true);
+        // The candidates of UtauFolderSearch, from which the user chooses the folder
+        auto search = new QPushButton(tr("S&earch..."), widget);
+        m_utauDirectory = addPathRow(
+            utauForm, widget, tr("&UTAU folder:"),
+            QString::fromStdU16String(m_settings.utau().directory().u16string()), true, {search});
+        connect(search, &QPushButton::clicked, widget, [this, search] {
+            UtauFolderSearchDialog dialog(search);
+            dialog.start();
+            if (dialog.exec() == QDialog::Accepted) {
+                if (const auto folder = dialog.selectedFolder()) {
+                    m_utauDirectory->setText(
+                        QDir::toNativeSeparators(QString::fromStdU16String(folder->u16string())));
+                }
+            }
+        });
         utauForm->addRow(
             note(tr("The folder that contains utau.exe. A synth tool that a project "
                     "names by a relative path is resolved against it, and its voice and "

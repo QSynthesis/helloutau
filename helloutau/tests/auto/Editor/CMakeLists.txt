@@ -18,6 +18,7 @@ helloutau_add_auto_test(test_SamplePreview.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_SoftwareBuildChannel.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_SynthToolTrust.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_UpdateChecker.cpp HelloUtauEditor)
+helloutau_add_auto_test(test_UtauFolderSearch.cpp HelloUtauEditor)
 
 # The tests write their archives with libzip, and give the update the updater of the build.
 helloutau_add_auto_test(test_SoftwareTreeUpdate.cpp HelloUtauEditor libzip::zip
