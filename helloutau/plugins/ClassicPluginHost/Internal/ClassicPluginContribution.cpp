@@ -50,6 +50,20 @@ namespace hello::daw {
         return folders;
     }
 
+    ClassicPluginContribution::FolderTimes
+        ClassicPluginContribution::modificationTimesOf(const AppSettings &settings) {
+        FolderTimes times;
+        for (int root = 0; root < AppSettings::ClassicRootCount; ++root) {
+            const auto path = pluginsOf(settings.classicRoot(AppSettings::ClassicRoot(root)));
+            std::error_code error;
+            if (const auto time = std::filesystem::last_write_time(path, error);
+                !path.empty() && !error) {
+                times[root] = time;
+            }
+        }
+        return times;
+    }
+
     void ClassicPluginContribution::openFolder(QWidget *parent, const AppSettings &settings,
                                                const std::filesystem::path &folder) {
         const auto text = QString::fromStdU16String(folder.u16string());
@@ -120,7 +134,9 @@ namespace hello::daw {
     }
 
     void ClassicPluginContribution::fill(QMenu *menu, ProjectWindow *window) {
-        if (m_utauDirectory != window->editor()->settings().utau().directory()) {
+        const auto &current = window->editor()->settings();
+        if (m_utauDirectory != current.utau().directory() ||
+            m_folderTimes != modificationTimesOf(current)) {
             refresh(window);
         }
 
@@ -173,6 +189,7 @@ namespace hello::daw {
         m_diagnostics.clear();
         m_plugins = ClassicPlugin::discover(pluginFolders(settings), m_diagnostics);
         m_utauDirectory = settings.utau().directory();
+        m_folderTimes = modificationTimesOf(settings);
     }
 
 }

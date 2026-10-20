@@ -1,12 +1,14 @@
 #ifndef HELLOUTAU_CLASSICPLUGINHOST_INTERNAL_CLASSICPLUGINCONTRIBUTION_H
 #define HELLOUTAU_CLASSICPLUGINHOST_INTERNAL_CLASSICPLUGINCONTRIBUTION_H
 
+#include <array>
 #include <filesystem>
 #include <optional>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QList>
 
+#include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Widgets/ActionContribution.h>
 
 #include <ClassicPluginHost/ClassicPlugin.h>
@@ -15,7 +17,6 @@ class QMenu;
 
 namespace hello::daw {
 
-    class AppSettings;
     class ProjectWindow;
 
     /// The submenu Classic Plugins of the Tools menu of the project windows, as the plugin menu
@@ -23,8 +24,10 @@ namespace hello::daw {
     /// plugin folders. The command Classic Plugins at Pointer (key N, as in UTAU) shows the same
     /// menu at the mouse pointer. That command is in no menu.
     ///
-    /// The plugins are discovered when the menu first opens, on Refresh, and after the UTAU
-    /// folder in the settings has changed. The discovery covers the folders of pluginFolders().
+    /// The plugins are discovered when the menu first opens, on Refresh, after the UTAU folder in
+    /// the settings has changed, and after the modification time of a plugin folder has changed,
+    /// which a plugin added to or removed from the folder changes, such as by an installation
+    /// archive. The discovery covers the folders of pluginFolders().
     class ClassicPluginContribution : public ActionContribution {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ClassicPluginContribution)
     public:
@@ -51,6 +54,15 @@ namespace hello::daw {
                                const std::filesystem::path &folder);
 
     private:
+        // The modification time of the plugins directory of each root of
+        // AppSettings::classicRoot(), indexed by the root
+        using FolderTimes = std::array<std::optional<std::filesystem::file_time_type>,
+                                       AppSettings::ClassicRootCount>;
+
+        // Returns the modification time of each plugin folder, std::nullopt for a folder that
+        // does not apply or cannot be read.
+        static FolderTimes modificationTimesOf(const AppSettings &settings);
+
         void fill(QMenu *menu, ProjectWindow *window);
         void refresh(ProjectWindow *window);
 
@@ -61,6 +73,8 @@ namespace hello::daw {
         // The UTAU folder in the settings at the last discovery, or \c std::nullopt before the
         // first discovery
         std::optional<std::filesystem::path> m_utauDirectory;
+        // The modification times of the plugin folders at the last discovery
+        FolderTimes m_folderTimes;
     };
 
 }
