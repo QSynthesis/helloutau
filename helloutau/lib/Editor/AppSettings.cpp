@@ -156,6 +156,26 @@ namespace hello::daw {
         return userDirectory() / u"ClassicExtensions";
     }
 
+    std::filesystem::path
+        AppSettings::classicRoot(ClassicRoot root,
+                                 const std::filesystem::path &utauDirectory) const {
+        switch (root) {
+            case HelloUtauRoot:
+                return classicExtensionsDirectory();
+            case UtauDataRoot:
+                return UtauSettings::dataDirectory();
+            case UtauRoot:
+                return utauDirectory;
+            case ClassicRootCount:
+                break;
+        }
+        return {};
+    }
+
+    std::filesystem::path AppSettings::classicRoot(ClassicRoot root) const {
+        return classicRoot(root, utau().directory());
+    }
+
     void AppSettings::sync() {
         stdc_impl_t;
         impl.store.file.sync();

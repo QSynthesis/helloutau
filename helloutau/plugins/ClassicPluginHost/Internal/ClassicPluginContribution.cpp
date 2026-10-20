@@ -29,8 +29,10 @@ namespace hello::daw {
 
     namespace {
 
-        std::filesystem::path pluginsOf(const std::filesystem::path &utauDirectory) {
-            return utauDirectory.empty() ? std::filesystem::path() : utauDirectory / u"plugins";
+        // Returns the plugins directory of a root of AppSettings::classicRoot(), or an empty path
+        // if the root is empty.
+        std::filesystem::path pluginsOf(const std::filesystem::path &root) {
+            return root.empty() ? std::filesystem::path() : root / u"plugins";
         }
 
     }
@@ -38,12 +40,12 @@ namespace hello::daw {
     QList<std::filesystem::path>
         ClassicPluginContribution::pluginFolders(const AppSettings &settings) {
         // In the order of the voice bank folders of VoiceBankSettings::locations()
-        QList<std::filesystem::path> folders{userDirectory(settings)};
-        if (const auto data = UtauSettings::dataDirectory(); !data.empty()) {
-            folders.push_back(data / u"plugins");
-        }
-        if (const auto utauPlugins = pluginsOf(settings.utau().directory()); !utauPlugins.empty()) {
-            folders.push_back(utauPlugins);
+        QList<std::filesystem::path> folders;
+        for (int root = 0; root < AppSettings::ClassicRootCount; ++root) {
+            if (auto path = pluginsOf(settings.classicRoot(AppSettings::ClassicRoot(root)));
+                !path.empty()) {
+                folders.push_back(std::move(path));
+            }
         }
         return folders;
     }
@@ -114,7 +116,7 @@ namespace hello::daw {
     }
 
     std::filesystem::path ClassicPluginContribution::userDirectory(const AppSettings &settings) {
-        return settings.classicExtensionsDirectory() / u"plugins";
+        return pluginsOf(settings.classicRoot(AppSettings::HelloUtauRoot));
     }
 
     void ClassicPluginContribution::fill(QMenu *menu, ProjectWindow *window) {
@@ -155,7 +157,7 @@ namespace hello::daw {
                          [window, folder = userDirectory(settings)] {
                              openFolder(window, window->editor()->settings(), folder);
                          });
-        const auto utauPlugins = pluginsOf(settings.utau().directory());
+        const auto utauPlugins = pluginsOf(settings.classicRoot(AppSettings::UtauRoot));
         if (!utauPlugins.empty()) {
             QObject::connect(menu->addAction(tr("Open &UTAU Plugin Folder")), &QAction::triggered,
                              window, [window, utauPlugins] {

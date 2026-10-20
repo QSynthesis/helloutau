@@ -16,6 +16,33 @@ class test_AppSettings : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
+    // The roots are the classic extensions of the user directory, the data folder of UTAU and
+    // the UTAU folder, which the caller may give before it is applied. An empty folder yields
+    // an empty root.
+    void the_classic_roots_follow_the_folders() {
+        QTemporaryDir dir;
+        const auto user = dir.filePath(QStringLiteral("user"));
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")), user);
+        const auto data =
+            std::filesystem::path(dir.filePath(QStringLiteral("data")).toStdU16String());
+        UtauSettings::setDataDirectory(data);
+        const auto utau =
+            std::filesystem::path(dir.filePath(QStringLiteral("utau")).toStdU16String());
+        settings.utau().setDirectory(utau);
+
+        QCOMPARE(settings.classicRoot(AppSettings::HelloUtauRoot),
+                 std::filesystem::path(user.toStdU16String()) / u"ClassicExtensions");
+        QCOMPARE(settings.classicRoot(AppSettings::UtauDataRoot), data);
+        QCOMPARE(settings.classicRoot(AppSettings::UtauRoot), utau);
+        const auto edited = std::filesystem::path(u"edited");
+        QCOMPARE(settings.classicRoot(AppSettings::UtauRoot, edited), edited);
+        QVERIFY(settings.classicRoot(AppSettings::UtauRoot, {}).empty());
+
+        UtauSettings::setDataDirectory(std::filesystem::path());
+        QVERIFY(settings.classicRoot(AppSettings::UtauDataRoot).empty());
+        UtauSettings::setDataDirectory(std::nullopt);
+    }
+
     void unset_values_are_empty_except_the_export_encoding() {
         QTemporaryDir dir;
         const AppSettings settings(dir.filePath(QStringLiteral("settings.json")));

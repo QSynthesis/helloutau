@@ -75,6 +75,26 @@ namespace hello::daw {
         /// and plugins. The directory is not created by this class.
         std::filesystem::path classicExtensionsDirectory() const;
 
+        /// The folders laid out as the folder of UTAU, each with the \c voice and \c plugins
+        /// directories, in the order in which their voice banks and plugins are listed
+        enum ClassicRoot {
+            HelloUtauRoot,    ///< classicExtensionsDirectory()
+            UtauDataRoot,     ///< UtauSettings::dataDirectory()
+            UtauRoot,         ///< The UTAU folder
+            ClassicRootCount, ///< The number of the roots
+        };
+
+        /// Returns \a root with \a utauDirectory as the UTAU folder, such as the folder that the
+        /// settings page edits before it applies the folder.
+        ///
+        /// \return the root, or an empty path if the root does not apply: UtauDataRoot if
+        ///         UtauSettings::dataDirectory() is empty, UtauRoot if \a utauDirectory is empty
+        std::filesystem::path classicRoot(ClassicRoot root,
+                                          const std::filesystem::path &utauDirectory) const;
+
+        /// Returns \a root with the UTAU folder of utau().
+        std::filesystem::path classicRoot(ClassicRoot root) const;
+
         /// Writes the pending changes immediately.
         void sync();
 

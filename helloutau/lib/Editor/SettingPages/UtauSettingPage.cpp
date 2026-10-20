@@ -62,18 +62,16 @@ namespace hello::daw {
     }
 
     void UtauSettingPage::showVoiceFolders() {
-        // The folders are listed in the order of kit::VoiceLocations::voiceBankFolders() for the
-        // UTAU folder being edited
+        // The voice directory of each root for the UTAU folder being edited, in the order of
+        // kit::VoiceLocations::voiceBankFolders()
         QStringList lines{tr("The folders whose voice banks are listed, in decreasing priority:")};
-        lines.push_back(QDir::toNativeSeparators(
-            QString::fromStdU16String(m_settings.voiceBanks().folder().u16string())));
-        if (const auto data = UtauSettings::dataDirectory(); !data.empty()) {
-            lines.push_back(
-                QDir::toNativeSeparators(QString::fromStdU16String((data / u"voice").u16string())));
-        }
-        const auto utau = pathText(m_utauDirectory);
-        if (!utau.isEmpty()) {
-            lines.push_back(QDir::toNativeSeparators(utau + QStringLiteral("/voice")));
+        const auto utau = std::filesystem::path(pathText(m_utauDirectory).toStdU16String());
+        for (int root = 0; root < AppSettings::ClassicRootCount; ++root) {
+            const auto folder = m_settings.classicRoot(AppSettings::ClassicRoot(root), utau);
+            if (!folder.empty()) {
+                lines.push_back(QDir::toNativeSeparators(
+                    QString::fromStdU16String((folder / u"voice").u16string())));
+            }
         }
         m_voiceFolders->setText(lines.join(QLatin1Char('\n')));
     }

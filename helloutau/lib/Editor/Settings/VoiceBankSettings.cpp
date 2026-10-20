@@ -21,7 +21,7 @@ namespace hello::daw {
     VoiceBankSettings::~VoiceBankSettings() = default;
 
     std::filesystem::path VoiceBankSettings::folder() const {
-        return m_settings.classicExtensionsDirectory() / u"voice";
+        return m_settings.classicRoot(AppSettings::HelloUtauRoot) / u"voice";
     }
 
     bool VoiceBankSettings::isRelativeToUtau() const {
@@ -33,12 +33,15 @@ namespace hello::daw {
     }
 
     kit::VoiceLocations VoiceBankSettings::locations() const {
+        // The roots before the UTAU folder are data folders, which %DATA% denotes. The UTAU
+        // folder holds the voice folder of %VOICE% and is the base of the relative paths.
         kit::VoiceLocations locations;
-        locations.dataFolders.push_back(m_settings.classicExtensionsDirectory());
-        if (const auto data = UtauSettings::dataDirectory(); !data.empty()) {
-            locations.dataFolders.push_back(data);
+        for (const auto root : {AppSettings::HelloUtauRoot, AppSettings::UtauDataRoot}) {
+            if (auto data = m_settings.classicRoot(root); !data.empty()) {
+                locations.dataFolders.push_back(std::move(data));
+            }
         }
-        const auto utau = m_settings.utau().directory();
+        const auto utau = m_settings.classicRoot(AppSettings::UtauRoot);
         std::error_code error;
         const bool utauExists = !utau.empty() && std::filesystem::is_directory(utau, error);
         if (utauExists) {
