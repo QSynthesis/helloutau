@@ -16,10 +16,14 @@ int main(int argc, char *argv[]) {
     QApplication::setApplicationName(QStringLiteral(HELLOUTAU_APPLICATION_NAME));
     QApplication::setApplicationVersion(QStringLiteral(HELLOKIT_VERSION));
 
-    // The core plugin creates the editor and opens the windows. Before it, the loader shows the
-    // usage for --help, after which the program ends, and the warning about the privileges of
-    // the administrator.
+    // The core plugin creates the editor and opens the windows. Before it, the files go to the
+    // process that already runs with the same settings directory, after which the program ends.
+    // The loader then shows the usage for --help, after which the program ends, and the warning
+    // about the privileges of the administrator.
     hello::daw::AppLoader loader(QApplication::arguments());
+    if (loader.forwardToRunningProcess()) {
+        return 0;
+    }
     if (!loader.showStartMessages()) {
         return 0;
     }

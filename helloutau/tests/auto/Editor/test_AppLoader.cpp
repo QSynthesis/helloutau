@@ -585,15 +585,29 @@ private Q_SLOTS:
         QCOMPARE(projectWindowCount(), 0);
     }
 
-    // A file that the system asks to open before the plugins are initialized joins the files of
-    // the command line, which the core plugin opens. A local file name is required.
-    void a_file_opened_by_the_system_before_loading_joins_the_files() {
-        const AppLoader loader(arguments({QStringLiteral("a.ust")}));
+    // A file that the system asks to open reaches the plugins as a remote command, after every
+    // plugin is initialized if it arrives before. A local file name is required.
+    void a_file_opened_by_the_system_reaches_the_plugins() {
+        QTemporaryDir root;
+        addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
+                  QLatin1String(AppLoader::corePluginId));
+        AppLoader loader(arguments({QStringLiteral("a.ust")}));
+        loader.setPluginPaths({root.path()});
         QFileOpenEvent event(QStringLiteral("b.ust"));
         QVERIFY(QCoreApplication::sendEvent(qApp, &event));
         QFileOpenEvent remote(QUrl(QStringLiteral("https://example.com/c.ust")));
         QCoreApplication::sendEvent(qApp, &remote);
-        QCOMPARE(loader.files(), (QStringList{QStringLiteral("a.ust"), QStringLiteral("b.ust")}));
+        QCOMPARE(loader.files(), QStringList{QStringLiteral("a.ust")});
+
+        QString error;
+        QVERIFY2(loader.load(&error), qPrintable(error));
+        QFileOpenEvent later(QStringLiteral("d.ust"));
+        QVERIFY(QCoreApplication::sendEvent(qApp, &later));
+        QCOMPARE(events(), QStringList({QStringLiteral("initialize a.ust"),
+                                        QStringLiteral("pluginsInitialized"),
+                                        QStringLiteral("remoteCommand b.ust "),
+                                        QStringLiteral("remoteCommand d.ust ")}));
+        loader.shutdown();
     }
 
     // After the plugins are initialized, a file that the system asks to open takes the window

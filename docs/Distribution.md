@@ -157,7 +157,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
   - 翻译按 bundle 求出（作者 2026-10-17 决定）：库的翻译在 `Contents/Resources/translations`（qmsetup 的 data 目录），Qt 的翻译在 `Contents/Resources/Qt/translations`，分别对应其他系统的 `share/helloutau/translations` 与 `share/Qt/translations`。更新配置同样在 data 目录，由 `AppLoader::applicationDataPath()` 求出。hellokit 的辅助程序与主程序同在 `Contents/MacOS`。
   - 两个模块的 `<模块>_MACOSX_BUNDLE_NAME` 取根目录的 `HELLO_MACOSX_BUNDLE_NAME`，即 `HelloUtau`，该名字在其他系统上不起作用。不构建应用时同样按 bundle 布局（作者 2026-10-19 决定）。
   - `cmake --install` 整体复制构建中的 bundle，因此不随应用发布的文件不得输出到 bundle 中：测试与只供测试的库以 qmsetup 的 `TEST` 输出到 `out/bin` 与 `out/lib`。静态库的归档与其他库同在 `Contents/Frameworks`，不安装开发文件（`HELLO_DEVEL` 关闭）时，qmsetup 在复制 bundle 之后、部署重新签名之前把它们从安装的 bundle 中删除，因为 codesign 拒绝含有归档的 bundle。测试启动的辅助程序由 `PROGRAMS` 以路径传给测试，不复制到测试旁边（见 `cmake/AddAutoTest.cmake`）。
-  - 从 Finder 打开文件经 `QFileOpenEvent` 传入，由 `AppLoader` 处理。插件初始化之前收到的文件并入命令行的文件，由核心插件打开。之后收到的文件由编辑器打开：唯一的窗口是启动时新建、未经编辑的工程时，文件在该窗口中打开，否则新开窗口。
+  - 从 Finder 打开文件经 `QFileOpenEvent` 传入，`AppLoader` 把它作为远程命令交给插件系统（见 [`Plugins.md`](Plugins.md)「Core 插件」）。macOS 本身每个用户只运行一个 bundle 的实例，之后打开的文件交给已运行的实例。
 - **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：
   - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
   - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。

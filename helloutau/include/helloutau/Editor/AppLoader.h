@@ -61,6 +61,14 @@ namespace hello::daw {
         ///    theirs when they initialize.
         explicit AppLoader(const QStringList &arguments);
 
+        /// Sends the files of the command line to the process of the application that already
+        /// runs with the same settings directory, whose plugins receive them as a remote command.
+        /// Nothing is sent with \c --help, or if this process is the first. The program calls
+        /// the function after the constructor, and ends if it returns \c true .
+        ///
+        /// \return whether the other process received the files
+        bool forwardToRunningProcess();
+
         /// Shows the messages that precede the windows, in message boxes of the system, which
         /// appear without the widgets of Qt, or on the standard output or error if no message
         /// box can be shown. With \c --help, it shows the usage of the command line.
@@ -134,9 +142,9 @@ namespace hello::daw {
         /// their own plugins.
         void setPluginPaths(const QStringList &paths);
 
-        /// Returns the files that the core plugin opens: those specified on the command line, and
-        /// those that the system asked to open by a QFileOpenEvent before the plugins were
-        /// initialized. A file that the system asks to open later opens in the editor directly.
+        /// Returns the files specified on the command line, which the core plugin opens. The
+        /// files of a QFileOpenEvent and of another process reach the plugins as remote commands
+        /// (stdc::pluginsystem::PluginSystem::remoteCommand()).
         QStringList files() const;
 
         /// Returns the settings directory: AppSettings::defaultDirectory(), or the directory of

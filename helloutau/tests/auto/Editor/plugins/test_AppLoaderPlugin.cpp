@@ -36,6 +36,16 @@ namespace {
             record(QString::fromUtf8("aboutToShutdown"));
         }
 
+        void remoteCommand(const std::vector<std::string> &arguments,
+                           const std::filesystem::path &workingDirectory) override {
+            QStringList words{QString::fromUtf8("remoteCommand")};
+            for (const auto &argument : arguments) {
+                words.push_back(QString::fromStdString(argument));
+            }
+            words.push_back(QString::fromStdU16String(workingDirectory.u16string()));
+            record(words.join(QLatin1Char(' ')));
+        }
+
     private:
         static void record(const QString &event) {
             auto events = qApp->property("appLoaderEvents").toStringList();

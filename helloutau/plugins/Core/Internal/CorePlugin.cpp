@@ -2,15 +2,30 @@
 
 #include <filesystem>
 
+#include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Support/TranslationLoader.h>
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
+#include <helloutau/Editor/ProjectWindow.h>
 
 #include <Core/CoreSettingPages.h>
 
 namespace hello::daw {
+
+    namespace {
+
+        // Returns whether window holds a new project that the user has not edited, such as the
+        // project that a start without files opens
+        bool isUntouched(const ProjectWindow *window) {
+            const auto document = window->document();
+            const auto session = document->session();
+            return document->sourcePath().empty() && !document->isModified() &&
+                   !session->canUndo() && !session->canRedo();
+        }
+
+    }
 
     CorePlugin::CorePlugin() = default;
 
@@ -56,6 +71,38 @@ namespace hello::daw {
         // request.
         if (AppLoader::instance()) {
             m_editor->checkForUpdatesAtStartup();
+        }
+    }
+
+    void CorePlugin::remoteCommand(const std::vector<std::string> &arguments,
+                                   const std::filesystem::path &workingDirectory) {
+        if (!m_editor) {
+            return;
+        }
+        // A window opened from the file manager comes to the front.
+        const auto activate = [](QWidget *window) {
+            if (window) {
+                window->raise();
+                window->activateWindow();
+            }
+        };
+        // A second start without files would have shown a new project.
+        if (arguments.empty()) {
+            activate(m_editor->newWindow());
+            return;
+        }
+        for (const auto &argument : arguments) {
+            auto path = std::filesystem::path(QString::fromStdString(argument).toStdU16String());
+            if (path.is_relative() && !workingDirectory.empty()) {
+                path = workingDirectory / path;
+            }
+            // The window of an untouched new project takes the file if it is the only window,
+            // because the Finder passes the file of a start only after the start opened that
+            // window.
+            const auto windows = m_editor->windows();
+            const auto from =
+                windows.size() == 1 && isUntouched(windows.first()) ? windows.first() : nullptr;
+            activate(m_editor->openFile(path, from));
         }
     }
 

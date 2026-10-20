@@ -26,13 +26,12 @@
 #include <hellokit/NativeSystem/NativeProcess.h>
 #include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Support/SettingsFile.h>
+#include <hellokit/Support/SingleProcessPeer.h>
 #include <hellokit/Support/TemporaryStorage.h>
-#include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Support/TranslationLoader.h>
 
 #include "AppSettings.h"
 #include "Editor.h"
-#include "ProjectWindow.h"
 
 namespace hello::daw {
 
@@ -89,15 +88,6 @@ namespace hello::daw {
             std::function<void(const QString &)> m_open;
         };
 
-        // Returns whether window holds a new project that the user has not edited, such as the
-        // project that a launch without files opens
-        bool isUntouched(const ProjectWindow *window) {
-            const auto document = window->document();
-            const auto session = document->session();
-            return document->sourcePath().empty() && !document->isModified() &&
-                   !session->canUndo() && !session->canRedo();
-        }
-
         // Returns path relative to the parent of the directory of the program, the installation
         // or Contents of a bundle
         QString besideProgram(const QString &programDirectory, const QString &path) {
@@ -134,31 +124,26 @@ namespace hello::daw {
         // the pending changes
         std::optional<kit::SettingsFile> pluginFile;
         bool loaded = false;
-        // Whether the plugins are initialized, after which the core plugin has opened the files
-        bool pluginsLoaded = false;
         bool allowsRoot = false;
         bool showsHelp = false;
         QPointer<Editor> editor;
-        // Declared last, so that it is destroyed first and calls no member of a destroyed loader
+        // Declared last, so that they are destroyed first and call no member of a destroyed
+        // loader
         std::optional<FileOpenFilter> fileOpenFilter;
+        std::optional<kit::SingleProcessPeer> peer;
 
-        // Opens a file that the system asks the application to open. Before the plugins are
-        // initialized, the file joins the files of the command line, which the core plugin
-        // opens with every registration of the plugins in place. Afterwards the editor opens it,
-        // in the window of an untouched new project if that window is the only window, because
-        // the system asks for the file only after the launch has opened that window.
-        void openRequestedFile(const QString &file) {
-            if (!pluginsLoaded) {
-                files.push_back(file);
-                return;
+        // Passes the files of a QFileOpenEvent, or the arguments of another process of the same
+        // settings directory, to the plugins, which open them as remote commands. The plugin
+        // system keeps a command until every plugin is initialized, so that the windows open
+        // with every registration of the plugins in place.
+        void passToPlugins(const QStringList &arguments, const QString &workingDirectory) {
+            std::vector<std::string> converted;
+            converted.reserve(arguments.size());
+            for (const auto &argument : arguments) {
+                converted.push_back(argument.toStdString());
             }
-            if (!editor) {
-                return;
-            }
-            const auto windows = editor->windows();
-            const auto from =
-                windows.size() == 1 && isUntouched(windows.first()) ? windows.first() : nullptr;
-            editor->openFile(std::filesystem::path(file.toStdU16String()), from);
+            system.remoteCommand(converted,
+                                 std::filesystem::path(workingDirectory.toStdU16String()));
         }
 
         // Settings rejected by the library are reported and ignored. Every plugin then follows
@@ -234,8 +219,21 @@ namespace hello::daw {
         impl.exitLauncher.emplace(impl.options);
         if (const auto application = QCoreApplication::instance()) {
             impl.fileOpenFilter.emplace(
-                [&impl](const QString &file) { impl.openRequestedFile(file); });
+                [&impl](const QString &file) { impl.passToPlugins({file}, QString()); });
             application->installEventFilter(&*impl.fileOpenFilter);
+
+            // One process per settings directory. A settings directory of the option is a
+            // separate instance, as a portable copy or a test is.
+            auto directory = QDir::cleanPath(QFileInfo(impl.settingsDirectory).absoluteFilePath());
+#ifdef Q_OS_WINDOWS
+            directory = directory.toLower();
+#endif
+            impl.peer.emplace(QCoreApplication::organizationName() + QLatin1Char('/') +
+                              QCoreApplication::applicationName() + QLatin1Char('\n') + directory);
+            QObject::connect(&*impl.peer, &kit::SingleProcessPeer::activateRequested, &*impl.peer,
+                             [&impl](const QStringList &arguments, const QString &directory) {
+                                 impl.passToPlugins(arguments, directory);
+                             });
         }
 
         // A settings directory given by the option also holds the voice banks and the plugins of
@@ -263,6 +261,14 @@ namespace hello::daw {
     AppLoader::~AppLoader() {
         shutdown();
         currentAppLoader = nullptr;
+    }
+
+    bool AppLoader::forwardToRunningProcess() {
+        stdc_impl_t;
+        if (impl.showsHelp || !impl.peer || impl.peer->isPrimary()) {
+            return false;
+        }
+        return impl.peer->sendToPrimary(impl.files, QDir::currentPath());
     }
 
     bool AppLoader::showStartMessages() const {
@@ -482,7 +488,6 @@ namespace hello::daw {
             impl.system.setPluginSettings(stdc::pluginsystem::PluginSystem::Local,
                                           impl.pluginSettings);
             impl.system.loadPlugins();
-            impl.pluginsLoaded = true;
         }
 
         for (const auto &message : errors()) {
