@@ -186,11 +186,20 @@ namespace hello::daw {
 
         /// Opens \a paths, the first as openFile() does with \a from and the others in windows of
         /// their own. The user is asked once, before any file opens, whether to save the project
-        /// of \a from. If the user cancels, no file opens.
+        /// of \a from. If the user cancels, no file opens. The installation archives among
+        /// \a paths (InstallArchiveDialog::isInstallArchive()) are installed with
+        /// installArchive() after the projects open, and need no question to save.
         ///
         /// \return the windows that show the files that were opened
         QList<ProjectWindow *> openFiles(const QList<std::filesystem::path> &paths,
                                          ProjectWindow *from);
+
+        /// Installs the voice bank or the plugin of the installation archive \a path over
+        /// \a from, see InstallArchiveDialog::install(). Once a voice bank is installed, the user
+        /// is offered to open it.
+        ///
+        /// \return whether the archive was installed
+        bool installArchive(const std::filesystem::path &path, QWidget *from = nullptr);
 
         /// Returns the open voice bank windows, in the order of opening.
         QList<VoiceBankWindow *> voiceBankWindows() const;

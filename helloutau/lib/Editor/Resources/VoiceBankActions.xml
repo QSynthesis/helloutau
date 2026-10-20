@@ -60,6 +60,8 @@
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="Help"
                 shortcuts="Ctrl+Shift+P;F1" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
+        <action id="helloutau.tools.installArchive" text="&amp;Install Voice Bank or Plugin..."
+                category="Tools" />
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
         <action id="helloutau.help.checkForUpdates" text="Check for &amp;Updates..."
                 category="Help" />
@@ -250,6 +252,8 @@
                 <action id="helloutau.voiceBank.viewFrequencyMapLog" />
                 <separator />
                 <action id="helloutau.voiceBank.processAudio" />
+                <separator />
+                <action id="helloutau.tools.installArchive" />
                 <separator />
                 <action id="helloutau.tools.settings" />
             </menu>

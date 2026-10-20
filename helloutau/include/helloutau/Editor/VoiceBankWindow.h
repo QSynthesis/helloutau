@@ -284,6 +284,11 @@ namespace hello::daw {
         void closeEvent(QCloseEvent *event) override;
         void changeEvent(QEvent *event) override;
 
+        /// The installation archives dropped on the window are installed, see
+        /// Editor::installArchive(). Other files are not accepted.
+        void dragEnterEvent(QDragEnterEvent *event) override;
+        void dropEvent(QDropEvent *event) override;
+
     private:
         class Impl;
         std::unique_ptr<Impl> _impl;

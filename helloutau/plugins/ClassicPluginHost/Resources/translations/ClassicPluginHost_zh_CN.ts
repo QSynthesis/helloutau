@@ -357,6 +357,10 @@
         <source>Install</source>
         <translation>安装</translation>
     </message>
+    <message>
+        <source>&amp;Install Plugin...</source>
+        <translation>安装插件(&amp;I)...</translation>
+    </message>
     <message numerus="yes">
         <source>%n plugin(s) below come with a %1, which they start for a preview, and are recommended. Install All installs the preview program in exactly these plugins, or updates its older version.</source>
         <translation>

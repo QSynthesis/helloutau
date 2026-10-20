@@ -233,6 +233,10 @@
         <translation>左空白(&amp;O)</translation>
     </message>
     <message>
+        <source>&amp;Install Voice Bank or Plugin...</source>
+        <translation>安装音源或插件(&amp;I)...</translation>
+    </message>
+    <message>
         <source>&amp;Open in File Explorer</source>
         <translation>在文件资源管理器中打开(&amp;O)</translation>
     </message>
@@ -1266,6 +1270,18 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
         <translation>未命名</translation>
     </message>
     <message>
+        <source>Install</source>
+        <translation>安装</translation>
+    </message>
+    <message>
+        <source>The voice bank %1 is installed in %2.
+
+Open it now?</source>
+        <translation>音源 %1 已安装到 %2。
+
+是否现在打开？</translation>
+    </message>
+    <message>
         <source>Open</source>
         <translation>打开</translation>
     </message>
@@ -1643,6 +1659,157 @@ Start %1 as a normal user. The option --allow-root suppresses this warning.</sou
     <message>
         <source>No file is checked.</source>
         <translation>没有勾选任何文件。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::InstallArchiveDialog</name>
+    <message>
+        <source>Install</source>
+        <translation>安装</translation>
+    </message>
+    <message>
+        <source>File names</source>
+        <translation>文件名</translation>
+    </message>
+    <message>
+        <source>The archive does not state the encoding of its file names. Choose the encoding in which the names on the Files tab read correctly.</source>
+        <translation>压缩包没有说明文件名的编码。请选择能使「文件」标签页中的名字正确显示的编码。</translation>
+    </message>
+    <message>
+        <source>Write the names as they read in this encoding</source>
+        <translation>按此编码解出的名字写入</translation>
+    </message>
+    <message>
+        <source>Write the names as UTAU writes them on this computer</source>
+        <translation>按本机 UTAU 写出的名字写入</translation>
+    </message>
+    <message>
+        <source>Encoding:</source>
+        <translation>编码：</translation>
+    </message>
+    <message>
+        <source>Text files</source>
+        <translation>文本文件</translation>
+    </message>
+    <message>
+        <source>Choose the encoding in which the text files of the voice bank read correctly. The voice bank records it, so that it opens without this question.</source>
+        <translation>请选择能使音源的文本文件正确显示的编码。音源会记录这一编码，打开时不再询问。</translation>
+    </message>
+    <message>
+        <source>Files</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <source>Install Voice Bank or Plugin</source>
+        <translation>安装音源或插件</translation>
+    </message>
+    <message>
+        <source>Install Voice Bank</source>
+        <translation>安装音源</translation>
+    </message>
+    <message>
+        <source>Install Plugin</source>
+        <translation>安装插件</translation>
+    </message>
+    <message>
+        <source>Installation archives of UTAU (*.uar *.zip);;All files (*)</source>
+        <translation>UTAU 安装包 (*.uar *.zip);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Install %1</source>
+        <translation>安装 %1</translation>
+    </message>
+    <message>
+        <source>%1 cannot be installed.
+
+%2</source>
+        <translation>无法安装 %1。
+
+%2</translation>
+    </message>
+    <message>
+        <source>The archive holds a voice bank rather than a plugin. Install it with Install Voice Bank... on the UTAU page.</source>
+        <translation>这个安装包里是音源，不是插件。请使用「UTAU」页中的「安装音源...」安装。</translation>
+    </message>
+    <message>
+        <source>The archive holds a plugin rather than a voice bank. Install it with Install Plugin... on the Classic Plugins page.</source>
+        <translation>这个安装包里是插件，不是音源。请使用「经典插件」页中的「安装插件...」安装。</translation>
+    </message>
+    <message>
+        <source>The folder %1 cannot be created: %2</source>
+        <translation>无法创建文件夹 %1：%2</translation>
+    </message>
+    <message>
+        <source>The folder %1 already exists in %2.</source>
+        <translation>%2 中已有文件夹 %1。</translation>
+    </message>
+    <message>
+        <source>Overwrite replaces the files of the same names and keeps the other files of the folder. A new folder leaves the folder as it is.</source>
+        <translation>覆盖会替换同名文件，并保留该文件夹中的其他文件。装到新文件夹则不改动该文件夹。</translation>
+    </message>
+    <message>
+        <source>Overwrite</source>
+        <translation>覆盖</translation>
+    </message>
+    <message>
+        <source>Install into %1</source>
+        <translation>装到 %1</translation>
+    </message>
+    <message>
+        <source>Installing %1...</source>
+        <translation>正在安装 %1...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>The voice bank %1 is installed in %2.</source>
+        <translation>音源 %1 已安装到 %2。</translation>
+    </message>
+    <message>
+        <source>The plugin %1 is installed in %2. It is listed in Classic Plugins of the Tools menu.</source>
+        <translation>插件 %1 已安装到 %2，列在「工具」菜单的「经典插件」中。</translation>
+    </message>
+    <message>
+        <source>The names are written as misdecoded in %1, the encoding of this computer, as UTAU writes them. HelloUtau reads them as the names in %2.</source>
+        <translation>名字按本机的编码 %1 错解后写入，与 UTAU 写出的结果相同。HelloUtau 按 %2 还原这些名字。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file name(s) cannot be represented in %1, the encoding of this computer. UTAU on this computer cannot open these files.</source>
+        <translation>
+            <numerusform>有 %n 个文件名无法以本机的编码 %1 表示，本机的 UTAU 无法打开这些文件。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>The names cannot be written as UTAU writes them, because some names are invalid in %1.</source>
+        <translation>部分名字在 %1 中无效，因此无法按 UTAU 写出的方式写入。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 (%n invalid byte sequence(s))</source>
+        <translation>
+            <numerusform>%1（%n 处无效字节序列）</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>This archive cannot be installed in the selected encoding.</source>
+        <translation>按所选编码无法安装此压缩包。</translation>
+    </message>
+    <message>
+        <source>Voice bank: %1</source>
+        <translation>音源：%1</translation>
+    </message>
+    <message>
+        <source>Plugin: %1</source>
+        <translation>插件：%1</translation>
+    </message>
+    <message>
+        <source>Folder: %1</source>
+        <translation>文件夹：%1</translation>
+    </message>
+    <message>
+        <source>Description: %1</source>
+        <translation>说明：%1</translation>
     </message>
 </context>
 <context>
@@ -3762,6 +3929,10 @@ Lyrics:
         <translation>UTAU 按自身所在的文件夹解析相对路径的音源。取消此选项，或 UTAU 文件夹不存在时，按 HelloUtau 所在的文件夹解析。</translation>
     </message>
     <message>
+        <source>&amp;Install Voice Bank...</source>
+        <translation>安装音源(&amp;I)...</translation>
+    </message>
+    <message>
         <source>The folders whose voice banks are listed, in decreasing priority:</source>
         <translation>列出其中音源的文件夹，按优先级从高到低：</translation>
     </message>
@@ -5001,6 +5172,65 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>The format records an amplitude for each frame, and the map lacks amplitudes.</source>
         <translation>该格式为每帧记录振幅，而该频率表没有振幅。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::InstallArchive</name>
+    <message>
+        <source>The archive has no install.txt at its root, so it is not an installation archive of UTAU.</source>
+        <translation>压缩包的根目录中没有 install.txt，因此不是 UTAU 的安装包。</translation>
+    </message>
+    <message>
+        <source>The encoding %1 is not available.</source>
+        <translation>编码 %1 不可用。</translation>
+    </message>
+    <message>
+        <source>The name %1 of an entry is invalid in %2.</source>
+        <translation>条目名 %1 在 %2 中无效。</translation>
+    </message>
+    <message>
+        <source>install.txt is invalid in %1.</source>
+        <translation>install.txt 在 %1 中无效。</translation>
+    </message>
+    <message>
+        <source>The type %1 of install.txt is neither voiceset nor editplugin.</source>
+        <translation>install.txt 的类型 %1 既不是 voiceset，也不是 editplugin。</translation>
+    </message>
+    <message>
+        <source>The folder %1 of install.txt is not a safe folder name.</source>
+        <translation>install.txt 中的文件夹 %1 不是安全的文件夹名。</translation>
+    </message>
+    <message>
+        <source>The archive holds no %1 at its root.</source>
+        <translation>压缩包的根目录中没有 %1。</translation>
+    </message>
+    <message>
+        <source>The archive holds no %1 in the folder %2 that install.txt names.</source>
+        <translation>install.txt 指定的文件夹 %2 中没有 %1。</translation>
+    </message>
+    <message>
+        <source>%1 is not a safe folder name.</source>
+        <translation>%1 不是安全的文件夹名。</translation>
+    </message>
+    <message>
+        <source>The archive holds no files to install.</source>
+        <translation>压缩包中没有要安装的文件。</translation>
+    </message>
+    <message>
+        <source>The folder %1 cannot be written.</source>
+        <translation>无法写入文件夹 %1。</translation>
+    </message>
+    <message>
+        <source>The folder %1 cannot be created.</source>
+        <translation>无法创建文件夹 %1。</translation>
+    </message>
+    <message>
+        <source>The file %1 cannot be written.</source>
+        <translation>无法写入文件 %1。</translation>
+    </message>
+    <message>
+        <source>The folder %1 cannot be read.</source>
+        <translation>无法读取文件夹 %1。</translation>
     </message>
 </context>
 <context>
@@ -6273,12 +6503,28 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>压缩包条目 %1 是符号链接。</translation>
     </message>
     <message>
+        <source>The entry %1 cannot be read.</source>
+        <translation>无法读取压缩包条目 %1。</translation>
+    </message>
+    <message>
         <source>The entry %1 is encrypted.</source>
         <translation>压缩包条目 %1 已加密。</translation>
     </message>
     <message>
+        <source>The entry %1 exceeds %2 bytes.</source>
+        <translation>压缩包条目 %1 超过 %2 字节。</translation>
+    </message>
+    <message>
         <source>The extracted files exceed %1 bytes.</source>
         <translation>解压出的文件超过 %1 字节。</translation>
+    </message>
+    <message>
+        <source>The entries %1 and %2 have the same name apart from case.</source>
+        <translation>压缩包条目 %1 与 %2 的名字只有大小写不同。</translation>
+    </message>
+    <message>
+        <source>The folder %1 is an unsafe path.</source>
+        <translation>文件夹 %1 的路径不安全。</translation>
     </message>
     <message>
         <source>The folder %1 cannot be accessed.</source>

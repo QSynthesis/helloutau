@@ -133,6 +133,17 @@ namespace hello::kit {
                            [&](const Entry &entry) { return decode(entry.raw).has_value(); });
     }
 
+    QList<QByteArray> InstallArchive::rawTexts() const {
+        QList<QByteArray> texts;
+        for (const auto &entry : m_entries) {
+            if (!entry.raw.utf8) {
+                texts.push_back(entry.raw.name);
+            }
+        }
+        texts.push_back(m_manifest);
+        return texts;
+    }
+
     bool InstallArchive::setNameEncoding(const QString &encoding) {
         m_errorString.clear();
         m_nameEncoding = needsNameEncoding() ? encoding : QString();

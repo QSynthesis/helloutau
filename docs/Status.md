@@ -129,7 +129,8 @@
 - `.llsm` 版本不兼容的诊断器暂缓，需要先取得 moresampler 报错的原文。
 - 经典模式下整轨存在而部分音符失败时的诊断（优先级极低，作者 2026-10-11 认为现状已经足够）：现在只在没有写出整轨时诊断，办法与实测见 [`SynthDiagnostics.md`](SynthDiagnostics.md)「三种渲染器的记录」中经典模式的局限。
 - 音符属性对话框中 UTAU 的 Others 栏（手写 `$patch`、`$direct` 等条目）日后以官方插件提供，现在不做（作者 2026-10-09 决定）。
-- ~~关联文件的图标~~：`.usth`、`.ust` 与 `.uar` 已接入 Windows 安装包，macOS 上声明了前两种，见 `Distribution.md`「文件图标」。打开 `.uar` 的安装界面尚未实现。`.uar` 只能拖入或经安装菜单与设置页的安装按钮安装，打开对话框不列出 `.uar`（作者 2026-10-20 决定）。
+- ~~关联文件的图标~~：`.usth`、`.ust` 与 `.uar` 已接入 Windows 安装包与 macOS 的 bundle，见 `Distribution.md`「文件图标」。
+- ~~音源与插件安装包的安装~~（2026-10-21）：`InstallArchiveDialog`，入口为拖放、「工具」菜单、设置页的安装按钮与打开文件（关联、命令行、第二次启动），见 `ArchiveInstall.md`。打开对话框不列出 `.uar`（作者 2026-10-20 决定）。
 - ~~库的翻译的位置~~：已迁移到 `helloutau/share/helloutau/translations/`，与安装布局一致，同 Qt Creator 的 `share/qtcreator/translations/`，生成的 `.qm` 不再嵌入 HelloUtauEditor（作者 2026-10-17 决定，见 `Distribution.md`「安装目录」）。插件的翻译仍嵌入插件自身。
 
 ## 已知问题

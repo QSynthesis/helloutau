@@ -4,11 +4,14 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
 #include "AppSettings.h"
+#include "InstallArchiveDialog.h"
 #include "SettingPageWidgets_p.h"
 
 namespace hello::daw {
@@ -44,6 +47,21 @@ namespace hello::daw {
         m_voiceFolders = note(QString());
         utauForm->addRow(m_voiceFolders);
         showVoiceFolders();
+        // A voice bank is installed into the first of the folders, which belongs to HelloUtau.
+        auto install = new QPushButton(tr("&Install Voice Bank..."), widget);
+        connect(install, &QPushButton::clicked, widget, [this, install] {
+            constexpr auto kind = kit::InstallArchive::VoiceBank;
+            if (const auto archive = InstallArchiveDialog::chooseArchive(install, kind)) {
+                if (const auto installation =
+                        InstallArchiveDialog::install(*archive, m_settings, install, kind)) {
+                    InstallArchiveDialog::reportInstalled(*installation, install);
+                }
+            }
+        });
+        auto installRow = new QHBoxLayout();
+        installRow->addWidget(install);
+        installRow->addStretch();
+        utauForm->addRow(installRow);
         connect(m_utauDirectory, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_utauDirectory, &QLineEdit::textChanged, this, &UtauSettingPage::showVoiceFolders);
         connect(m_relativeVoiceDirInUtau, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);

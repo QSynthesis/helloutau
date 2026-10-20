@@ -16,8 +16,11 @@
 #include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
+#include <QtCore/QMimeData>
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
+#include <QtGui/QDragEnterEvent>
+#include <QtGui/QDropEvent>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
@@ -81,6 +84,7 @@
 #include "Editor.h"
 #include "FindSupport_p.h"
 #include "GenerateFrequencyMapsDialog.h"
+#include "InstallArchiveDialog.h"
 #include "OtoWaveformKeyboardModifiers.h"
 #include "OtoWaveformView.h"
 #include "OutputLogDialog.h"
@@ -311,6 +315,12 @@ namespace hello::daw {
                 const auto folder = QFileDialog::getExistingDirectory(&decl, tr("Open Voice Bank"));
                 if (!folder.isEmpty()) {
                     editor->openVoiceBank(pathOf(folder), &decl);
+                }
+            });
+            addCommand(QStringLiteral("helloutau.tools.installArchive"), [this] {
+                stdc_decl_t;
+                if (const auto archive = InstallArchiveDialog::chooseArchive(&decl)) {
+                    editor->installArchive(*archive, &decl);
                 }
             });
             recentMenu = new QMenu(&decl);
@@ -2235,6 +2245,8 @@ namespace hello::daw {
         impl.initScheduler();
         // File names left to determine when the voice bank was opened
         impl.updateBar();
+        // An installation archive dropped on the window is installed, see dropEvent().
+        setAcceptDrops(true);
 
         const auto session = impl.document->session();
         connect(session, &kit::VoiceBankSession::stepChanged, this, [this] {
@@ -3336,6 +3348,45 @@ namespace hello::daw {
             return;
         }
         QMainWindow::closeEvent(event);
+    }
+
+    namespace {
+
+        // Returns the installation archives among the local files of data.
+        QList<std::filesystem::path> installArchivesOf(const QMimeData *data) {
+            QList<std::filesystem::path> archives;
+            for (const auto &url : data->urls()) {
+                if (url.isLocalFile()) {
+                    const auto path = pathOf(url.toLocalFile());
+                    if (InstallArchiveDialog::isInstallArchive(path)) {
+                        archives.push_back(path);
+                    }
+                }
+            }
+            return archives;
+        }
+
+    }
+
+    void VoiceBankWindow::dragEnterEvent(QDragEnterEvent *event) {
+        if (!installArchivesOf(event->mimeData()).isEmpty()) {
+            event->acceptProposedAction();
+        }
+    }
+
+    void VoiceBankWindow::dropEvent(QDropEvent *event) {
+        const auto archives = installArchivesOf(event->mimeData());
+        if (archives.isEmpty()) {
+            return;
+        }
+        event->acceptProposedAction();
+        // Later, so that the dialogs of the installation run after the drag has ended
+        QTimer::singleShot(0, this, [this, archives] {
+            stdc_impl_t;
+            for (const auto &archive : archives) {
+                impl.editor->installArchive(archive, this);
+            }
+        });
     }
 
 }

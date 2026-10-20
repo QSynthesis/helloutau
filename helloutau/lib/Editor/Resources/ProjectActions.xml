@@ -204,6 +204,9 @@
         <action id="helloutau.tools.clearCache" text="&amp;Clear Render Cache" category="Tools" />
         <action id="helloutau.tools.viewRenderLog" text="View Render &amp;Log..." category="Tools" />
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+        <!-- A .uar or a .zip with an install.txt (docs/ArchiveInstall.md) -->
+        <action id="helloutau.tools.installArchive" text="&amp;Install Voice Bank or Plugin..."
+                category="Tools" />
         <action id="helloutau.help.checkForUpdates" text="Check for &amp;Updates..."
                 category="Help" />
         <action id="helloutau.help.about" text="About &amp;${APP_NAME}" category="Help" />
@@ -334,6 +337,8 @@
                 <separator />
                 <action id="helloutau.tools.clearCache" />
                 <action id="helloutau.tools.viewRenderLog" />
+                <separator />
+                <action id="helloutau.tools.installArchive" />
                 <separator />
                 <action id="helloutau.tools.settings" />
             </menu>

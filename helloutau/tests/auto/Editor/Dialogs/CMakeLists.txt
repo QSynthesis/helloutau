@@ -2,6 +2,8 @@ helloutau_add_auto_test(test_AboutDialog.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_ConvertFrequencyMapsDialog.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_DiagnosticBox.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_GenerateFrequencyMapsDialog.cpp HelloUtauEditor)
+# The test writes its archives with libzip, including names without the UTF-8 flag.
+helloutau_add_auto_test(test_InstallArchiveDialog.cpp HelloUtauEditor libzip::zip)
 helloutau_add_auto_test(test_NoteEntriesDialog.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_NotePropertiesDialog.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_OutputLogDialog.cpp HelloUtauEditor)

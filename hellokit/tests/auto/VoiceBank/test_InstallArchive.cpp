@@ -156,6 +156,22 @@ private Q_SLOTS:
         QVERIFY(configuration->fileNameEncoding->isAsIs());
     }
 
+    // The bytes by which a dialog ranks the encodings are the names without the UTF-8 flag and
+    // install.txt, not the names marked as UTF-8.
+    void the_raw_texts_are_the_names_to_decode_and_install_txt() {
+        const auto text = manifest("voiceset", "bank", "contents");
+        QVERIFY(
+            writeArchive(archivePath(), {
+                                            file("install.txt", text),
+                                            file("contents/character.txt"),
+                                            rawFile("contents/" + shiftJisA + ".wav"),
+                                            {"contents/\xE3\x81\x82.wav", {}, ZIP_FL_ENC_UTF_8}
+        }));
+        InstallArchive archive;
+        QVERIFY2(archive.open(pathOf(archivePath())), qPrintable(archive.errorString()));
+        QCOMPARE(archive.rawTexts(), (QList<QByteArray>{"contents/" + shiftJisA + ".wav", text}));
+    }
+
     // UTAU refuses an archive without install.txt, and so does HelloUtau.
     void an_archive_without_install_txt_is_rejected() {
         QVERIFY(writeArchive(archivePath(), {file("bank/oto.ini")}));

@@ -58,6 +58,11 @@ namespace hello::kit {
         /// Returns whether every name and the \c install.txt are valid in \a encoding.
         bool canDecode(const QString &encoding) const;
 
+        /// Returns the bytes that the encoding of setNameEncoding() decodes: the names of the
+        /// entries that are not marked as UTF-8, and the \c install.txt. A dialog ranks the
+        /// candidates by them with TextCodec::ranked().
+        QList<QByteArray> rawTexts() const;
+
         /// Decodes the names and the \c install.txt in \a encoding, which is ignored unless
         /// needsNameEncoding(), parses \c install.txt and checks the archive.
         ///

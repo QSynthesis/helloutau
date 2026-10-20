@@ -7,6 +7,7 @@
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/BuiltinActions.h>
+#include <helloutau/Editor/Dialogs/InstallArchiveDialog.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
@@ -59,13 +60,25 @@ namespace hello::daw {
     // Called on the core plugin last, so that the windows open with all registrations of the
     // other plugins.
     void CorePlugin::pluginsInitialized() {
+        // The installation archives are installed over the first window, which a start with
+        // archives alone opens with a new project, so that a window remains after the
+        // installation.
+        QList<std::filesystem::path> archives;
         if (const auto loader = AppLoader::instance()) {
             for (const auto &file : loader->files()) {
-                m_editor->openFile(std::filesystem::path(file.toStdU16String()));
+                const auto path = std::filesystem::path(file.toStdU16String());
+                if (InstallArchiveDialog::isInstallArchive(path)) {
+                    archives.push_back(path);
+                } else {
+                    m_editor->openFile(path);
+                }
             }
         }
         if (m_editor->windows().isEmpty()) {
             m_editor->newWindow();
+        }
+        for (const auto &archive : std::as_const(archives)) {
+            m_editor->installArchive(archive, m_editor->windows().first());
         }
         // The check runs only with a loader, so that a test that loads this plugin sends no
         // request.
@@ -96,10 +109,18 @@ namespace hello::daw {
             if (path.is_relative() && !workingDirectory.empty()) {
                 path = workingDirectory / path;
             }
+            const auto windows = m_editor->windows();
+            // An installation archive is installed over the first window, which comes to the
+            // front first.
+            if (InstallArchiveDialog::isInstallArchive(path)) {
+                const auto parent = windows.isEmpty() ? nullptr : windows.first();
+                activate(parent);
+                m_editor->installArchive(path, parent);
+                continue;
+            }
             // The window of an untouched new project takes the file if it is the only window,
             // because the Finder passes the file of a start only after the start opened that
             // window.
-            const auto windows = m_editor->windows();
             const auto from =
                 windows.size() == 1 && isUntouched(windows.first()) ? windows.first() : nullptr;
             activate(m_editor->openFile(path, from));

@@ -183,7 +183,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 - **位置**：量 VS Code 的 `json.ico` 与 `cpp.ico`，其中心图形水平居中，64 像素及以上的竖直中心在页高的 0.50 至 0.52，小尺寸在 0.54 至 0.60。缎带的中心在小尺寸放在约 0.56，48 像素及以上为下方的扩展名留出位置，放在 0.47，因此缎带不与折角重叠。
 - **扩展名**：从 48 像素起写在下方。字母画成路径，不依赖字体，只用到 U、S、T、H、A、R。
 - **角标**：`.ust` 是 UTAU 图标的矢量版（淡紫圆角块、白色圆盘与八分音符，小于 10 像素时省去圆盘），`.uar` 是挖空出箭头与托盘的深绿块，`.usth` 没有角标（作者 2026-10-20 决定）。角标在每个尺寸都有，位于缎带右下、高音符的下方，与缎带重叠处在缎带上挖出一圈空隙，同应用图标以挖空表现细节。
-- **安装**：每个图标以其目录命名，在 Windows 上与 `app.ico` 一起装到 `share/helloutau/icons`，安装包把三个文件图标登记为三个 ProgId 的 `DefaultIcon`。三种类型都只登记为「打开方式」中的程序，因此只有用户把 HelloUtau 设为默认程序时才显示其图标。macOS 上图标装到 `Contents/Resources`，`.usth` 与 `.ust` 由 `Info.plist` 的 `CFBundleTypeIconFile` 指定，`.uar` 尚未声明为文档类型。Linux 上图标装到 `share/icons/hicolor` 各尺寸的 `mimetypes` 目录，名为 `application-x-<类型>.svg`，三种类型由 `share/mime/packages` 中各自的声明定义：`application/x-usth` 是 `application/json` 的子类型，`application/x-ust` 是 `text/plain` 的子类型，`application/x-uar` 是 `application/zip` 的子类型。打开 `.uar` 的安装界面尚未实现，在此之前以 HelloUtau 打开 `.uar` 时，Core 插件把它当作工程打开并报告错误。
+- **安装**：每个图标以其目录命名，在 Windows 上与 `app.ico` 一起装到 `share/helloutau/icons`，安装包把三个文件图标登记为三个 ProgId 的 `DefaultIcon`。三种类型都只登记为「打开方式」中的程序，因此只有用户把 HelloUtau 设为默认程序时才显示其图标。macOS 上图标装到 `Contents/Resources`，由 `Info.plist` 的 `CFBundleTypeIconFile` 指定。`.uar` 声明为 `public.zip-archive` 的子类型，角色为 `Viewer`，排名为 `Alternate`，因此不取代归档实用工具等已有的程序。Linux 上图标装到 `share/icons/hicolor` 各尺寸的 `mimetypes` 目录，名为 `application-x-<类型>.svg`，三种类型由 `share/mime/packages` 中各自的声明定义：`application/x-usth` 是 `application/json` 的子类型，`application/x-ust` 是 `text/plain` 的子类型，`application/x-uar` 是 `application/zip` 的子类型。以 HelloUtau 打开 `.uar` 时显示安装对话框，见 `ArchiveInstall.md`。
 
 ## 卸载
 

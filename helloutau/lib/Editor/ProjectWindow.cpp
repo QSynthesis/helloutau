@@ -79,6 +79,7 @@
 #include "ReplaceLyricsDialog.h"
 #include "ExportUstDialog.h"
 #include "FindSupport_p.h"
+#include "InstallArchiveDialog.h"
 #include "PianoRoll.h"
 #include "NotePropertiesDialog.h"
 #include "OutputLogDialog.h"
@@ -1479,6 +1480,12 @@ namespace hello::daw {
                 const auto folder = QFileDialog::getExistingDirectory(&decl, tr("Open Voice Bank"));
                 if (!folder.isEmpty()) {
                     editor->openVoiceBank(pathOf(folder), &decl);
+                }
+            });
+            addCommand(QStringLiteral("helloutau.tools.installArchive"), [this] {
+                stdc_decl_t;
+                if (const auto archive = InstallArchiveDialog::chooseArchive(&decl)) {
+                    editor->installArchive(*archive, &decl);
                 }
             });
             addCommand(QStringLiteral("helloutau.tools.editVoiceBank"), [this] {

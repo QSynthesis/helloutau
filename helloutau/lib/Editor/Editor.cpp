@@ -46,6 +46,7 @@
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
 #include "FrequencyViewKeyboardModifiers.h"
+#include "InstallArchiveDialog.h"
 #include "KeymapFile.h"
 #include "NoteViewKeyboardModifiers.h"
 #include "OtoWaveformKeyboardModifiers.h"
@@ -702,15 +703,44 @@ namespace hello::daw {
     QList<ProjectWindow *> Editor::openFiles(const QList<std::filesystem::path> &paths,
                                              ProjectWindow *from) {
         QList<ProjectWindow *> opened;
-        if (paths.isEmpty() || (from && !from->maybeSave())) {
-            return opened;
+        QList<std::filesystem::path> projects;
+        QList<std::filesystem::path> archives;
+        for (const auto &path : paths) {
+            (InstallArchiveDialog::isInstallArchive(path) ? archives : projects).push_back(path);
         }
-        for (qsizetype i = 0; i < paths.size(); ++i) {
-            if (const auto window = openFile(paths.at(i), i == 0 ? from : nullptr, false)) {
-                opened.push_back(window);
+        if (!projects.isEmpty() && (!from || from->maybeSave())) {
+            for (qsizetype i = 0; i < projects.size(); ++i) {
+                if (const auto window = openFile(projects.at(i), i == 0 ? from : nullptr, false)) {
+                    opened.push_back(window);
+                }
             }
         }
+        // Over the window that shows the first project, or else over the window of the drop
+        const auto parent = opened.isEmpty() ? from : opened.first();
+        for (const auto &archive : std::as_const(archives)) {
+            installArchive(archive, parent);
+        }
         return opened;
+    }
+
+    bool Editor::installArchive(const std::filesystem::path &path, QWidget *from) {
+        stdc_impl_t;
+        const auto installation = InstallArchiveDialog::install(path, *impl.settings, from);
+        if (!installation) {
+            return false;
+        }
+        if (installation->kind != kit::InstallArchive::VoiceBank) {
+            InstallArchiveDialog::reportInstalled(*installation, from);
+            return true;
+        }
+        const auto answer = QMessageBox::question(
+            from, tr("Install"),
+            tr("The voice bank %1 is installed in %2.\n\nOpen it now?")
+                .arg(installation->name, QDir::toNativeSeparators(textOf(installation->folder))));
+        if (answer == QMessageBox::Yes) {
+            openVoiceBank(installation->folder, from);
+        }
+        return true;
     }
 
     ProjectWindow *Editor::openFile(const std::filesystem::path &path, ProjectWindow *from,
@@ -732,9 +762,8 @@ namespace hello::daw {
         kit::DiagnosticList diagnostics;
         auto document = kit::ProjectDocument::open(path, &selector, diagnostics);
         const auto title = tr("Open");
-        const auto pathDiagnostic =
-            kit::Diagnostic{kit::Diagnostic::Note,
-                            tr("File: %1").arg(normalizedPathText(path)), std::nullopt};
+        const auto pathDiagnostic = kit::Diagnostic{
+            kit::Diagnostic::Note, tr("File: %1").arg(normalizedPathText(path)), std::nullopt};
         if (!document) {
             // Without diagnostics, the user declined to choose an encoding, which is no error.
             if (diagnostics.isEmpty()) {

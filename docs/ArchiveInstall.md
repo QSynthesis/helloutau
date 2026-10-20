@@ -1,6 +1,6 @@
 # 安装包
 
-> 状态：设计，作者 2026-10-17 决定。UTAU 对 `type=voiceset` 的处理待实测（「UTAU 的行为」），实测之前不实现依赖它的部分。
+> 状态：已实现（2026-10-21），设计由作者 2026-10-17 决定。UTAU 对 `type=voiceset` 的处理已于 2026-10-17 实测，见「UTAU 的行为」。
 
 本文档定义音源与插件安装包（`.uar`、`.zip`）的安装。安全要求见 [`../CLAUDE.md`](../CLAUDE.md)「安全底线」第二条，本文档只补充安装特有的部分。
 
@@ -24,21 +24,21 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 ## 范围
 
 - 音源与插件都安装（作者 2026-10-17 决定）。`install.txt` 的 `type` 为 `editplugin` 时装到用户的 UTAU 插件目录（`Documents/OpenVPI/HelloUtau/ClassicExtensions/plugins`，见 [`Distribution.md`](Distribution.md)），`voiceset` 按音源装到 `Documents/OpenVPI/HelloUtau/ClassicExtensions/voice`，与 UTAU 装入 `%AppData%\UTAU` 下的同名目录相对应。没有 `install.txt` 的包与未知的 `type` 同 UTAU 拒绝安装（作者 2026-10-17 决定）。
-- 入口：把 `.uar` 或 `.zip` 拖到工程窗口或音源窗口，或者「文件 → Install Voice Bank or Plugin...」。拖入的 `.zip` 只在根上有 `install.txt` 时视为安装包，否则按原有的拖放处理。`.uar` 与从菜单选择的文件根上没有 `install.txt` 时拒绝安装并告知用户。
+- 入口：把 `.uar` 或 `.zip` 拖到工程窗口或音源窗口，两种窗口的「工具 → Install Voice Bank or Plugin...」（放在「设置...」之上，作者 2026-10-21 决定），设置的「UTAU」页的「Install Voice Bank...」与「Classic Plugins」页的「Install Plugin...」，两者只安装各自的种类，另一种安装包被拒绝并告知应从哪一页安装，因为按钮所在的页决定了用户预期的种类（作者 2026-10-21 指出），以及以 HelloUtau 打开文件：文件关联、命令行参数与第二次启动转发的文件（作者 2026-10-20 决定）。打开对话框不列出 `.uar`。`.zip` 只在根上有 `install.txt` 时视为安装包（`InstallArchiveDialog::isInstallArchive()`），否则按原有的方式作为工程打开。`.uar` 与从菜单选择的文件根上没有 `install.txt` 时拒绝安装并告知用户。启动时只带安装包的，先打开一个新工程的窗口，安装对话框显示在其上，因此安装结束后程序仍有窗口。
 - 不支持 rar、7z 与嵌套的压缩包。
 
 ## 流程
 
 1. **读取条目。** 只读取中央目录，不解压。得到每个条目的原始名字、UTF-8 标志、声明的大小与类型。此时即进行与解压相同的全部检查（见「安全」），不通过时拒绝整个压缩包并告知用户，不进入下一步。
-2. **条目名的编码。** 条目名全为 ASCII 或都带 UTF-8 标志时不询问。否则在安装对话框中选择编码：候选为 `TextCodec::ustCandidates()`，默认值按 `TextCodec::ranked()` 选出，旁边以所选编码解码出的目录树预览。某个候选对某个名字是非法字节序列时，该候选不可选。不检测编码，见 [`note.md`](note.md)。
+2. **条目名的编码。** 条目名全为 ASCII 或都带 UTF-8 标志时不询问。否则在安装对话框中选择编码：候选为 `TextCodec::ustCandidates()`，默认值按 `TextCodec::ranked()` 选出，旁边以所选编码解码出的目录树预览。某个候选对某个名字是非法字节序列时，该候选显示为灰色，选中时对话框给出原因，不能安装。不检测编码，见 [`note.md`](note.md)。
 3. **种类与目标文件夹。** 按根上的 `install.txt` 的 `type`、`folder` 与 `contentsdir` 确定：`contentsdir` 所指的文件夹装为 `folder`，省略时包的根装为 `folder`，同 UTAU 不复制 `install.txt`。同 UTAU 要求内容的根上有 `character.txt` 或 `plugin.txt`，否则拒绝安装。
-4. **文本编码。** 音源的 `character.txt`、`oto.ini` 等文本文件的编码在同一个对话框中选择，预览沿用 `VoiceBankDecodingDialog` 的文本预览。安装后为每个含 `oto.ini` 的文件夹写入 `hello-config.json`，记录文本编码与文件名编码（见第 5 步），打开该音源时不再询问。插件的 `plugin.txt` 照 UTAU 按系统 ANSI 代码页读取（[`note.md`](note.md)「插件」），不写 `plugin.json`。
+4. **文本编码。** 音源的文本文件的编码在同一个对话框中选择，整个音源一种编码。预览照 `VoiceBankDecodingDialog` 的做法，根上的 `character.txt` 与 `readme.txt` 以及各文件夹的 `oto.ini` 各占一个标签页，最多 8 个文件，每个最多读 1 MiB，有无效字节序列的文件在标签上注明个数。默认值按这些文件以 `TextCodec::ranked()` 选出，有无效字节序列的候选显示为灰色。音源的名字取自 `character.txt` 的 `name`，按所选编码解码。安装后为每个含 `oto.ini` 的文件夹写入 `hello-config.json`，记录文本编码与文件名编码（见第 5 步），打开该音源时不再询问。插件的 `plugin.txt` 照 UTAU 按系统 ANSI 代码页读取（[`note.md`](note.md)「插件」），不写 `plugin.json`。
 5. **名字写入磁盘的方式**（作者 2026-10-17 决定，默认第一种，用户可选第二种）：
    - **按所选编码还原**：磁盘上是正确的 Unicode 名字，`fileNameEncoding` 记为 `{}`。在 Windows 上，有名字无法以系统 ANSI 代码页表示时提示用户：官方 UTAU 在这台机器上无法使用这些文件。
-   - **按本机代码页错解**：与 UTAU 在本机解压的结果相同，官方 UTAU 在这台机器上可以使用。`fileNameEncoding` 记为所选编码与系统 ANSI 代码页这一对，HelloUtau 按 [`Editing.md`](Editing.md)「文件名编码错解的处理」读取。有名字在系统 ANSI 代码页中是非法字节序列时，此项不可选，因为错解后的名字无法还原。所选编码与系统 ANSI 代码页相同时两种方式结果相同，不显示此选项。
+   - **按本机代码页错解**：与 UTAU 在本机解压的结果相同，官方 UTAU 在这台机器上可以使用。`fileNameEncoding` 记为所选编码与系统 ANSI 代码页这一对，HelloUtau 按 [`Editing.md`](Editing.md)「文件名编码错解的处理」读取。有名字在系统 ANSI 代码页中是非法字节序列时，此项不可选，因为错解后的名字无法还原。所选编码与系统 ANSI 代码页相同时两种方式结果相同，不显示此选项。既不能错解，又没有系统 ANSI 代码页无法表示的名字时，同样不显示，例如系统编码为 UTF-8 的 macOS 与 Linux，名字直接按第一种方式写入。
 6. **同名文件夹。** 目标文件夹已存在时同 UTAU 询问覆盖、装到新文件夹或取消。覆盖为合并，同名文件被替换，其他文件保留，因此用户生成的频率表与 `hello-config.json` 不会丢失。新文件夹在原名后加从 0 起第一个未被占用的数字。
 7. **解压。** 先解压到目标位置的同一目录下的临时文件夹（`.<名字>.installing-<随机>`），全部成功后改名为目标文件夹，覆盖时把各文件移入目标文件夹。解压失败或取消时删除临时文件夹，目标位置不受影响。进度与取消沿用 `ZipExtractor` 的进度回调。
-8. **完成。** 音源装好后可直接打开音源窗口，插件装好后由 ClassicPluginHost 的目录监视自动载入。
+8. **完成。** 音源装好后询问是否打开音源窗口，从设置页安装时只告知安装的位置。插件装好后，「经典插件」菜单下次打开时重新扫描，因为 ClassicPluginHost 在打开菜单时比较各插件文件夹的修改时间，文件夹中增删插件会改变它。
 
 ## 安全
 
@@ -59,4 +59,6 @@ OpenUtau 的做法可作对照（`OpenUtau.Core/Classic/VoicebankInstaller.cs`�
 
 - **`kit::ZipExtractor` 的补充**（`HelloKitSupport`，已实现）：`listEntries()` 只读取中央目录的条目列表（原始名字、UTF-8 标志、大小、类型），`readEntry()` 读取单个条目的内容并限制其大小，实际读出的字节同样计数（用于 `install.txt` 与文本预览），`setSubdirectory()` 只写出某个文件夹并去掉这一层（`contentsdir`，文件夹名按大小写不敏感比较，其外的条目照常检查），`check()` 进行解压的全部检查而不写入，名字冲突以 `DuplicateName` 拒绝。
 - **`kit::InstallArchive`**（`HelloKitVoiceBank`，已实现）：`open()` 读取条目与 `install.txt`，`setNameEncoding()` 以选定的编码解码条目名与 `install.txt`、解析并进行全部检查，`contents()` 与 `readContent()` 供预览，`canWriteMisdecoded()` 与 `unrepresentableNames()` 给出两种写入方式的条件，`freeFolderName()` 给出 UTAU 式的新文件夹名，`install()` 解压到临时文件夹后改名或合并，并为音源写入 `hello-config.json`。不依赖 QtWidgets。插件的安装同样由它完成，因为两者共用 `install.txt` 的格式与全部检查。`folder` 与 `contentsdir` 的检查使用 `ZipExtractor::isSafeComponent()`，与条目名的分量是同一套规则。测试为 `test_InstallArchive`。
-- **安装对话框**（`HelloUtauEditor`）：条目名编码、文本编码、写入方式、同名文件夹的处理与进度。入口的拖放与菜单动作也在编辑器中。
+- **`kit::InstallArchive::rawTexts()`**：需要以所选编码解码的原始字节，即不带 UTF-8 标志的条目名与 `install.txt`，对话框以它们为 `TextCodec::ranked()` 的输入。
+- **`InstallArchiveDialog`**（`HelloUtauEditor`，已实现）：条目名编码、文本编码、写入方式与内容的预览。静态函数 `install()` 完成整个安装：打开压缩包、显示对话框、询问同名文件夹的处理、在 `AppSettings::classicExtensionsDirectory()` 下按需创建 `voice` 或 `plugins`、显示进度并可取消。`isInstallArchive()` 判断入口收到的文件是否为安装包，`chooseArchive()` 是菜单与设置页共用的文件对话框。`Editor::installArchive()` 在其上加入打开音源的询问，拖放、菜单与 Core 插件的远程命令都经由它。测试为 `test_InstallArchiveDialog`。
+- macOS 的 `Info.plist` 声明 `.uar`（`org.openvpi.helloutau.uar`，`public.zip-archive` 的子类型），Finder 可以用 HelloUtau 打开。

@@ -20,6 +20,7 @@
 #include <hellokit/Support/TextCodec.h>
 
 #include <helloutau/Editor/Dialogs/DiagnosticBox.h>
+#include <helloutau/Editor/Dialogs/InstallArchiveDialog.h>
 
 #include <ClassicPluginHost/ClassicPlugin.h>
 #include <ClassicPluginHost/ClassicPluginPreviewInstallation.h>
@@ -63,6 +64,23 @@ namespace hello::daw {
         foldersLayout->setContentsMargins(0, 0, 0, 0);
         groupLayout->addWidget(m_folders);
         fillFolders();
+        // A plugin is installed into the first folder, which belongs to HelloUtau, and the
+        // preview programs are listed again.
+        auto install = new QPushButton(tr("&Install Plugin..."), group);
+        connect(install, &QPushButton::clicked, group, [this, install] {
+            constexpr auto kind = kit::InstallArchive::Plugin;
+            if (const auto archive = InstallArchiveDialog::chooseArchive(install, kind)) {
+                if (const auto installation =
+                        InstallArchiveDialog::install(*archive, m_settings, install, kind)) {
+                    InstallArchiveDialog::reportInstalled(*installation, install);
+                    fillPreviews();
+                }
+            }
+        });
+        auto installRow = new QHBoxLayout();
+        installRow->addWidget(install);
+        installRow->addStretch();
+        groupLayout->addLayout(installRow);
         layout->addWidget(group);
 
         auto previews = new QGroupBox(tr("Preview program"), widget);

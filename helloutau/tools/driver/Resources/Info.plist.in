@@ -77,6 +77,20 @@
 				<string>org.openvpi.helloutau.ust</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>UTAU Installation Archive</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>uar.icns</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.openvpi.helloutau.uar</string>
+			</array>
+		</dict>
 	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
@@ -114,6 +128,23 @@
 				<key>public.filename-extension</key>
 				<array>
 					<string>ust</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.openvpi.helloutau.uar</string>
+			<key>UTTypeDescription</key>
+			<string>UTAU Installation Archive</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.zip-archive</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>uar</string>
 				</array>
 			</dict>
 		</dict>
