@@ -3,6 +3,7 @@
 #include <fstream>
 #include <future>
 
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
 #include <QtTest/QSignalSpy>
@@ -530,8 +531,9 @@ private Q_SLOTS:
         const auto document = singingDocument(dir);
         QVERIFY(document);
         Playback playback(nullptr, temporaryOf(dir), nullptr);
+        // Ten seconds of sound, so that the playback does not end while the test waits
         const auto runner = std::make_shared<SilentRunner>();
-        runner->frames = 44100;
+        runner->frames = 10 * 44100;
         playback.setRunner(runner);
 
         kit::DiagnosticList diagnostics;
@@ -539,12 +541,23 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         const auto first = playback.position();
         QVERIFY(first);
-        QTest::qWait(400);
-        const auto later = playback.position();
-        QVERIFY(later);
-        // Within the latency of the device, and a timer may be late
-        const double moved = *later - *first;
-        QVERIFY2(moved > 250 && moved < 600, qPrintable(QString::number(moved)));
+        QElapsedTimer elapsed;
+        elapsed.start();
+        const auto moved = [&playback, &first] {
+            const auto position = playback.position();
+            return position ? *position - *first : -1.0;
+        };
+        // The playhead advances with the sound that the device plays. The check waits for an
+        // advance rather than measuring one over a fixed time, because a slow build, such as one
+        // with AddressSanitizer, delays the device: 400 milliseconds once advanced the playhead
+        // by 202.667 milliseconds on macOS.
+        QTRY_VERIFY_WITH_TIMEOUT(moved() >= 1000, 10000);
+        // The playhead does not run ahead of the time that has passed, by more than the sound
+        // that the device pulls at once.
+        const double advance = moved();
+        const auto passed = double(elapsed.elapsed());
+        QVERIFY2(advance <= passed + 250,
+                 qPrintable(QStringLiteral("%1 in %2").arg(advance).arg(passed)));
         playback.stop();
     }
 
