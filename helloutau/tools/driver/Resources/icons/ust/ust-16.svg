@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+<title>.ust file</title>
+<!-- The drawing of ust.svg on the pixel grid of 16 px. Without the extension, which does not fit. -->
+<defs><linearGradient id="plate" x1="1" y1="0" x2="0" y2="1"><stop offset=".5" stop-color="#fbfbfb"/><stop offset="1" stop-color="#e6eaf0"/></linearGradient><mask id="points" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16"><rect width="16" height="16" fill="#fff"/><rect x="5" y="10" width="1" height="1" fill="#000"/><rect x="10" y="5" width="1" height="1" fill="#000"/></mask><mask id="knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16"><rect width="16" height="16" fill="#fff"/><rect x="6.5" y="8" width="8" height="8" rx="2.32" fill="#000"/></mask></defs>
+<path d="M4 0H10L14 4V14A2 2 0 0 1 12 16H4A2 2 0 0 1 2 14V2A2 2 0 0 1 4 0Z" fill="url(#plate)"/>
+<path d="M4 0H10L14 4V14A2 2 0 0 1 12 16H4A2 2 0 0 1 2 14V2A2 2 0 0 1 4 0Z" fill="none" stroke="#1d2b44" stroke-opacity=".12" stroke-width="1" stroke-linejoin="round"/>
+<path d="M10 0V2.8A1.2 1.2 0 0 0 11.2 4H14Z" fill="#dde2ea"/>
+<path d="M10 0V2.8A1.2 1.2 0 0 0 11.2 4H14Z" fill="none" stroke="#1d2b44" stroke-opacity=".12" stroke-width="1" stroke-linejoin="round"/>
+<g mask="url(#knockout)"><g transform="translate(1.760 2.760) scale(0.78)"><path d="M4.5 10.5H5.5C8.5 10.5 7.5 5.5 10.5 5.5H11.5" fill="none" stroke="#9336f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" mask="url(#points)"/></g></g>
+<rect x="7.88" y="9.38" width="5.25" height="5.25" rx="1.32" fill="#ccccff" stroke="#8f8fc7" stroke-width="0.75"/><ellipse cx="10.08" cy="13.08" rx="0.84" ry="0.63" transform="rotate(-22 10.08 13.08)" fill="#1a1a1a"/><rect x="10.68" y="10.20" width="1.00" height="2.88" fill="#1a1a1a"/><path d="M10.68 10.20C11.22 10.62 12.00 10.92 11.70 12.00C11.52 11.46 11.16 11.22 10.68 11.10Z" fill="#1a1a1a"/>
+</svg>

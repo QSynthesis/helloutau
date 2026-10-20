@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<title>.ust file</title>
+<!-- The drawing of ust.svg on the pixel grid of 32 px. Without the extension, which does not fit. -->
+<defs><linearGradient id="plate" x1="1" y1="0" x2="0" y2="1"><stop offset=".5" stop-color="#fbfbfb"/><stop offset="1" stop-color="#e6eaf0"/></linearGradient><mask id="points" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32"><rect width="32" height="32" fill="#fff"/><circle cx="10.5" cy="20" r="1.6" fill="#000"/><circle cx="21.5" cy="12" r="1.6" fill="#000"/></mask><linearGradient id="band" gradientUnits="userSpaceOnUse" x1="5" y1="9" x2="27" y2="23"><stop offset="0" stop-color="#a14fff"/><stop offset="1" stop-color="#8525e6"/></linearGradient><mask id="knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32"><rect width="32" height="32" fill="#fff"/><rect x="14.75" y="16.75" width="12.5" height="12.5" rx="3.45" fill="#000"/></mask></defs>
+<path d="M8 1H20L28 9V27A4 4 0 0 1 24 31H8A4 4 0 0 1 4 27V5A4 4 0 0 1 8 1Z" fill="url(#plate)"/>
+<path d="M8 1H20L28 9V27A4 4 0 0 1 24 31H8A4 4 0 0 1 4 27V5A4 4 0 0 1 8 1Z" fill="none" stroke="#1d2b44" stroke-opacity=".12" stroke-width="1" stroke-linejoin="round"/>
+<path d="M20 1V6.6A2.4 2.4 0 0 0 22.4 9H28Z" fill="#dde2ea"/>
+<path d="M20 1V6.6A2.4 2.4 0 0 0 22.4 9H28Z" fill="none" stroke="#1d2b44" stroke-opacity=".12" stroke-width="1" stroke-linejoin="round"/>
+<g mask="url(#knockout)"><g transform="translate(4.800 6.800) scale(0.7)"><path d="M7 20H10.5C16.5 20 15.5 12 21.5 12H25" fill="none" stroke="url(#band)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" mask="url(#points)"/></g></g>
+<rect x="16.38" y="18.38" width="9.25" height="9.25" rx="2.20" fill="#ccccff" stroke="#8f8fc7" stroke-width="0.75"/><circle cx="21.00" cy="23.00" r="3.40" fill="#fff"/><ellipse cx="20.30" cy="24.80" rx="1.40" ry="1.05" transform="rotate(-22 20.30 24.80)" fill="#1a1a1a"/><rect x="21.30" y="20.00" width="1.00" height="4.80" fill="#1a1a1a"/><path d="M21.30 20.00C22.20 20.70 23.50 21.20 23.00 23.00C22.70 22.10 22.10 21.70 21.30 21.50Z" fill="#1a1a1a"/>
+</svg>

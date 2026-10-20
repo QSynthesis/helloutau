@@ -9,7 +9,9 @@
   A project of HelloUtau, .usth, is a type that the application declares and owns. A sequence of
   UTAU, .ust, is a type of UTAU, which declares no identifier, so the application imports it and
   is an alternate editor rather than the default one, as on Windows, where the installer adds the
-  application to the programs that open the type without replacing the default program.
+  application to the programs that open the type without replacing the default program. The icons
+  of the types, usth.icns and ust.icns in Resources, are written by the build from the drawings in
+  helloutau/tools/driver/Resources/icons.
 -->
 <plist version="1.0">
 <dict>
@@ -50,6 +52,8 @@
 		<dict>
 			<key>CFBundleTypeName</key>
 			<string>HelloUtau Project</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>usth.icns</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -62,6 +66,8 @@
 		<dict>
 			<key>CFBundleTypeName</key>
 			<string>UTAU Sequence</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>ust.icns</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>

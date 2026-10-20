@@ -77,28 +77,39 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; Only .usth is associated by default. .ust is the format of UTAU, and .uar the installation
+; archive of UTAU, which the user may want UTAU to keep.
 Name: "associateusth"; Description: "{cm:AssocFileExtension,{#AppName},.usth}"; GroupDescription: "{cm:FileAssociations}"
-Name: "associateust"; Description: "{cm:AssocFileExtension,{#AppName},.ust}"; GroupDescription: "{cm:FileAssociations}"
+Name: "associateust"; Description: "{cm:AssocFileExtension,{#AppName},.ust}"; GroupDescription: "{cm:FileAssociations}"; Flags: unchecked
+Name: "associateuar"; Description: "{cm:AssocFileExtension,{#AppName},.uar}"; GroupDescription: "{cm:FileAssociations}"; Flags: unchecked
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]
 ; The program is offered in Open With of each file type, without changing the default program of
-; the type, because .ust may be associated with UTAU.
+; the type, because .ust and .uar may be associated with UTAU. The icon of a file type, which the
+; build writes into share/helloutau/icons, appears once the user chooses the program as the
+; default.
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExeName}"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExeName}\SupportedTypes"; ValueType: string; ValueName: ".usth"; ValueData: ""; Tasks: associateusth
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExeName}\SupportedTypes"; ValueType: string; ValueName: ".ust"; ValueData: ""; Tasks: associateust
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExeName}\SupportedTypes"; ValueType: string; ValueName: ".uar"; ValueData: ""; Tasks: associateuar
 
 Root: HKA; Subkey: "Software\Classes\.usth\OpenWithProgids"; ValueType: string; ValueName: "HelloUtau.usth"; ValueData: ""; Flags: uninsdeletevalue; Tasks: associateusth
 Root: HKA; Subkey: "Software\Classes\HelloUtau.usth"; ValueType: string; ValueName: ""; ValueData: "{cm:UsthFile}"; Flags: uninsdeletekey; Tasks: associateusth
-Root: HKA; Subkey: "Software\Classes\HelloUtau.usth\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExe},0"; Tasks: associateusth
+Root: HKA; Subkey: "Software\Classes\HelloUtau.usth\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\share\helloutau\icons\usth.ico"; Tasks: associateusth
 Root: HKA; Subkey: "Software\Classes\HelloUtau.usth\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: associateusth
 
 Root: HKA; Subkey: "Software\Classes\.ust\OpenWithProgids"; ValueType: string; ValueName: "HelloUtau.ust"; ValueData: ""; Flags: uninsdeletevalue; Tasks: associateust
 Root: HKA; Subkey: "Software\Classes\HelloUtau.ust"; ValueType: string; ValueName: ""; ValueData: "{cm:UstFile}"; Flags: uninsdeletekey; Tasks: associateust
-Root: HKA; Subkey: "Software\Classes\HelloUtau.ust\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExe},0"; Tasks: associateust
+Root: HKA; Subkey: "Software\Classes\HelloUtau.ust\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\share\helloutau\icons\ust.ico"; Tasks: associateust
 Root: HKA; Subkey: "Software\Classes\HelloUtau.ust\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: associateust
+
+Root: HKA; Subkey: "Software\Classes\.uar\OpenWithProgids"; ValueType: string; ValueName: "HelloUtau.uar"; ValueData: ""; Flags: uninsdeletevalue; Tasks: associateuar
+Root: HKA; Subkey: "Software\Classes\HelloUtau.uar"; ValueType: string; ValueName: ""; ValueData: "{cm:UarFile}"; Flags: uninsdeletekey; Tasks: associateuar
+Root: HKA; Subkey: "Software\Classes\HelloUtau.uar\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\share\helloutau\icons\uar.ico"; Tasks: associateuar
+Root: HKA; Subkey: "Software\Classes\HelloUtau.uar\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: associateuar
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"

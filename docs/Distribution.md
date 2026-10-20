@@ -139,7 +139,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 
 - `[Files]` 以 `recursesubdirs` 复制 `cmake --install` 与打包脚本产出的整个目录。
 - 开始菜单快捷方式，以及可选的桌面快捷方式（任务，默认不选）。
-- 文件关联（任务）：`.usth` 与 `.ust`，按 Inno Setup 向导生成的写法注册 ProgID，在扩展名的 `OpenWithProgids` 下加入该 ProgID，不改写扩展名的默认值，因为 `.ust` 可能已由 UTAU 关联。设置 `ChangesAssociations=yes`，安装与卸载结束时由 Inno Setup 调用 `SHChangeNotify(SHCNE_ASSOCCHANGED, ...)` 通知资源管理器。ProgID 为 `HelloUtau.usth` 与 `HelloUtau.ust`（作者 2026-10-11 决定）。Microsoft 规定的格式为 `<厂商或应用>.<组件>.<版本>`，不需要并存多个版本时省去版本，同 VS Code 的 `<应用名>.<扩展名>`（`build/win32/code.iss` 中的 `{#RegValueName}.go`）。
+- 文件关联（任务）：`.usth`、`.ust` 与 `.uar`，只有 `.usth` 默认勾选（作者 2026-10-20 决定），因为另外两种是 UTAU 的格式，用户可能希望仍由 UTAU 打开。按 Inno Setup 向导生成的写法注册 ProgID，在扩展名的 `OpenWithProgids` 下加入该 ProgID，不改写扩展名的默认值，因为 `.ust` 与 `.uar` 可能已由 UTAU 关联。设置 `ChangesAssociations=yes`，安装与卸载结束时由 Inno Setup 调用 `SHChangeNotify(SHCNE_ASSOCCHANGED, ...)` 通知资源管理器。ProgID 为 `HelloUtau.usth`、`HelloUtau.ust`（作者 2026-10-11 决定）与 `HelloUtau.uar`。Microsoft 规定的格式为 `<厂商或应用>.<组件>.<版本>`，不需要并存多个版本时省去版本，同 VS Code 的 `<应用名>.<扩展名>`（`build/win32/code.iss` 中的 `{#RegValueName}.go`）。
 - 安装模式下的卸载信息由 Inno Setup 写入：`DisplayName`、`DisplayVersion`（取自 `AppVersion`，即 `HELLO_VERSION`）、`Publisher`、`DisplayIcon`、`InstallLocation`、`UninstallString` 等。
 
 ### 签名
@@ -172,6 +172,16 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 - **构建时生成**：图标由 qiconmaker（`stdware/qiconmaker`）在构建时从源稿写出，仓库只保存源稿（作者 2026-10-20 决定加入这一依赖，取代 10-16 只提交生成的 `helloutau.ico`、不提交小稿的做法）。`cmake/AddIcon.cmake` 的 `add_icon()` 生成一个图标，qiconmaker 由 `third-party/Dependencies.cmake` 查找，只在 Windows 与 macOS 上构建应用时需要。小稿的分配：24 像素的小稿也用于 30 像素，48 像素的小稿也用于 36 与 40 像素，其余尺寸由主稿渲染，`.icns` 只取 16 与 32 像素的小稿。Windows 上 qiconmaker 需要 Qt 的 DLL，自定义命令把 Qt 的 `bin` 设为 `PATH`。改为 256 格主稿后，60 像素及以上各帧与原先由 48 格主稿生成的帧只在边缘抗锯齿上有差别，以 qiconmaker 的 `--png-dir` 对比确认。32 像素以下底板铺满画布，缎带为纯色，16 像素的控制点各为一个像素。缎带的曲线在两端放缓，以免粗线内侧的半径小于线宽的一半，在衔接处出现折角。
 - **`app.ico`**（编进 `helloutau.exe` 的资源，也装到 `share/helloutau/icons`，作者 2026-10-20 要求）共 14 帧：16、20、24、30、32、36、40、48、60、64、72、80、96 与 256，即[应用图标构造](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction)一页中标题栏、任务栏与开始菜单在各缩放比例下所用尺寸的并集。30 像素用 24 像素的小稿，36 像素起用主稿。各帧由 QtSvg 渲染，256 像素帧以 PNG 压缩，其余帧为 32 位 BGRA 位图。qmsetup 的 `qm_add_win_rc()` 把图标列为资源脚本的依赖与配置依赖，换了图标后 Ninja、Makefile 与 Visual Studio 都会重新编译资源。
 - macOS 需要另做一个满幅方形、由系统加圆角的版本，Linux 安装 `helloutau.svg` 到 `hicolor/scalable/apps`，两者在补充相应平台的打包时再做。
+
+## 文件图标
+
+`.usth`、`.ust` 与 `.uar` 各有一个文件图标，源稿在 `helloutau/tools/driver/Resources/icons/<类型>`，与应用图标同样在构建时生成（作者 2026-10-20 选定）。画法同 VS Code 的文件图标：一页右上角折角的文档，中间是该类型的图形，右下角可有角标。
+
+- **风格与应用图标一致**：文档页用应用图标的底板渐变与极淡的边，中间是应用图标的缎带，各尺寸沿用应用图标对应的小稿，只换颜色（作者要求不得另选风格）。`.usth` 用应用图标的蓝色。`.ust` 用 UTAU 图标（作者所用的 utau.exe 的第一个图标资源，`#ccccff`、`#cc99ff` 一系的淡紫）的色相，按蓝色缎带的饱和度与亮度换算为 `#a14fff` 到 `#8525e6`。`.uar` 用绿色。
+- **位置**：量 VS Code 的 `json.ico` 与 `cpp.ico`，其中心图形水平居中，64 像素及以上的竖直中心在页高的 0.50 至 0.52，小尺寸在 0.54 至 0.60。缎带的中心在小尺寸放在约 0.56，48 像素及以上为下方的扩展名留出位置，放在 0.47，因此缎带不与折角重叠。
+- **扩展名**：从 48 像素起写在下方。字母画成路径，不依赖字体，只用到 U、S、T、H、A、R。
+- **角标**：`.ust` 是 UTAU 图标的矢量版（淡紫圆角块、白色圆盘与八分音符，小于 10 像素时省去圆盘），`.uar` 是挖空出箭头与托盘的深绿块，`.usth` 没有角标（作者 2026-10-20 决定）。角标在每个尺寸都有，位于缎带右下、高音符的下方，与缎带重叠处在缎带上挖出一圈空隙，同应用图标以挖空表现细节。
+- **安装**：每个图标以其目录命名，在 Windows 上与 `app.ico` 一起装到 `share/helloutau/icons`，安装包把三个文件图标登记为三个 ProgId 的 `DefaultIcon`。三种类型都只登记为「打开方式」中的程序，因此只有用户把 HelloUtau 设为默认程序时才显示其图标。macOS 上图标装到 `Contents/Resources`，`.usth` 与 `.ust` 由 `Info.plist` 的 `CFBundleTypeIconFile` 指定，`.uar` 尚未声明为文档类型。打开 `.uar` 的安装界面尚未实现，在此之前以 HelloUtau 打开 `.uar` 时，Core 插件把它当作工程打开并报告错误。
 
 ## 卸载
 

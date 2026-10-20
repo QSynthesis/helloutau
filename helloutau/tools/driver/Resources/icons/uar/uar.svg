@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<title>.uar file</title>
+<!-- The file icon of .uar: the plate of the application icon as a document page, the band in the
+     color of the type and an install badge at its lower right, and the extension below. The
+     drawing for 60 px and above, on a grid of 256. uar-48.svg and the smaller drawings are aligned
+     to the pixel grids of the smaller sizes. -->
+<defs><linearGradient id="plate" x1="1" y1="0" x2="0" y2="1"><stop offset=".5" stop-color="#fbfbfb"/><stop offset="1" stop-color="#e6eaf0"/></linearGradient><mask id="points" maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48"><rect width="48" height="48" fill="#fff"/><circle cx="16" cy="30.5" r="2.4" fill="#000"/><circle cx="32" cy="17.5" r="2.4" fill="#000"/></mask><linearGradient id="band" gradientUnits="userSpaceOnUse" x1="8" y1="13" x2="40" y2="35"><stop offset="0" stop-color="#38d184"/><stop offset="1" stop-color="#0f9756"/></linearGradient><mask id="knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256"><rect width="256" height="256" fill="#fff"/><rect x="133" y="111" width="66" height="66" rx="18.44" fill="#000"/></mask><mask id="badge" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256"><rect width="256" height="256" fill="#fff"/><path d="M166.00 128.40V149.20M156.64 140.88L166.00 150.24L175.36 140.88M152.48 150.24V158.56H179.52V150.24" fill="none" stroke="#000" stroke-width="6.76" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+<path d="M64 12H160L218 70V218A26 26 0 0 1 192 244H64A26 26 0 0 1 38 218V38A26 26 0 0 1 64 12Z" fill="url(#plate)"/>
+<path d="M64 12H160L218 70V218A26 26 0 0 1 192 244H64A26 26 0 0 1 38 218V38A26 26 0 0 1 64 12Z" fill="none" stroke="#1d2b44" stroke-opacity=".12" stroke-width="2" stroke-linejoin="round"/>
+<path d="M160 12V54.4A15.6 15.6 0 0 0 175.6 70H218Z" fill="#dde2ea"/>
+<path d="M160 12V54.4A15.6 15.6 0 0 0 175.6 70H218Z" fill="none" stroke="#1d2b44" stroke-opacity=".12" stroke-width="2" stroke-linejoin="round"/>
+<g mask="url(#knockout)"><g transform="translate(52.400 45.400) scale(3.15)"><path d="M10.5 30.5H16C25 30.5 23 17.5 32 17.5H37.5" fill="none" stroke="url(#band)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" mask="url(#points)"/></g></g>
+<rect x="140" y="118" width="52" height="52" rx="11.44" fill="#14864c" mask="url(#badge)"/>
+<g opacity=".62"><path transform="translate(97.060 192.200) scale(2.3800)" d="M1.2 0V6.3A2.5 2.5 0 0 0 6.2 6.3V0" fill="none" stroke="#1d2b44" stroke-width="2.4"/><path transform="translate(117.766 192.200) scale(2.3800)" d="M0 10L2.8 0H5.4L8.2 10H5.7L4.97 7.4H3.23L2.5 10ZM3.73 5.6H4.47L4.1 4.29Z" fill="#1d2b44" fill-rule="evenodd"/><path transform="translate(140.376 192.200) scale(2.3800)" d="M1.2 0V10M1.2 1.2H4.3A2.35 2.35 0 0 1 4.3 5.9H1.2M3.9 5.9L6.5 10" fill="none" stroke="#1d2b44" stroke-width="2.4"/></g>
+</svg>
