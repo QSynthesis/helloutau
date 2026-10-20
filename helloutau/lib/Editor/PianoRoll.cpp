@@ -1137,7 +1137,8 @@ namespace hello::daw {
         // QUESTION: A jump of the playhead forward keeps the playhead at the center without an
         // easing, because a step of playback moves it forward as well. No command makes such a
         // jump now, since a move of the playhead during playback stops playback and starts it
-        // again. A command that does would require a distance that distinguishes a jump from a step.
+        // again. A command that does would require a distance that distinguishes a jump from a
+        // step.
         if (!tick || (impl.playhead && *tick < *impl.playhead)) {
             impl.centered = false;
         }

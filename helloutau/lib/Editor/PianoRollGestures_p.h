@@ -224,12 +224,13 @@ namespace hello::daw {
         kit::Vibrato m_original;
     };
 
-    /// A stroke of the Mode1 pitch (step 5 in docs/Tuning.md). For each sung note, the stroke
-    /// replaces the values from its first reading to its end with the pitch of the pointer path
-    /// at those positions, in whole cents. A later part of the path replaces an earlier part.
-    /// A value of 0 erases the values in the stroke. A note without values starts them at its
-    /// first reading, as UTAU does. Values before the stroke retain the existing curve. The
-    /// result is written as one step when the stroke is released.
+    /// A stroke of the Mode1 pitch (step 5 in docs/Tuning.md). For each sung note along the
+    /// stroke, the values within the stroke, from the first reading of the note to its end, take
+    /// the pitch of the pointer path at their places, in whole cents. A later part of the path
+    /// replaces an earlier part. A stroke that erases writes 0 instead and changes only the
+    /// values that a note already has. A note without values starts them at its first reading,
+    /// as UTAU does, and its values before the stroke take the curve as it was. The stroke is
+    /// written in one step when it is released.
     class PianoRollState::BendGesture : public SceneGesture {
     public:
         BendGesture(PianoRollState *state, QPointF position, bool erases);
