@@ -2,11 +2,12 @@
 
 #include <QtCore/QDir>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QVBoxLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 #include "SettingPageWidgets_p.h"
@@ -26,7 +27,7 @@ namespace hello::daw {
         auto widget = new QWidget();
         auto layout = new QVBoxLayout(widget);
         auto synthToolsGroup = new QGroupBox(tr("Synth tools"), widget);
-        auto synthToolsForm = new QFormLayout(synthToolsGroup);
+        auto synthToolsForm = new FormLayout(synthToolsGroup);
         m_wavtool = addPathRow(synthToolsForm, widget, tr("&Wavtool:"),
                                m_settings.rendering().wavtool(), false);
         m_resampler = addPathRow(synthToolsForm, widget, tr("&Resampler:"),
@@ -37,7 +38,7 @@ namespace hello::daw {
         layout->addWidget(synthToolsGroup);
 
         auto playbackGroup = new QGroupBox(tr("Playback"), widget);
-        auto playbackForm = new QFormLayout(playbackGroup);
+        auto playbackForm = new FormLayout(playbackGroup);
         m_playbackMode = new QComboBox();
         m_playbackMode->addItem(tr("Classic prerender, in an external console as UTAU does"),
                                 RenderingSettings::Prerender);
@@ -65,7 +66,7 @@ namespace hello::daw {
 
         layout->addWidget(playbackGroup);
         auto logGroup = new QGroupBox(tr("Render Log"), widget);
-        auto logForm = new QFormLayout(logGroup);
+        auto logForm = new FormLayout(logGroup);
         m_renderLogMode = createLogModeBox(m_settings.rendering().isLogAccumulated());
         logForm->addRow(tr("Render &log:"), m_renderLogMode);
         m_renderLogLimit = createLogLimitBox(m_settings.rendering().logLimit());

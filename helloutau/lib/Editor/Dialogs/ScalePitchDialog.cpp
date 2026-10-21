@@ -2,8 +2,9 @@
 
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QVBoxLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -29,7 +30,7 @@ namespace hello::daw {
 
         m_portamento = percentBox();
         m_vibrato = percentBox();
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         form->addRow(tr("&Pitch points:"), m_portamento);
         form->addRow(tr("&Vibrato depth:"), m_vibrato);
 

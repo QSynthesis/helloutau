@@ -2,13 +2,14 @@
 
 #include <QtCore/QDir>
 #include <QtWidgets/QCheckBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 #include "InstallArchiveDialog.h"
@@ -30,7 +31,7 @@ namespace hello::daw {
         auto widget = new QWidget();
         auto layout = new QVBoxLayout(widget);
         auto utauGroup = new QGroupBox(tr("Folder"), widget);
-        auto utauForm = new QFormLayout(utauGroup);
+        auto utauForm = new FormLayout(utauGroup);
         // The candidates of UtauFolderSearch, from which the user chooses the folder
         auto search = new QPushButton(tr("S&earch..."), widget);
         m_utauDirectory = addPathRow(

@@ -5,7 +5,6 @@
 
 #include <QtCore/QSignalBlocker>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
@@ -13,6 +12,7 @@
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/SineWaveSource.h>
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 #include "SettingPageWidgets_p.h"
@@ -28,7 +28,7 @@ namespace hello::daw {
 
     QWidget *AudioSettingPage::createWidget() {
         auto widget = new QWidget();
-        auto form = new QFormLayout(widget);
+        auto form = new FormLayout(widget);
         m_output = new QComboBox(widget);
         fillDevices(m_settings.audio().outputDevice());
         form->addRow(tr("&Output device:"), m_output);

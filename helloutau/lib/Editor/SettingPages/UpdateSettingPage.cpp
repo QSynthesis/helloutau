@@ -5,13 +5,14 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QLocale>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QVBoxLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 #include "SettingPageWidgets_p.h"
@@ -31,7 +32,7 @@ namespace hello::daw {
         auto widget = new QWidget();
         auto layout = new QVBoxLayout(widget);
         auto group = new QGroupBox(tr("Updates"), widget);
-        auto form = new QFormLayout(group);
+        auto form = new FormLayout(group);
         m_mode = new QComboBox(widget);
         m_mode->addItem(tr("Manual"), UpdateSettings::Manual);
         m_mode->addItem(tr("Check and notify"), UpdateSettings::Notified);

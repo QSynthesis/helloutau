@@ -3,12 +3,13 @@
 #include <algorithm>
 
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
 
 #include <hellokit/Support/ExitLauncher.h>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 #include "SettingPageWidgets_p.h"
@@ -27,7 +28,7 @@ namespace hello::daw {
         auto widget = new QWidget();
         auto layout = new QVBoxLayout(widget);
         auto interfaceGroup = new QGroupBox(tr("Interface"), widget);
-        auto interfaceForm = new QFormLayout(interfaceGroup);
+        auto interfaceForm = new FormLayout(interfaceGroup);
         m_language = new QComboBox(widget);
         m_language->setObjectName(QStringLiteral("language"));
         for (const auto &[language, name] : AppearanceSettings::languages()) {
@@ -41,7 +42,7 @@ namespace hello::daw {
         layout->addWidget(interfaceGroup);
 
         auto tasksGroup = new QGroupBox(tr("Tasks"), widget);
-        auto tasksForm = new QFormLayout(tasksGroup);
+        auto tasksForm = new FormLayout(tasksGroup);
         m_taskThreads = createThreadCountBox(m_settings.tasks().threadCount());
         m_taskThreads->setObjectName(QStringLiteral("taskThreads"));
         tasksForm->addRow(tr("Task &threads:"), m_taskThreads);

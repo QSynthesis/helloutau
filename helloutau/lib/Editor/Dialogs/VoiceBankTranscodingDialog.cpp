@@ -5,7 +5,6 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
@@ -18,6 +17,7 @@
 #include <hellokit/Support/TextCodec.h>
 
 #include <helloutau/Widgets/CheckAllBox.h>
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -71,7 +71,7 @@ namespace hello::daw {
         m_nameList->setRootIsDecorated(false);
         m_nameList->setHeaderLabels({tr("Name on Disk"), tr("New Name")});
         m_nameList->header()->setSectionResizeMode(QHeaderView::Stretch);
-        auto encodings = new QFormLayout();
+        auto encodings = new FormLayout();
         encodings->addRow(tr("&Written in:"), m_original);
         encodings->addRow(tr("&Read as:"), m_misdecodedAs);
         auto names = new QVBoxLayout(m_names);
@@ -102,7 +102,7 @@ namespace hello::daw {
                "and its window opens again without the undo history. UTAU on a system in the "
                "encoding in which the names were read no longer finds the renamed files."));
         m_methodNote->setWordWrap(true);
-        auto method = new QFormLayout();
+        auto method = new FormLayout();
         method->addRow(tr("&File names:"), m_method);
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);

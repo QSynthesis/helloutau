@@ -4,13 +4,14 @@
 #include <QtGui/QKeySequence>
 #include <QtGui/QWheelEvent>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QScrollArea>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QVBoxLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -151,7 +152,7 @@ namespace hello::daw {
     QWidget *KeyboardModifierSettingPage::createSchemeGroup(Editor::WindowKind kind, int scheme) {
         const auto &bindings = m_modifiers[kind].at(scheme);
         auto group = new QGroupBox(bindings.scheme().name());
-        auto form = new QFormLayout(group);
+        auto form = new FormLayout(group);
         for (const auto &role : bindings.scheme().roles()) {
             auto box = new WheelIgnoringComboBox();
             box->setObjectName(QStringLiteral("%1/%2/%3")

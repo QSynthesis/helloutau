@@ -4,7 +4,6 @@
 
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSplitter>
@@ -15,6 +14,7 @@
 #include <hellokit/VoiceBank/FrequencyFormat.h>
 
 #include <helloutau/Widgets/FileCheckList.h>
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -86,7 +86,7 @@ namespace hello::daw {
                                   "The maps of the target format are replaced, and their analysis "
                                   "caches are removed."));
         note->setWordWrap(true);
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         form->addRow(tr("&From:"), m_source);
         form->addRow(tr("&To:"), m_target);
 

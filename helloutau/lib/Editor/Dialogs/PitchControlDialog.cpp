@@ -9,7 +9,6 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QPushButton>
@@ -17,6 +16,8 @@
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QVBoxLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -161,7 +162,7 @@ namespace hello::daw {
             std::clamp(selection.vibratoPreset, 0, int(std::size(vibratoPresets)) - 1));
         m_vibratoDefault = new QPushButton(tr("Set as Default"));
 
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         form->addRow(m_portamento);
         auto presetRow = new QWidget();
         auto presetLayout = new QHBoxLayout(presetRow);

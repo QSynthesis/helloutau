@@ -4,16 +4,17 @@
 
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QSpinBox>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
     InterchangeOptionForm::InterchangeOptionForm(const QList<kit::InterchangeOption> &options,
                                                  QWidget *parent)
         : QWidget(parent), m_options(options) {
-        auto form = new QFormLayout(this);
+        auto form = new FormLayout(this);
         for (const auto &option : std::as_const(m_options)) {
             QWidget *control = nullptr;
             switch (option.type) {

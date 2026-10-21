@@ -1,7 +1,8 @@
 #include "EditorSettingPage.h"
 
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 #include "ExportUstDialog.h"
@@ -17,7 +18,7 @@ namespace hello::daw {
 
     QWidget *EditorSettingPage::createWidget() {
         auto widget = new QWidget();
-        auto form = new QFormLayout(widget);
+        auto form = new FormLayout(widget);
         m_ustExportCharset = new QComboBox();
         m_ustExportCharset->addItems(ExportUstDialog::charsets());
         const int index = m_ustExportCharset->findText(m_settings.files().ustExportCharset());

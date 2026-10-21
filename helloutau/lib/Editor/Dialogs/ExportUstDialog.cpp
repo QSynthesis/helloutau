@@ -4,13 +4,14 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
 #include <hellokit/Support/TextCodec.h>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -32,7 +33,7 @@ namespace hello::daw {
         const int index = m_charset->findText(charset);
         m_charset->setCurrentIndex(index >= 0 ? index : 0);
 
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         form->addRow(tr("&File:"), pathRow);
         form->addRow(tr("&Encoding:"), m_charset);
 

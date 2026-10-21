@@ -2,7 +2,6 @@
 
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
@@ -10,6 +9,8 @@
 #include <QtWidgets/QStyle>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -31,7 +32,7 @@ namespace hello::daw {
         m_replacementLabel = new QLabel(tr("Re&place with:"));
         m_replacementLabel->setBuddy(m_replacement);
 
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         form->addRow(tr("&Rule:"), m_kind);
         form->addRow(tr("&Text:"), m_text);
         form->addRow(m_replacementLabel, m_replacement);

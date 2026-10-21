@@ -10,7 +10,6 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QMessageBox>
@@ -25,6 +24,8 @@
 #include <hellokit/Support/PlatformFileSystem.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Support/ZipExtractor.h>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 
@@ -140,7 +141,7 @@ namespace hello::daw {
         modeLayout->addWidget(m_decoded);
         modeLayout->addWidget(m_misdecoded);
         modeLayout->addWidget(m_nameNote);
-        auto namesForm = new QFormLayout();
+        auto namesForm = new FormLayout();
         namesForm->addRow(tr("Encoding:"), m_nameEncoding);
         auto namesLayout = new QVBoxLayout(m_names);
         namesLayout->addWidget(namesNote);
@@ -154,7 +155,7 @@ namespace hello::daw {
         textNote->setWordWrap(true);
         m_charset = new QComboBox();
         m_charset->addItems(kit::TextCodec::ustCandidates());
-        auto textForm = new QFormLayout();
+        auto textForm = new FormLayout();
         textForm->addRow(tr("Encoding:"), m_charset);
         auto textLayout = new QVBoxLayout(m_text);
         textLayout->addWidget(textNote);

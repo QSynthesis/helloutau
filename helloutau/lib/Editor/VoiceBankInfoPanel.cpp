@@ -7,7 +7,6 @@
 #include <QtGui/QGuiApplication>
 #include <QtGui/QPalette>
 #include <QtGui/QPixmap>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
@@ -24,6 +23,8 @@
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Edit/VoiceBankSession.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -267,7 +268,7 @@ namespace hello::daw {
         QWidget *characterPage() {
             stdc_decl_t;
             auto page = new QWidget();
-            auto form = new QFormLayout();
+            auto form = new FormLayout();
             const auto line = [&](QLineEdit *&edit, const QString &label, const char *object) {
                 edit = new QLineEdit();
                 edit->setObjectName(QLatin1String(object));

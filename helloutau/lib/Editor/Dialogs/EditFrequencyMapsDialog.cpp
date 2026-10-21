@@ -20,7 +20,6 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
@@ -55,6 +54,7 @@
 #include <hellokit/VoiceBank/FrequencyMapRevisionBuffer.h>
 
 #include <helloutau/Widgets/FolderTree.h>
+#include <helloutau/Widgets/FormLayout.h>
 #include <helloutau/Widgets/ToolBarPalette.h>
 
 #include "AppSettings.h"
@@ -902,7 +902,7 @@ namespace hello::daw {
             auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
             QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
             QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-            auto form = new QFormLayout(&dialog);
+            auto form = new FormLayout(&dialog);
             form->addRow(tr("&Note of the recordings:"), note);
             form->addRow(pitchChange);
             form->addRow(changeAtStart);

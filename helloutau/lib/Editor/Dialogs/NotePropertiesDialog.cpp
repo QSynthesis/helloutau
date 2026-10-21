@@ -8,7 +8,6 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
@@ -17,6 +16,7 @@
 
 #include <stdutau/utaconst.h>
 
+#include <helloutau/Widgets/FormLayout.h>
 #include <helloutau/Widgets/HeightForWidthFilter.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
 
@@ -63,7 +63,7 @@ namespace hello::daw {
         const auto number = new QRegularExpressionValidator(
             QRegularExpression(QStringLiteral("-?\\d*(\\.\\d*)?")), this);
 
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         const auto add = [&](const QString &label, QLineEdit *edit) {
             edit->setClearButtonEnabled(true);
             const int index = int(m_fields.size());
@@ -309,7 +309,7 @@ namespace hello::daw {
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         form->addRow(tr("&Tempo:"), m_tempo);
         form->addRow(m_follow);
         auto layout = new QVBoxLayout(this);

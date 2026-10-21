@@ -11,7 +11,6 @@
 #include <QtWidgets/QCompleter>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
@@ -24,6 +23,7 @@
 
 #include <hellokit/Support/PlatformFileSystem.h>
 
+#include <helloutau/Widgets/FormLayout.h>
 #include <helloutau/Widgets/HeightForWidthFilter.h>
 
 #include "AppSettings.h"
@@ -206,7 +206,7 @@ namespace hello::daw {
             layout->addWidget(m_untrustedText, 1);
         }
 
-        auto form = new QFormLayout();
+        auto form = new FormLayout();
         form->addRow(tr("&Name:"), m_name);
         form->addRow(tr("&Flags:"), m_flags);
         // The resolved path shares the cell of the voice folder, without the spacing of a row.

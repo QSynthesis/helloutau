@@ -34,7 +34,6 @@
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStatusBar>
@@ -64,6 +63,7 @@
 #include <helloutau/Widgets/ActionIconToggle.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
+#include <helloutau/Widgets/FormLayout.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
@@ -1393,7 +1393,7 @@ namespace hello::daw {
                 denominator->addItem(QString::number(value), value);
             }
             denominator->setCurrentIndex(denominator->findData(current.denominator));
-            auto form = new QFormLayout(&dialog);
+            auto form = new FormLayout(&dialog);
             form->addRow(tr("Beats per bar:"), numerator);
             form->addRow(tr("Beat unit:"), denominator);
             auto buttons =

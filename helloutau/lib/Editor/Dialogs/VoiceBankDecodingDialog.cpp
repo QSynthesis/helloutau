@@ -5,7 +5,6 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QListWidget>
@@ -19,6 +18,7 @@
 #include <hellokit/Support/TextCodec.h>
 
 #include <helloutau/Widgets/CheckAllBox.h>
+#include <helloutau/Widgets/FormLayout.h>
 
 namespace hello::daw {
 
@@ -90,7 +90,7 @@ namespace hello::daw {
         m_nameList->setRootIsDecorated(false);
         m_nameList->setHeaderLabels({tr("Name on Disk"), tr("Restored Name")});
         m_nameList->header()->setSectionResizeMode(QHeaderView::Stretch);
-        auto encodings = new QFormLayout();
+        auto encodings = new FormLayout();
         encodings->addRow(tr("&Written in:"), m_original);
         encodings->addRow(tr("&Read as:"), m_misdecodedAs);
         auto names = new QVBoxLayout(m_names);

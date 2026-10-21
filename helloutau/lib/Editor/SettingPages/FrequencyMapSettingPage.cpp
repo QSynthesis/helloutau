@@ -2,7 +2,6 @@
 
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
@@ -10,6 +9,8 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include <hellokit/VoiceBank/FrequencyFormats.h>
+
+#include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
 #include "SettingPageWidgets_p.h"
@@ -42,7 +43,7 @@ namespace hello::daw {
         auto layout = new QVBoxLayout(widget);
 
         auto generationGroup = new QGroupBox(tr("Generation"), widget);
-        auto generationForm = new QFormLayout(generationGroup);
+        auto generationForm = new FormLayout(generationGroup);
         m_threads = createThreadCountBox(m_settings.frequencyMaps().threadCount());
         m_threads->setObjectName(QStringLiteral("threads"));
         generationForm->addRow(tr("Generation &threads:"), m_threads);
@@ -63,7 +64,7 @@ namespace hello::daw {
         layout->addWidget(generationGroup);
 
         auto editingGroup = new QGroupBox(tr("Editing"), widget);
-        auto editingForm = new QFormLayout(editingGroup);
+        auto editingForm = new FormLayout(editingGroup);
         m_removeCachesOnSave =
             new QCheckBox(tr("Re&move the analysis caches when saving a frequency map"));
         m_removeCachesOnSave->setChecked(m_settings.frequencyMaps().removesCachesOnSave());
@@ -75,7 +76,7 @@ namespace hello::daw {
         layout->addWidget(editingGroup);
 
         auto logGroup = new QGroupBox(tr("Generation Log"), widget);
-        auto logForm = new QFormLayout(logGroup);
+        auto logForm = new FormLayout(logGroup);
         const auto &maps = m_settings.frequencyMaps();
         m_followRenderLog = new QCheckBox(tr("&Use the settings of the render log"));
         m_followRenderLog->setChecked(maps.followsRenderLog());
