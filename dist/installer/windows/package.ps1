@@ -7,16 +7,16 @@ param(
 # Packages a release build of HelloUtau for Windows into the release assets of
 # docs/Distribution.md, in $OutputDir:
 #
-#     helloutau-<version>-<triplet>.zip         the portable package, a folder HelloUtau
-#     helloutau-<version>-<triplet>-setup.exe   the installer, compiled from setup.iss
-#     helloutau-<version>-<triplet>-symbols.zip the PDBs of the binaries, in the layout of the
-#                                               package, if the build records them
-#     SHA256SUMS                                the digests of the files above, as sha256sum
-#                                               writes them
+#     helloutau-<version>-<triplet>-portable.zip  the portable package, a folder HelloUtau
+#     helloutau-<version>-<triplet>-setup.exe     the installer, compiled from setup.iss
+#     helloutau-<version>-<triplet>-symbols.zip   the PDBs of the binaries, in the layout of the
+#                                                 package, if the build records them
+#     SHA256SUMS                                  the digests of the files above, as sha256sum
+#                                                 writes them
 #
 # A build of another channel than release (HELLO_BUILD_CHANNEL) follows the version with
-# -<channel>.<commit>, such as helloutau-<version>-ci.1a2b3c4-<triplet>.zip, as other projects
-# follow the version with the identifier of the build.
+# -<channel>.<commit>, such as helloutau-<version>-ci.1a2b3c4-<triplet>-portable.zip, as other
+# projects follow the version with the identifier of the build.
 #
 # The installation is laid out as
 #
@@ -198,7 +198,7 @@ foreach ($binary in $packaged) {
 }
 Write-Output "  $symbolCount of $($packaged.Count) binaries have symbols"
 
-$archive = Join-Path $OutputDir "$base.zip"
+$archive = Join-Path $OutputDir "$base-portable.zip"
 if (Test-Path -LiteralPath $archive) {
     Remove-Item -LiteralPath $archive -Force
 }

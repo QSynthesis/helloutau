@@ -102,7 +102,7 @@ private Q_SLOTS:
     void asset_names_follow_the_release_assets() {
         const QVersionNumber version({0, 1, 6, 0});
         QCOMPARE(UpdateChecker::assetName("app", version, "x86_64-windows-msvc", false),
-                 QStringLiteral("app-0.1.6.0-x86_64-windows-msvc.zip"));
+                 QStringLiteral("app-0.1.6.0-x86_64-windows-msvc-portable.zip"));
         QCOMPARE(UpdateChecker::assetName("app", version, "x86_64-windows-msvc", true),
                  QStringLiteral("app-0.1.6.0-x86_64-windows-msvc-setup.exe"));
     }

@@ -24,13 +24,14 @@
 
 | 附件 | 文件名 |
 |---|---|
-| 免安装版（Windows） | `helloutau-<version>-<triplet>.zip` |
-| 免安装版（Linux） | `helloutau-<version>-<triplet>.tar.xz` |
+| 免安装版（Windows） | `helloutau-<version>-<triplet>-portable.zip` |
+| 免安装版（Linux） | `helloutau-<version>-<triplet>-portable.tar.xz` |
 | 安装包（仅 Windows） | `helloutau-<version>-<triplet>-setup.exe` |
 | 磁盘映像（仅 macOS） | `helloutau-<version>-<triplet>.dmg` |
 | 调试符号 | `helloutau-<version>-<triplet>-symbols.zip`，Linux 为 `-symbols.tar.xz` |
 | 校验文件 | `SHA256SUMS` |
 
+- 免安装版以 `-portable` 结尾，与安装包的 `-setup` 相对，用户不必从扩展名推断附件的种类（作者 2026-10-21 决定）。磁盘映像是 macOS 唯一的发布物，不加后缀。
 - 调试符号供分析崩溃转储使用，按安装目录的结构存放各个 exe 与 dll 的 PDB，包括 vcpkg 依赖的 PDB，Qt 的官方二进制不带 PDB（作者 2026-10-18 要求）。更新程序按完整的文件名挑选附件，不会选中它。MinGW 的构建以 llvm-mingw 生成 PDB，同样收入符号包。macOS 的符号包是各二进制的 dSYM，由 `dsymutil` 从构建的目标文件收集，放在二进制在 bundle 中的相对位置，例如 `HelloUtau.app/Contents/MacOS/HelloUtau.dSYM`。Linux 的符号包是各二进制的 `<文件名>.debug`，由 `objcopy --only-keep-debug` 分离，放在二进制在免安装版中的相对位置，例如 `HelloUtau/bin/helloutau.debug`，二进制只保留符号表与指向它的 `.gnu_debuglink`，解压到免安装版上 gdb 即可找到。没有调试信息的二进制（Qt 的库，以及从二进制缓存恢复、没有目标文件的 vcpkg 依赖）不收入。
 
 - `<version>` 为 `HELLO_VERSION` 的四段版本号。
@@ -45,9 +46,9 @@ CMake 缓存项 `HELLO_BUILD_CHANNEL` 区分三种构建，正式版与 CI 的�
 
 | 渠道 | 来源 | 窗口标题的结尾 | 附件文件名 |
 |---|---|---|---|
-| `release` | 推送 `v` 开头的 tag 时 CI 的构建 | `HelloUtau 0.1.8.0` | `helloutau-0.1.8.0-x86_64-windows-msvc.zip` |
-| `ci` | CI 的其他构建 | `HelloUtau 0.1.8.0-ci.1a2b3c4` | `helloutau-0.1.8.0-ci.1a2b3c4-x86_64-windows-msvc.zip` |
-| `dev` | 本地构建，默认值 | `HelloUtau 0.1.8.0-dev.1a2b3c4` | `helloutau-0.1.8.0-dev.1a2b3c4-x86_64-windows-msvc.zip` |
+| `release` | 推送 `v` 开头的 tag 时 CI 的构建 | `HelloUtau 0.1.8.0` | `helloutau-0.1.8.0-x86_64-windows-msvc-portable.zip` |
+| `ci` | CI 的其他构建 | `HelloUtau 0.1.8.0-ci.1a2b3c4` | `helloutau-0.1.8.0-ci.1a2b3c4-x86_64-windows-msvc-portable.zip` |
+| `dev` | 本地构建，默认值 | `HelloUtau 0.1.8.0-dev.1a2b3c4` | `helloutau-0.1.8.0-dev.1a2b3c4-x86_64-windows-msvc-portable.zip` |
 
 - 渠道写入 `hellokit/Config.h` 的 `HELLOKIT_BUILD_CHANNEL`，提交取 `hellokit/BuildInfo.h` 的 `HELLOKIT_GIT_LAST_COMMIT_HASH` 的前七位。源码不在 git 仓库中时（例如解压的源码包），qmsetup 记录的提交为 `unknown`，名称省略提交，例如 `HelloUtau 0.1.8.0-dev`。程序由 `SoftwareBuildChannel` 读取，工程窗口与音源窗口的标题以它结尾，关于对话框在版本号后注明。`package.ps1` 以它命名附件，并作为安装包的 `AppVerName` 传入，安装向导与「已安装的应用」中的名称因此同样不会被当成正式版。
 - 其他渠道的附件名把 `-<渠道>.<提交>` 跟在版本号之后，再接 triplet 与附件种类的后缀，例如 `helloutau-0.1.8.0-ci.1a2b3c4-x86_64-windows-msvc-setup.exe`（作者 2026-10-18 决定）。DiffScope 的开发构建同样把构建标识跟在版本号之后（`<版本>+<标识>`），平台在其后，附件种类在最后。不用 semver 的 `+`，因为它在 URL 中须转义。
@@ -161,7 +162,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 - **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：
   - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
   - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。
-- **Linux**：只出 tar.xz 压缩包，即 `helloutau-<version>-x86_64-linux-gcc.tar.xz`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。最初为 zip，作者 2026-10-19 改为 tar.xz，因为 tar.xz 是 Linux 上通行的格式，原生保存文件权限与库的符号链接，压缩率也高于 zip。符号包同为 tar.xz。条目的属主写为 0，不带构建机的用户名。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装，发现新版本时打开下载页（作者 2026-10-18 决定），尚未实现。
+- **Linux**：只出 tar.xz 压缩包，即 `helloutau-<version>-x86_64-linux-gcc-portable.tar.xz`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。最初为 zip，作者 2026-10-19 改为 tar.xz，因为 tar.xz 是 Linux 上通行的格式，原生保存文件权限与库的符号链接，压缩率也高于 zip。符号包同为 tar.xz。条目的属主写为 0，不带构建机的用户名。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装，发现新版本时打开下载页（作者 2026-10-18 决定），尚未实现。
 - **Linux 的桌面登记**（作者 2026-10-21 要求）：免安装版没有安装步骤，而桌面项的 `Exec` 须为程序的绝对路径，因此包的根目录附两个脚本，由 `package.sh` 放入，不由 `cmake --install` 安装，因为装到 `/usr` 时 `share` 中的文件已在系统的位置。`register-desktop.sh` 把所在的文件夹登记到当前用户的桌面：应用菜单中的项与桌面上的快捷方式默认都创建（作者 2026-10-21 决定），分别以 `--no-menu` 与 `--no-desktop` 关闭。`--no-menu` 只把桌面项标为 `NoDisplay`，桌面项本身仍然写入，因为桌面按它为窗口取图标，并为文件类型找到程序。文件类型同 Windows 安装包，默认只在 `.usth` 的「打开方式」中列出 HelloUtau，`--ust` 与 `--uar` 另加，`--no-usth` 去掉，任何类型的默认程序都不改变。桌面项写到 `~/.local/share/applications`，程序的路径按 Desktop Entry Specification 的规则转义，图标复制到 `~/.local/share/icons/hicolor`，所选类型的声明复制到 `~/.local/share/mime/packages`，之后更新桌面的缓存。快捷方式写到 `xdg-user-dir DESKTOP` 所指的目录，设为可执行，并以 `gio` 标为可信，因为 GNOME 只启动可信的快捷方式。文件夹移动后再运行一次即更新，最后一次运行的选项取代以前的选项。`unregister-desktop.sh` 删除这些文件，不论由哪个文件夹登记，用户的设置、音源与插件不受影响。
 
 ## 应用图标

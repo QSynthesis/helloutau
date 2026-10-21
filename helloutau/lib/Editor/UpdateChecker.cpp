@@ -339,7 +339,7 @@ namespace hello::daw {
     QString UpdateChecker::assetName(const QString &prefix, const QVersionNumber &version,
                                      const QString &triplet, bool installer) {
         return prefix + QLatin1Char('-') + version.toString() + QLatin1Char('-') + triplet +
-               (installer ? QStringLiteral("-setup.exe") : QStringLiteral(".zip"));
+               (installer ? QStringLiteral("-setup.exe") : QStringLiteral("-portable.zip"));
     }
 
     bool UpdateChecker::offers(const kit::SoftwareRelease &release, const QVersionNumber &current,

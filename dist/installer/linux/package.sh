@@ -2,13 +2,13 @@
 # Packages a release build of HelloUtau for Linux into the release assets of
 # docs/Distribution.md, in the output directory:
 #
-#     helloutau-<version>-<triplet>.tar.xz          the portable package, a folder HelloUtau
-#     helloutau-<version>-<triplet>-symbols.tar.xz  the debug information of the binaries, a
-#                                                   file <binary>.debug beside the path of each
-#                                                   binary in the layout of the package, if the
-#                                                   build records debug information
-#     SHA256SUMS                                    the digests of the files above, as sha256sum
-#                                                   writes them
+#     helloutau-<version>-<triplet>-portable.tar.xz  the portable package, a folder HelloUtau
+#     helloutau-<version>-<triplet>-symbols.tar.xz   the debug information of the binaries, a
+#                                                    file <binary>.debug beside the path of each
+#                                                    binary in the layout of the package, if the
+#                                                    build records debug information
+#     SHA256SUMS                                     the digests of the files above, as sha256sum
+#                                                    writes them
 #
 # A build of another channel than release follows the version with -<channel>.<commit>, see
 # common.sh. The build must be complete: this script does not build. Steps: cmake --install,
@@ -33,7 +33,7 @@ echo "Packaging $base from $build"
 staging="$output/HelloUtau"
 symbols="$output/symbols"
 rm -rf "$staging" "$symbols"
-rm -f "$output/$base.tar.xz" "$output/$base-symbols.tar.xz" "$output/SHA256SUMS"
+rm -f "$output/$base-portable.tar.xz" "$output/$base-symbols.tar.xz" "$output/SHA256SUMS"
 
 echo "== Install"
 cmake --install "$build" --prefix "$staging"
@@ -79,9 +79,9 @@ archive() {
     XZ_OPT=-T0 tar --owner=0 --group=0 --numeric-owner -cJf "$@"
 }
 
-echo "== Create $base.tar.xz"
-(cd "$output" && archive "$base.tar.xz" HelloUtau)
-assets=("$base.tar.xz")
+echo "== Create $base-portable.tar.xz"
+(cd "$output" && archive "$base-portable.tar.xz" HelloUtau)
+assets=("$base-portable.tar.xz")
 
 if [ "$count" -gt 0 ]; then
     echo "== Create $base-symbols.tar.xz"
