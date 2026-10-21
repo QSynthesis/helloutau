@@ -1,0 +1,5 @@
+/* The names of the document types and of the exported types of Info.plist.in, keyed by their
+   English names, the same as the MIME types of Linux. */
+"HelloUtau Project" = "HelloUtau プロジェクト";
+"UTAU Project" = "UTAU プロジェクト";
+"UTAU Installation Archive" = "UTAU インストールアーカイブ";

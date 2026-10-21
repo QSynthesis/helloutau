@@ -65,7 +65,7 @@
 		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
-			<string>UTAU Sequence</string>
+			<string>UTAU Project</string>
 			<key>CFBundleTypeIconFile</key>
 			<string>ust.icns</string>
 			<key>CFBundleTypeRole</key>
@@ -118,7 +118,7 @@
 			<key>UTTypeIdentifier</key>
 			<string>org.openvpi.helloutau.ust</string>
 			<key>UTTypeDescription</key>
-			<string>UTAU Sequence</string>
+			<string>UTAU Project</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.text</string>

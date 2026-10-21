@@ -99,6 +99,22 @@ if(APPLE)
     # The icons of the file types, which Info.plist.in names, in Contents/Resources
     set_source_files_properties(${_file_icons} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 
+    # The translated names of the file types, which the Finder shows in the language of the user,
+    # one directory for each language, also for the languages without a translation of the
+    # program, as the MIME types of Linux. The directories are gathered in Resources/localizations
+    # of the sources, and macOS requires them directly in Contents/Resources.
+    file(GLOB _strings_files
+        "${CMAKE_CURRENT_SOURCE_DIR}/Resources/localizations/*.lproj/InfoPlist.strings"
+    )
+    foreach(_strings IN LISTS _strings_files)
+        get_filename_component(_lproj "${_strings}" DIRECTORY)
+        get_filename_component(_lproj "${_lproj}" NAME)
+        target_sources(${PROJECT_NAME} PRIVATE "${_strings}")
+        set_source_files_properties("${_strings}" PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources/${_lproj}"
+        )
+    endforeach()
+
     # The localizations of the bundle, English and the languages of the translations. macOS gives
     # the application the current locale in the preferred language of the user only if the
     # bundle lists that language, and gives a bundle that lists English alone an English locale

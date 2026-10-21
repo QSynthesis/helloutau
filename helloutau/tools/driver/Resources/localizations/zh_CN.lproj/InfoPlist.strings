@@ -1,0 +1,5 @@
+/* The names of the document types and of the exported types of Info.plist.in, keyed by their
+   English names, the same as the installer of Windows and the MIME types of Linux. */
+"HelloUtau Project" = "HelloUtau 工程";
+"UTAU Project" = "UTAU 工程";
+"UTAU Installation Archive" = "UTAU 安装包";
