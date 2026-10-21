@@ -275,6 +275,13 @@ namespace hello::daw {
         /// function once the first windows are open. See UpdateChecker.
         void checkForUpdatesAtStartup();
 
+        /// Reports the folders that the check at startup found unreadable or unwritable, once,
+        /// in a dialog over the last opened project window, which leads to the Folder Access
+        /// page of the settings. The core plugin calls this function once the first windows are
+        /// open. Does nothing without a kit::FolderAccessRecord or without such folders. See
+        /// docs/FolderAccess.md.
+        void reportFolderAccessAtStartup();
+
         /// Closes every window. Each window prompts the user to save its document first. Stops
         /// at the first window for which the user cancels, and returns whether every window was
         /// closed.

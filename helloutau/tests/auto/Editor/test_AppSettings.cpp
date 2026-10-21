@@ -43,6 +43,40 @@ private Q_SLOTS:
         UtauSettings::setDataDirectory(std::nullopt);
     }
 
+    // The read folders are voice and plugins of each root and the extensions of the user
+    // directory. A root that does not apply has none. The written folders are those of the
+    // classic extensions.
+    void the_checked_folders_follow_the_roots() {
+        QTemporaryDir dir;
+        const auto user =
+            std::filesystem::path(dir.filePath(QStringLiteral("user")).toStdU16String());
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")),
+                             QString::fromStdU16String(user.u16string()));
+        const auto data =
+            std::filesystem::path(dir.filePath(QStringLiteral("data")).toStdU16String());
+        UtauSettings::setDataDirectory(data);
+        const auto classic = user / u"ClassicExtensions";
+        const std::vector<std::filesystem::path> withoutUtau{
+            classic / u"voice",
+            classic / u"plugins",
+            data / u"voice",
+            data / u"plugins",
+            user / u"Extensions" / u"plugins",
+            user / u"Extensions" / u"translations",
+        };
+        QCOMPARE(settings.readFolders(), withoutUtau);
+
+        const auto utau =
+            std::filesystem::path(dir.filePath(QStringLiteral("utau")).toStdU16String());
+        settings.utau().setDirectory(utau);
+        auto withUtau = withoutUtau;
+        withUtau.insert(withUtau.begin() + 4, {utau / u"voice", utau / u"plugins"});
+        QCOMPARE(settings.readFolders(), withUtau);
+        QCOMPARE(settings.writtenFolders(),
+                 (std::vector<std::filesystem::path>{classic / u"voice", classic / u"plugins"}));
+        UtauSettings::setDataDirectory(std::nullopt);
+    }
+
     void unset_values_are_empty_except_the_export_encoding() {
         QTemporaryDir dir;
         const AppSettings settings(dir.filePath(QStringLiteral("settings.json")));

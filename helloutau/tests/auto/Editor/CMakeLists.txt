@@ -28,6 +28,7 @@ helloutau_add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip PROGRAMS
 helloutau_add_auto_test(test_UpdateTaskView.cpp HelloUtauEditor)
 
 add_subdirectory(Dialogs)
+add_subdirectory(SettingPages)
 
 # The contribution of the test, with a manifest of its own for each kind of window
 qak_add_action_extension(_contribution_src TestContribution.xml

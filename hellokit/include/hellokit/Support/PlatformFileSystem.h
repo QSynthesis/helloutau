@@ -2,8 +2,10 @@
 #define HELLOKIT_SUPPORT_PLATFORMFILESYSTEM_H
 
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <system_error>
+#include <vector>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QString>
@@ -27,7 +29,8 @@ namespace hello::kit {
 
         /// Returns the reason for which \a directory cannot be listed, or \c std::nullopt if it
         /// can be listed or does not exist. A directory that cannot be reached at all, as in the
-        /// Documents folder that macOS denies, may exist, and is reported.
+        /// Documents folder that macOS denies, may exist, and is reported. The result updates the
+        /// entry of \a directory in FolderAccessRecord, see FolderAccessRecord::update().
         static std::optional<QString>
             unreadableFolderReason(const std::filesystem::path &directory);
 
@@ -39,6 +42,71 @@ namespace hello::kit {
 
     private:
         PlatformFileSystem() = delete;
+    };
+
+    /// The recorded access of the folders that the application reads, checked at startup and on
+    /// request, so that the prompt of macOS for a protected folder appears at startup and the
+    /// folders that cannot be read are reported in one place. The record guides the reports only:
+    /// every access still handles its own errors, and PlatformFileSystem::unreadableFolderReason()
+    /// updates the record with its result. At most one instance exists at a time, which the
+    /// application owns. See docs/FolderAccess.md.
+    class HELLOKIT_SUPPORT_EXPORT FolderAccessRecord {
+    public:
+        enum State {
+            Missing,    ///< The folder does not exist
+            Readable,   ///< The folder can be listed, and its writing was not checked
+            Writable,   ///< The folder can be listed, and a file can be created in it
+            Unreadable, ///< The folder cannot be listed
+            Unwritable, ///< The folder can be listed, and no file can be created in it
+        };
+
+        struct Entry {
+            std::filesystem::path folder;
+            State state = Missing;
+
+            /// The reason of Unreadable and Unwritable, or an empty string
+            QString reason;
+        };
+
+        /// Creates the record. At most one instance exists at a time.
+        FolderAccessRecord();
+        ~FolderAccessRecord();
+
+        /// Returns the instance, or \c nullptr if none exists.
+        static FolderAccessRecord *instance();
+
+        /// Returns the access of \a folder, checked now. If \a write is true and the folder can
+        /// be listed, a temporary file is created in the folder and removed.
+        static Entry checked(const std::filesystem::path &folder, bool write = false);
+
+        /// Checks each of \a folders as checked() does, and records the results.
+        void check(const std::vector<std::filesystem::path> &folders, bool write = false);
+
+        /// Records \a entry in place of the entry of its folder. A Readable entry keeps the result
+        /// of an earlier check of the writing.
+        void record(const Entry &entry);
+
+        /// Records \a entry as record() does if its folder is recorded already, so that the
+        /// accesses to other folders, such as to each voice bank, do not grow the record.
+        void update(const Entry &entry);
+
+        /// Returns the entry of \a folder, or \c std::nullopt if the folder was not checked.
+        std::optional<Entry> entryOf(const std::filesystem::path &folder) const;
+
+        /// Returns the entries in the order in which their folders were first recorded.
+        std::vector<Entry> entries() const;
+
+        /// Returns the entries that are Unreadable or Unwritable, in the order of entries().
+        std::vector<Entry> problems() const;
+
+    private:
+        // Replaces the entry of the folder of entry, and adds one if add is true
+        void store(const Entry &entry, bool add);
+
+        class Impl;
+        std::unique_ptr<Impl> _impl;
+
+        Q_DISABLE_COPY(FolderAccessRecord)
     };
 
 }

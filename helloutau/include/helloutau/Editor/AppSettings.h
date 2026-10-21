@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 #include <QtCore/QJsonValue>
 #include <QtCore/QString>
@@ -94,6 +95,17 @@ namespace hello::daw {
 
         /// Returns \a root with the UTAU folder of utau().
         std::filesystem::path classicRoot(ClassicRoot root) const;
+
+        /// Returns the folders that the application reads, whose access kit::FolderAccessRecord
+        /// records: the \c voice and \c plugins directories of each root, and the \c plugins and
+        /// \c translations directories of \c Extensions in userDirectory(). See
+        /// docs/FolderAccess.md.
+        std::vector<std::filesystem::path> readFolders() const;
+
+        /// Returns the folders into which the application writes, the \c voice and \c plugins
+        /// directories of HelloUtauRoot, into which the voice banks and the plugins of UTAU are
+        /// installed.
+        std::vector<std::filesystem::path> writtenFolders() const;
 
         /// Writes the pending changes immediately.
         void sync();

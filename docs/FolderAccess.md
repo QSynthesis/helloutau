@@ -1,6 +1,6 @@
 # 文件夹的访问检查
 
-本文档是启动时集中检查受保护文件夹的设计，尚未实现。第五节的三个问题已由作者 2026-10-21 确定。
+本文档是启动时集中检查受保护文件夹的设计。第五节的三个问题已由作者 2026-10-21 确定，记录、启动检查、集中的提示与设置页已于同日实现，第二节中 macOS 的几点仍待实测。
 
 ## 一、动机
 
@@ -30,7 +30,7 @@
 
 **检查的时机。** `AppLoader` 在读取设置之后、载入翻译与原生插件之前检查一次，在主线程上进行，使 macOS 的询问固定出现在启动时、第一个窗口之前。设置中的文件夹改变时（UTAU 文件夹、音源文件夹）重新检查改变的文件夹。设置页提供「重新检查」，用户在系统设置中允许访问之后可以不重启程序。
 
-**记录。** HelloKitSupport 新增 `kit::FolderAccessRecord`，与 `FileFingerprintCache` 相同，是由 `AppLoader` 持有、以 `instance()` 取得的实例。每个文件夹记录一种状态：可读、可读写、不存在、不可读（附原因）、不可写（附原因）。`PlatformFileSystem::unreadableFolderReason()` 先查记录，没有实例（测试）或没有该文件夹的记录时照旧直接检查。
+**记录。** `kit::FolderAccessRecord` 在 `hellokit/Support/PlatformFileSystem.h` 中，与 `FileFingerprintCache` 相同，是由 `AppLoader` 持有、以 `instance()` 取得的实例。每个文件夹记录一种状态：可读、可读写、不存在、不可读（附原因）、不可写（附原因）。要检查的文件夹由 `AppSettings::readFolders()` 与 `writtenFolders()` 给出。`PlatformFileSystem::unreadableFolderReason()` 照旧直接检查，并以结果更新已记录的文件夹（`FolderAccessRecord::update()`），不为其他文件夹（如各个音源）增加记录。之后的读取检查不覆盖写入检查的结果。代替文件夹的文件记为不存在，Windows 对文件的列举报告 `ERROR_DIRECTORY`，因此另以 `status()` 判断。
 
 **记录只是提示，不是闸门。** 各处的实际读写照常进行并照常处理错误，因为状态在运行中可能改变：用户在系统设置中允许了访问，外置磁盘接上或拔出，文件夹被创建或删除。实际访问的结果与记录不同时更新记录。记录改变的只是报告的方式。
 

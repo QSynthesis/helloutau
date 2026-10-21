@@ -5,6 +5,7 @@
 #include "AppearanceAndBehaviorCategory.h"
 #include "AudioSettingPage.h"
 #include "EditorSettingPage.h"
+#include "FolderAccessSettingPage.h"
 #include "FrequencyMapSettingPage.h"
 #include "RenderingSettingPage.h"
 #include "SystemSettingsPage.h"
@@ -18,6 +19,7 @@ namespace hello::daw {
         const auto appearance = new AppearanceAndBehaviorCategory();
         const auto system = new SystemSettingsPage(settings);
         system->addPage(new UpdateSettingPage(settings, checker));
+        system->addPage(new FolderAccessSettingPage(settings));
         appearance->addPage(system);
         catalog->addPage(appearance);
         catalog->addPage(new EditorSettingPage(settings));

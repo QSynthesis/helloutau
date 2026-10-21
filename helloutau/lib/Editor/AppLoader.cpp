@@ -28,6 +28,7 @@
 #include <hellokit/NativeSystem/NativeProcess.h>
 #include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Support/FileIntegrity.h>
+#include <hellokit/Support/PlatformFileSystem.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/SingleProcessPeer.h>
 #include <hellokit/Support/TemporaryStorage.h>
@@ -135,6 +136,8 @@ namespace hello::daw {
         std::optional<kit::TranslationLoader> translations;
         // The fingerprints of the trusted programs, see docs/ProgramIntegrity.md
         kit::FileFingerprintCache fingerprints;
+        // The access of the folders that the application reads, see docs/FolderAccess.md
+        kit::FolderAccessRecord folderAccess;
         stdc::pluginsystem::PluginSystem system{AppLoader::pluginIid,
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;
@@ -270,6 +273,11 @@ namespace hello::daw {
             impl.settings.emplace(settingsFile);
         }
         impl.readPluginSettings();
+        // Before the translations and the plugins, which are read from the user directory, so
+        // that the prompt of macOS for the Documents folder appears here. The folders are only
+        // read, because a written probe makes Windows Security show a notification if the
+        // controlled folder access blocks it.
+        impl.folderAccess.check(impl.settings->readFolders());
         // The plugins of the user follow those of the application, in Extensions/plugins of the
         // user directory of the settings
         impl.pluginPaths.insert(1, extensionPath() + QStringLiteral("/plugins"));

@@ -176,6 +176,25 @@ namespace hello::daw {
         return classicRoot(root, utau().directory());
     }
 
+    std::vector<std::filesystem::path> AppSettings::readFolders() const {
+        std::vector<std::filesystem::path> folders;
+        for (int root = 0; root < ClassicRootCount; ++root) {
+            if (const auto path = classicRoot(ClassicRoot(root)); !path.empty()) {
+                folders.push_back(path / u"voice");
+                folders.push_back(path / u"plugins");
+            }
+        }
+        const auto extensions = userDirectory() / u"Extensions";
+        folders.push_back(extensions / u"plugins");
+        folders.push_back(extensions / u"translations");
+        return folders;
+    }
+
+    std::vector<std::filesystem::path> AppSettings::writtenFolders() const {
+        const auto root = classicRoot(HelloUtauRoot);
+        return {root / u"voice", root / u"plugins"};
+    }
+
     void AppSettings::sync() {
         stdc_impl_t;
         impl.store.file.sync();

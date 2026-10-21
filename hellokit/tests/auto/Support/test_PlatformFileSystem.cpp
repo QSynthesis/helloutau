@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
@@ -106,6 +107,97 @@ private Q_SLOTS:
         QCOMPARE(reason, QString::fromLocal8Bit(
                              std::make_error_code(std::errc::operation_not_permitted).message()));
 #endif
+    }
+
+    // A folder that can be listed is readable, and writable if a file can be created in it,
+    // which leaves no file behind. A missing folder and a file are missing.
+    void a_checked_folder_has_its_access() {
+        QTemporaryDir dir;
+        const auto root = pathOf(dir.path());
+        std::ofstream(root / "file.txt") << "text";
+        QCOMPARE(FolderAccessRecord::checked(root).state, FolderAccessRecord::Readable);
+        QCOMPARE(FolderAccessRecord::checked(root / "missing").state, FolderAccessRecord::Missing);
+        QCOMPARE(FolderAccessRecord::checked(root / "file.txt").state, FolderAccessRecord::Missing);
+        const auto written = FolderAccessRecord::checked(root, true);
+        QCOMPARE(written.state, FolderAccessRecord::Writable);
+        QVERIFY(written.reason.isEmpty());
+        QCOMPARE(std::distance(fs::directory_iterator(root), fs::directory_iterator()), 1);
+    }
+
+    // A folder whose permissions deny the listing or the creation of a file has the reason.
+    void a_denied_folder_has_a_reason() {
+#ifdef Q_OS_WINDOWS
+        QSKIP("The permissions of std::filesystem do not deny access on Windows.");
+#else
+        QTemporaryDir dir;
+        const auto locked = pathOf(dir.path()) / "locked";
+        const auto readOnly = pathOf(dir.path()) / "readOnly";
+        fs::create_directories(locked);
+        fs::create_directories(readOnly);
+        fs::permissions(locked, fs::perms::none);
+        fs::permissions(readOnly, fs::perms::owner_read | fs::perms::owner_exec);
+        std::error_code error;
+        fs::directory_iterator probe(locked, error);
+        const bool root = !error;
+        const auto unreadable = FolderAccessRecord::checked(locked);
+        const auto unwritable = FolderAccessRecord::checked(readOnly, true);
+        fs::permissions(locked, fs::perms::owner_all);
+        fs::permissions(readOnly, fs::perms::owner_all);
+        if (root) {
+            QSKIP("The user reads a directory without permissions, as root does.");
+        }
+        QCOMPARE(unreadable.state, FolderAccessRecord::Unreadable);
+        QCOMPARE(unreadable.reason, PlatformFileSystem::accessErrorReason(error));
+        QCOMPARE(unwritable.state, FolderAccessRecord::Unwritable);
+        QVERIFY(!unwritable.reason.isEmpty());
+#endif
+    }
+
+    // The record keeps the order of the first check, keeps the result of the writing over a
+    // later check of the reading, and replaces it with any other state.
+    void the_record_keeps_the_last_access() {
+        QVERIFY(!FolderAccessRecord::instance());
+        QTemporaryDir dir;
+        const auto root = pathOf(dir.path());
+        const auto voice = root / "voice";
+        const auto plugins = root / "plugins";
+        fs::create_directories(voice);
+        {
+            FolderAccessRecord record;
+            QCOMPARE(FolderAccessRecord::instance(), &record);
+            record.check({voice, plugins});
+            QCOMPARE(record.entries().size(), size_t(2));
+            QCOMPARE(record.entries()[0].folder, voice);
+            QCOMPARE(record.entryOf(voice)->state, FolderAccessRecord::Readable);
+            QCOMPARE(record.entryOf(plugins)->state, FolderAccessRecord::Missing);
+            QVERIFY(!record.entryOf(root));
+
+            record.check({voice}, true);
+            record.check({voice});
+            QCOMPARE(record.entryOf(voice)->state, FolderAccessRecord::Writable);
+            record.record({voice, FolderAccessRecord::Unreadable, QStringLiteral("denied")});
+            QCOMPARE(record.entryOf(voice)->state, FolderAccessRecord::Unreadable);
+            QCOMPARE(record.problems().size(), size_t(1));
+            QCOMPARE(record.problems()[0].reason, QStringLiteral("denied"));
+        }
+        QVERIFY(!FolderAccessRecord::instance());
+    }
+
+    // A listing updates the entry of a recorded folder and adds no entry for another folder.
+    void a_listing_updates_a_recorded_folder_only() {
+        QTemporaryDir dir;
+        const auto root = pathOf(dir.path());
+        const auto plugins = root / "plugins";
+        const auto bank = root / "bank";
+        FolderAccessRecord record;
+        record.check({plugins});
+        fs::create_directories(plugins);
+        fs::create_directories(bank);
+        QCOMPARE(PlatformFileSystem::unreadableFolderReason(plugins), std::nullopt);
+        QCOMPARE(PlatformFileSystem::unreadableFolderReason(bank), std::nullopt);
+        QCOMPARE(record.entryOf(plugins)->state, FolderAccessRecord::Readable);
+        QVERIFY(!record.entryOf(bank));
+        QCOMPARE(record.entries().size(), size_t(1));
     }
 };
 

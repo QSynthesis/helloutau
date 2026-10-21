@@ -9,6 +9,8 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
+#include <hellokit/Support/PlatformFileSystem.h>
+
 #include <helloutau/Widgets/FormLayout.h>
 
 #include "AppSettings.h"
@@ -113,6 +115,10 @@ namespace hello::daw {
         m_settings.utau().setDirectory(
             std::filesystem::path(pathText(m_utauDirectory).toStdU16String()));
         m_settings.voiceBanks().setRelativeToUtau(m_relativeVoiceDirInUtau->isChecked());
+        // The folders of a new UTAU folder are recorded as at startup, see docs/FolderAccess.md.
+        if (const auto record = kit::FolderAccessRecord::instance()) {
+            record->check(m_settings.readFolders());
+        }
         Q_EMIT modifiedChanged();
         return true;
     }

@@ -26,6 +26,7 @@
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Support/ExitLauncher.h>
+#include <hellokit/Support/PlatformFileSystem.h>
 #include <hellokit/Support/RegistryInstantiator.h>
 #include <hellokit/Synth/BuiltinSynthDiagnosers.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
@@ -45,6 +46,7 @@
 #include "DiagnosticBox.h"
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
+#include "FolderAccessSettingPage.h"
 #include "FrequencyViewKeyboardModifiers.h"
 #include "InstallArchiveDialog.h"
 #include "KeymapFile.h"
@@ -1000,6 +1002,36 @@ namespace hello::daw {
         impl.updateChecker->holdInstallerMutex();
         impl.updateChecker->reportLastInstallation(parent);
         impl.updateChecker->checkAtStartup(parent);
+    }
+
+    void Editor::reportFolderAccessAtStartup() {
+        const auto record = kit::FolderAccessRecord::instance();
+        if (!record) {
+            return;
+        }
+        const auto problems = record->problems();
+        if (problems.empty()) {
+            return;
+        }
+        const auto all = windows();
+        const auto parent = all.isEmpty() ? nullptr : all.last();
+        QStringList lines;
+        for (const auto &entry : problems) {
+            lines.push_back(tr("%1: %2").arg(
+                QDir::toNativeSeparators(QString::fromStdU16String(entry.folder.u16string())),
+                entry.reason));
+        }
+        QMessageBox box(QMessageBox::Warning, tr("Folder Access"),
+                        tr("%1 cannot read some of its folders. The voice banks, the plugins and "
+                           "the translations in them are missing until the access is allowed.")
+                            .arg(QGuiApplication::applicationDisplayName()),
+                        QMessageBox::Close, parent);
+        box.setInformativeText(lines.join(QLatin1Char('\n')));
+        const auto show = box.addButton(tr("Show &Folder Access"), QMessageBox::ActionRole);
+        box.exec();
+        if (box.clickedButton() == show) {
+            showSettings(parent, QLatin1String(FolderAccessSettingPage::pageId));
+        }
     }
 
     bool Editor::closeAll() {

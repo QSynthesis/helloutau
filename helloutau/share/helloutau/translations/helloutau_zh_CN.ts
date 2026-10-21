@@ -1325,6 +1325,22 @@ Open it now?</source>
         <source>&amp;Clear</source>
         <translation>清除(&amp;C)</translation>
     </message>
+    <message>
+        <source>%1: %2</source>
+        <translation>%1：%2</translation>
+    </message>
+    <message>
+        <source>Folder Access</source>
+        <translation>文件夹访问</translation>
+    </message>
+    <message>
+        <source>%1 cannot read some of its folders. The voice banks, the plugins and the translations in them are missing until the access is allowed.</source>
+        <translation>%1 无法读取部分文件夹。在允许访问之前，其中的音源、插件与翻译不会出现。</translation>
+    </message>
+    <message>
+        <source>Show &amp;Folder Access</source>
+        <translation>查看文件夹访问(&amp;F)</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::EditorSettingPage</name>
@@ -1425,6 +1441,65 @@ Open it now?</source>
     <message>
         <source>Invalid</source>
         <translation>无效</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::FolderAccessSettingPage</name>
+    <message>
+        <source>Does not exist</source>
+        <translation>不存在</translation>
+    </message>
+    <message>
+        <source>Readable</source>
+        <translation>可读取</translation>
+    </message>
+    <message>
+        <source>Readable and writable</source>
+        <translation>可读写</translation>
+    </message>
+    <message>
+        <source>Cannot be read</source>
+        <translation>无法读取</translation>
+    </message>
+    <message>
+        <source>Cannot be written</source>
+        <translation>无法写入</translation>
+    </message>
+    <message>
+        <source>Folder Access</source>
+        <translation>文件夹访问</translation>
+    </message>
+    <message>
+        <source>The access of the folders of the voice banks, the plugins and the translations.</source>
+        <translation>音源、插件与翻译所在文件夹的访问情况。</translation>
+    </message>
+    <message>
+        <source>The folders are checked when %1 starts and when the UTAU folder changes. Check Again also checks whether the folders into which voice banks and plugins are installed can be written.</source>
+        <translation>%1 启动时与 UTAU 文件夹改变时检查这些文件夹。「再次检查」还会检查安装音源与插件的文件夹能否写入。</translation>
+    </message>
+    <message>
+        <source>If a folder in the Documents folder cannot be read, allow the access in System Settings, Privacy &amp; Security, Files and Folders.</source>
+        <translation>文稿文件夹中的文件夹无法读取时，请在「系统设置」的「隐私与安全性」中的「文件与文件夹」里允许访问。</translation>
+    </message>
+    <message>
+        <source>If a folder in the Documents folder cannot be written, allow %1 in Windows Security, Virus &amp; threat protection, Ransomware protection, Allow an app through Controlled folder access.</source>
+        <translation>文档文件夹中的文件夹无法写入时，请在「Windows 安全中心」的「病毒和威胁防护」中的「勒索软件防护」里，通过「允许应用通过受控制文件夹访问」允许 %1。</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>Access</source>
+        <translation>访问</translation>
+    </message>
+    <message>
+        <source>Reason</source>
+        <translation>原因</translation>
+    </message>
+    <message>
+        <source>Check &amp;Again</source>
+        <translation>再次检查(&amp;A)</translation>
     </message>
 </context>
 <context>

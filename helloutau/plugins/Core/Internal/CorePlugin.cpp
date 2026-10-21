@@ -80,9 +80,10 @@ namespace hello::daw {
         for (const auto &archive : std::as_const(archives)) {
             m_editor->installArchive(archive, m_editor->windows().first());
         }
-        // The check runs only with a loader, so that a test that loads this plugin sends no
-        // request.
+        // The reports and the check run only with a loader, so that a test that loads this plugin
+        // shows no dialog and sends no request.
         if (AppLoader::instance()) {
+            m_editor->reportFolderAccessAtStartup();
             m_editor->checkForUpdatesAtStartup();
         }
     }

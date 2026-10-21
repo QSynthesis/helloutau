@@ -1,0 +1,1 @@
+helloutau_add_auto_test(test_FolderAccessSettingPage.cpp HelloUtauEditor)
