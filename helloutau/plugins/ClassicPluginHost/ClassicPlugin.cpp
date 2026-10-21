@@ -12,8 +12,7 @@
 #include <stdutau/plugintxt.h>
 #include <stdutau/utaconst.h>
 
-#include <hellokit/Support/FileName.h>
-#include <hellokit/Support/FolderAccess.h>
+#include <hellokit/Support/PlatformFileSystem.h>
 #include <hellokit/Support/TextCodec.h>
 
 namespace hello::daw {
@@ -152,7 +151,7 @@ namespace hello::daw {
             // A directory that does not exist yields no plugins, as in UTAU. A directory that
             // cannot be read is reported, such as the folder of the user in the Documents folder,
             // which macOS denies until the user allows the access.
-            if (const auto reason = kit::FolderAccess::unreadableReason(directory)) {
+            if (const auto reason = kit::PlatformFileSystem::unreadableFolderReason(directory)) {
                 diagnostics.push_back(
                     {kit::Diagnostic::Warning, tr("The plugin folder \"%1\" cannot be read: %2")
                                                    .arg(textOf(directory), *reason)});
@@ -163,7 +162,8 @@ namespace hello::daw {
             for (const auto &entry : std::filesystem::directory_iterator(directory, error)) {
                 std::error_code entryError;
                 if (entry.is_directory(entryError)) {
-                    folders.push_back(directory / kit::FileName::listed(entry.path().filename()));
+                    folders.push_back(directory / kit::PlatformFileSystem::listedFileName(
+                                                      entry.path().filename()));
                 }
             }
             std::sort(folders.begin(), folders.end());

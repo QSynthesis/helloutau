@@ -8,8 +8,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QCryptographicHash>
 
-#include <hellokit/Support/FileName.h>
-#include <hellokit/Support/FolderAccess.h>
+#include <hellokit/Support/PlatformFileSystem.h>
 #include <hellokit/Support/TextCodec.h>
 
 namespace hello::kit {
@@ -114,7 +113,7 @@ namespace hello::kit {
                 if (entry.is_symlink()) {
                     continue;
                 }
-                const auto fileName = FileName::listed(entry.path().filename());
+                const auto fileName = PlatformFileSystem::listedFileName(entry.path().filename());
                 if (entry.is_directory()) {
                     subdirectories.push_back(fileName);
                     continue;
@@ -248,7 +247,7 @@ namespace hello::kit {
                 continue;
             }
             Entry entry;
-            entry.name = FileName::listed(item.path().filename());
+            entry.name = PlatformFileSystem::listedFileName(item.path().filename());
             if (item.is_directory(error)) {
                 entry.directory = true;
             } else if (item.is_regular_file(error)) {
@@ -376,7 +375,7 @@ namespace hello::kit {
         // The listing skips the folders that cannot be read, so that a folder that cannot be read
         // at all would read as an empty voice bank. macOS denies the Documents folder, which
         // holds the voice banks of the user, until the user allows the access.
-        if (const auto reason = FolderAccess::unreadableReason(root)) {
+        if (const auto reason = PlatformFileSystem::unreadableFolderReason(root)) {
             fail(diagnostics, tr("The voice bank folder \"%1\" cannot be read: %2")
                                   .arg(displayed(root), *reason));
             return std::nullopt;

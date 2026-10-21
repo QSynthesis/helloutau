@@ -22,7 +22,7 @@
 
 #include <stdcorelib/path.h>
 
-#include <hellokit/Support/FolderAccess.h>
+#include <hellokit/Support/PlatformFileSystem.h>
 
 #include <helloutau/Widgets/HeightForWidthFilter.h>
 
@@ -130,7 +130,7 @@ namespace hello::daw {
         // are missing from the items.
         QStringList unreadable;
         for (const auto &root : locations.voiceBankFolders()) {
-            if (const auto reason = kit::FolderAccess::unreadableReason(root)) {
+            if (const auto reason = kit::PlatformFileSystem::unreadableFolderReason(root)) {
                 unreadable.push_back(tr("The voice bank folder \"%1\" cannot be read: %2")
                                          .arg(textOf(root), *reason));
                 continue;

@@ -22,7 +22,7 @@
 #  include <unistd.h>
 #endif
 
-#include "FolderAccess.h"
+#include "PlatformFileSystem.h"
 
 namespace fs = std::filesystem;
 
@@ -254,7 +254,7 @@ namespace hello::kit {
         void setUnreadable(QString *reason, const fs::path &path, const std::error_code &error) {
             if (reason) {
                 *reason = FileFingerprint::tr("%1 cannot be read: %2")
-                              .arg(textOf(path), FolderAccess::reasonOf(error));
+                              .arg(textOf(path), PlatformFileSystem::accessErrorReason(error));
             }
         }
 

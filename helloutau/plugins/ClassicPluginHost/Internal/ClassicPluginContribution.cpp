@@ -13,7 +13,7 @@
 
 #include <QAKWidgets/widgetactioncontext.h>
 
-#include <hellokit/Support/FolderAccess.h>
+#include <hellokit/Support/PlatformFileSystem.h>
 
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Dialogs/DiagnosticBox.h>
@@ -77,13 +77,13 @@ namespace hello::daw {
         if (folder == userDirectory(settings) &&
             !std::filesystem::create_directories(folder, error) && error) {
             warn(tr("The folder \"%1\" cannot be created: %2")
-                     .arg(shown, kit::FolderAccess::reasonOf(error)));
+                     .arg(shown, kit::PlatformFileSystem::accessErrorReason(error)));
             return;
         }
         // is_directory() reports no error for a missing folder.
         if (!std::filesystem::is_directory(folder, error)) {
             warn(error ? tr("The folder \"%1\" cannot be opened: %2")
-                             .arg(shown, kit::FolderAccess::reasonOf(error))
+                             .arg(shown, kit::PlatformFileSystem::accessErrorReason(error))
                        : tr("The folder \"%1\" does not exist.").arg(shown));
             return;
         }

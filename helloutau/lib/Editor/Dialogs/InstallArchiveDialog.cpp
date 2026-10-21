@@ -22,7 +22,7 @@
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
-#include <hellokit/Support/FolderAccess.h>
+#include <hellokit/Support/PlatformFileSystem.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Support/ZipExtractor.h>
 
@@ -305,7 +305,7 @@ namespace hello::daw {
         fs::create_directories(root, error);
         if (error) {
             return fail(tr("The folder %1 cannot be created: %2")
-                            .arg(textOf(root), kit::FolderAccess::reasonOf(error)));
+                            .arg(textOf(root), kit::PlatformFileSystem::accessErrorReason(error)));
         }
 
         // A folder that exists is merged into, as UTAU does, or the content goes into a new
