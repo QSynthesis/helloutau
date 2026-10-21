@@ -12,8 +12,8 @@
 #include <QtCore/QHash>
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
+#include <QtGui/QCursor>
 #include <QtGui/QGuiApplication>
-#include <QtGui/QScreen>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
@@ -40,6 +40,7 @@
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
 #include <helloutau/Widgets/SettingPageRegistry.h>
+#include <helloutau/Widgets/WindowPlacement.h>
 
 #include "ActionLayoutsFile.h"
 #include "AppSettings.h"
@@ -92,28 +93,6 @@ namespace hello::daw {
                 normalized = std::filesystem::absolute(path, error);
             }
             return QDir::toNativeSeparators(textOf(normalized.empty() ? path : normalized));
-        }
-
-        void placeNewWindow(QWidget *window, QWidget *previous) {
-            if (!previous) {
-                return;
-            }
-            constexpr int CascadeStep = 32;
-            const auto wanted =
-                previous->frameGeometry().topLeft() + QPoint(CascadeStep, CascadeStep);
-            const auto screen = QGuiApplication::screenAt(wanted);
-            if (!screen) {
-                window->move(wanted);
-                return;
-            }
-            const auto available = screen->availableGeometry();
-            const int right =
-                std::max(available.left(), available.right() - window->frameGeometry().width() + 1);
-            const int bottom = std::max(available.top(),
-                                        available.bottom() - window->frameGeometry().height() + 1);
-            const int x = std::clamp(wanted.x(), available.left(), right);
-            const int y = std::clamp(wanted.y(), available.top(), bottom);
-            window->move(x, y);
         }
 
         // Makes the projects of projects that sing the voice bank of document take it as saved
@@ -429,13 +408,6 @@ namespace hello::daw {
 
         ProjectWindow *createWindow(Editor *editor,
                                     std::unique_ptr<kit::ProjectDocument> document) {
-            ProjectWindow *previous = nullptr;
-            for (auto it = windows.crbegin(); it != windows.crend(); ++it) {
-                if (*it) {
-                    previous = *it;
-                    break;
-                }
-            }
             auto window = new ProjectWindow(editor, std::move(document));
             window->setAttribute(Qt::WA_DeleteOnClose);
             windows.removeAll(nullptr);
@@ -461,7 +433,7 @@ namespace hello::daw {
                     }
                 });
             });
-            placeNewWindow(window, previous);
+            WindowPlacement::place(window, createdWindows, QCursor::pos());
             window->show();
             for (const auto project : std::as_const(windows)) {
                 if (project) {
@@ -829,16 +801,6 @@ namespace hello::daw {
         }
         impl.settings->files().addRecentVoiceBank(root);
 
-        QWidget *previous = nullptr;
-        for (auto it = impl.voiceBankWindows.crbegin(); it != impl.voiceBankWindows.crend(); ++it) {
-            if (*it) {
-                previous = *it;
-                break;
-            }
-        }
-        if (!previous) {
-            previous = from;
-        }
         auto window = new VoiceBankWindow(this, std::move(document));
         window->setAttribute(Qt::WA_DeleteOnClose);
         const auto saved = window->document();
@@ -848,7 +810,7 @@ namespace hello::daw {
         impl.voiceBankWindows.push_back(window);
         impl.createdWindows.removeAll(nullptr);
         impl.createdWindows.push_back(window);
-        placeNewWindow(window, previous);
+        WindowPlacement::place(window, impl.createdWindows, QCursor::pos());
         window->show();
         DiagnosticBox::report(window, title, diagnostics);
         return window;
