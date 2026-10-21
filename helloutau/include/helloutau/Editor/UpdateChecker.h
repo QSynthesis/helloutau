@@ -15,12 +15,11 @@
 #include <hellokit/Update/SoftwareRelease.h>
 
 #include <helloutau/Editor/AppSettings.h>
+#include <helloutau/Editor/UpdateTask.h>
 
 class QWidget;
 
 namespace hello::daw {
-
-    class UpdateTask;
 
     /// The update of the application, at start and on request, from one of the sources of the
     /// update manifest. The checker holds the UpdateTask of the application, which runs in
@@ -93,10 +92,17 @@ namespace hello::daw {
         /// directory of the system.
         static QString downloadDirectory();
 
-        /// Returns the name of the asset with \a prefix for \a version and \a triplet: the
-        /// installer if \a installer is true, and the archive otherwise.
+        /// Returns the name of the asset with \a prefix for \a version and \a triplet that an
+        /// application of \a kind updates from: the installer for UpdateTask::Installed, the zip
+        /// for UpdateTask::Portable, the disk image for UpdateTask::Bundle, and the tar.xz of
+        /// Linux for UpdateTask::Unmanaged.
         static QString assetName(const QString &prefix, const QVersionNumber &version,
-                                 const QString &triplet, bool installer);
+                                 const QString &triplet, UpdateTask::Kind kind);
+
+        /// Returns the kind of the running application with the installer identified in
+        /// \a manifest: UpdateTask::Installed or UpdateTask::Portable on Windows,
+        /// UpdateTask::Bundle on macOS, and UpdateTask::Unmanaged on other systems.
+        static UpdateTask::Kind applicationKind(const ManifestFile &manifest);
 
         /// Returns the arguments of the installer of an update: \c /SILENT with \c /RELAUNCH if
         /// \a relaunch is true, so that the installer shows its progress and starts the

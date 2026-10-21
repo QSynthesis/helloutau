@@ -101,10 +101,18 @@ private Q_SLOTS:
 
     void asset_names_follow_the_release_assets() {
         const QVersionNumber version({0, 1, 6, 0});
-        QCOMPARE(UpdateChecker::assetName("app", version, "x86_64-windows-msvc", false),
-                 QStringLiteral("app-0.1.6.0-x86_64-windows-msvc-portable.zip"));
-        QCOMPARE(UpdateChecker::assetName("app", version, "x86_64-windows-msvc", true),
-                 QStringLiteral("app-0.1.6.0-x86_64-windows-msvc-setup.exe"));
+        QCOMPARE(
+            UpdateChecker::assetName("app", version, "x86_64-windows-msvc", UpdateTask::Portable),
+            QStringLiteral("app-0.1.6.0-x86_64-windows-msvc-portable.zip"));
+        QCOMPARE(
+            UpdateChecker::assetName("app", version, "x86_64-windows-msvc", UpdateTask::Installed),
+            QStringLiteral("app-0.1.6.0-x86_64-windows-msvc-setup.exe"));
+        QCOMPARE(
+            UpdateChecker::assetName("app", version, "arm64-mac-appleclang", UpdateTask::Bundle),
+            QStringLiteral("app-0.1.6.0-arm64-mac-appleclang.dmg"));
+        QCOMPARE(
+            UpdateChecker::assetName("app", version, "x86_64-linux-gcc", UpdateTask::Unmanaged),
+            QStringLiteral("app-0.1.6.0-x86_64-linux-gcc-portable.tar.xz"));
     }
 
     // A release is offered if it is newer and has both its asset and the checksums.

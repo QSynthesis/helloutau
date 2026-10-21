@@ -25,8 +25,8 @@ namespace hello::daw {
     /// One update of the application, from the check to the scheduled installation. The task
     /// runs in the background, independent of the windows and of the update dialog, which only
     /// shows its state and calls its functions. The download, the verification and, for the
-    /// portable application, the extraction form one step for the user, which cancel()
-    /// undoes entirely. See the automatic update in docs/Distribution.md.
+    /// portable application and the bundle, the extraction form one step for the user, which
+    /// cancel() undoes entirely. See the automatic update in docs/Distribution.md.
     class HELLOUTAU_EDITOR_EXPORT UpdateTask : public QObject {
         Q_OBJECT
     public:
@@ -37,6 +37,14 @@ namespace hello::daw {
 
             /// Extracted from an archive, whose directory hello-updater replaces
             Portable,
+
+            /// The application bundle of macOS, copied from a disk image, which hello-updater
+            /// replaces as the portable application
+            Bundle,
+
+            /// Installed and updated by the user, who downloads a new version from the page of
+            /// the release, as on Linux
+            Unmanaged,
         };
 
         enum State {
@@ -47,7 +55,8 @@ namespace hello::daw {
             /// A newer release is offered, see release().
             Available,
             Downloading,
-            /// The archive of the portable application is extracted.
+            /// The archive of the portable application is extracted, or the bundle is copied from
+            /// the disk image.
             Extracting,
             /// The installation can be scheduled.
             Ready,
@@ -56,7 +65,7 @@ namespace hello::daw {
         };
 
         /// Constructs the task of an application of \a kind with \a settings, which outlive the
-        /// task. A portable application is installed in \a installDirectory.
+        /// task. A portable application or a bundle is installed in \a installDirectory.
         UpdateTask(AppSettings &settings, Kind kind, const QString &installDirectory,
                    QObject *parent = nullptr);
 
@@ -64,6 +73,10 @@ namespace hello::daw {
         ~UpdateTask();
 
         Kind kind() const;
+
+        /// Returns whether the task installs an update, which every kind but Unmanaged does.
+        bool installs() const;
+
         State state() const;
 
         /// The release offered, or \c std::nullopt before an offer
@@ -87,8 +100,9 @@ namespace hello::daw {
         void offer(const kit::SoftwareRelease &release, const QString &assetName);
 
         /// Downloads and verifies the asset of the offered release into
-        /// UpdateChecker::downloadDirectory(), and extracts it for the portable application.
-        /// The state is Ready once the installation can be scheduled.
+        /// UpdateChecker::downloadDirectory(), and extracts it for the portable application or
+        /// copies the bundle from it. The state is Ready once the installation can be scheduled.
+        /// Does nothing if the task does not install updates.
         void prepare();
 
         /// Prepares the installation from \a file, the asset of the offered release already
@@ -105,15 +119,15 @@ namespace hello::daw {
 
         /// Schedules the installation at exit with kit::ExitLauncher: the installer for the
         /// installed application, and hello-updater copied into the download directory for the
-        /// portable application. If \a relaunch is true, the application starts again after the
-        /// installation, and a scheduled restart is removed.
+        /// portable application and the bundle. If \a relaunch is true, the application starts
+        /// again after the installation, and a scheduled restart is removed.
         ///
         /// \return whether the installation was scheduled, which requires the state Ready and an
         ///         instance of kit::ExitLauncher
         bool schedule(bool relaunch);
 
-        /// The program that schedule() copies as hello-updater for the portable application,
-        /// SoftwareTreeUpdate::defaultUpdater() unless setUpdater() specifies another
+        /// The program that schedule() copies as hello-updater for the portable application and
+        /// the bundle, SoftwareTreeUpdate::defaultUpdater() unless setUpdater() specifies another
         QString updater() const;
         void setUpdater(const QString &updater);
 

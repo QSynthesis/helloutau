@@ -3430,6 +3430,30 @@ Open it now?</source>
         <source>The archive %1 does not contain the program %2.</source>
         <translation>压缩包 %1 中没有程序 %2。</translation>
     </message>
+    <message>
+        <source>The disk image %1 does not contain the program %2.</source>
+        <translation>磁盘映像 %1 中没有程序 %2。</translation>
+    </message>
+    <message>
+        <source>A temporary folder cannot be created: %1</source>
+        <translation>无法创建临时文件夹：%1</translation>
+    </message>
+    <message>
+        <source>The disk image %1 cannot be opened: %2</source>
+        <translation>无法打开磁盘映像 %1：%2</translation>
+    </message>
+    <message>
+        <source>The disk image %1 does not contain exactly one application.</source>
+        <translation>磁盘映像 %1 中的应用不是恰好一个。</translation>
+    </message>
+    <message>
+        <source>The application cannot be copied from the disk image %1: %2</source>
+        <translation>无法从磁盘映像 %1 复制应用：%2</translation>
+    </message>
+    <message>
+        <source>Disk images can be opened only on macOS.</source>
+        <translation>只有在 macOS 上才能打开磁盘映像。</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::SynthToolTrust</name>
@@ -3730,11 +3754,13 @@ Trust and use them for rendering?</source>
     </message>
     <message>
         <source>Manual: updates are checked only from Help &gt; Check for Updates.
-Check and notify: updates are checked at startup, at most once a day, and a new version is offered.
-Automatic: updates are checked at startup as well, and a new version is downloaded in the background and installed when the application quits.</source>
+Check and notify: updates are checked at startup, at most once a day, and a new version is offered.</source>
         <translation>手动：只从「帮助 &gt; 检查更新」检查。
-检查并提示：启动时检查，每天至多一次，有新版本时提示。
-自动：同样在启动时检查，新版本在后台下载，并在退出程序时安装。</translation>
+检查并提示：启动时检查，每天至多一次，有新版本时提示。</translation>
+    </message>
+    <message>
+        <source>Automatic: updates are checked at startup as well, and a new version is downloaded in the background and installed when the application quits.</source>
+        <translation>自动：同样在启动时检查，新版本在后台下载，并在退出程序时安装。</translation>
     </message>
     <message>
         <source>Update &amp;source:</source>
@@ -3778,6 +3804,10 @@ Automatic: updates are checked at startup as well, and a new version is download
     <message>
         <source>Cannot extract the update: %1</source>
         <translation>无法解压更新：%1</translation>
+    </message>
+    <message>
+        <source>%1 runs from the disk image or from a copy that macOS isolates, so that the update cannot be installed. Move %1 to the Applications folder, open it there, and update it again.</source>
+        <translation>%1 正在从磁盘映像或 macOS 隔离的副本中运行，因此无法安装更新。请把 %1 移到「应用程序」文件夹，从那里打开后再更新。</translation>
     </message>
     <message>
         <source>The folder that contains %1 cannot be written, so that the update cannot be installed there. Download the new version from the page of the release.</source>
@@ -3857,6 +3887,10 @@ Automatic: updates are checked at startup as well, and a new version is download
     <message>
         <source>%1 %2 is available. The current version is %3.</source>
         <translation>%1 %2 已发布，当前版本为 %3。</translation>
+    </message>
+    <message>
+        <source>%1 %2 is available. The current version is %3. Download the new version from the page of the release.</source>
+        <translation>%1 %2 已发布，当前版本为 %3。请从发布页面下载新版本。</translation>
     </message>
     <message>
         <source>Downloading and verifying %1 %2...</source>
@@ -5197,13 +5231,6 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     </message>
 </context>
 <context>
-    <name>hello::kit::PlatformFileSystem</name>
-    <message>
-        <source>macOS denies %1 the access. Allow the access to the folder in System Settings, Privacy &amp; Security, Files and Folders.</source>
-        <translation>macOS 不允许 %1 访问。请在「系统设置」的「隐私与安全性」中的「文件与文件夹」里允许访问该文件夹。</translation>
-    </message>
-</context>
-<context>
     <name>hello::kit::FrequencyFormat</name>
     <message>
         <source>&quot;%1&quot; could not be read.</source>
@@ -5482,6 +5509,13 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>The envelope of a note does not have four or five anchors and was ignored.</source>
         <translation>有音符的包络点不是四个或五个，该包络已忽略。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::PlatformFileSystem</name>
+    <message>
+        <source>macOS denies %1 the access. Allow the access to the folder in System Settings, Privacy &amp; Security, Files and Folders.</source>
+        <translation>macOS 不允许 %1 访问。请在「系统设置」的「隐私与安全性」中的「文件与文件夹」里允许访问该文件夹。</translation>
     </message>
 </context>
 <context>

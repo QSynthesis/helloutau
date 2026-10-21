@@ -31,9 +31,8 @@ namespace hello::daw {
                 return;
             }
             m_settings.updates().setLastCheck(QDateTime::currentDateTimeUtc());
-            const auto asset =
-                UpdateChecker::assetName(m_assetPrefix, release->version,
-                                         QStringLiteral(HELLOKIT_TRIPLET), m_kind == Installed);
+            const auto asset = UpdateChecker::assetName(m_assetPrefix, release->version,
+                                                        QStringLiteral(HELLOKIT_TRIPLET), m_kind);
             if (!UpdateChecker::offers(*release, m_current, asset)) {
                 setState(UpToDate);
                 return;
@@ -67,6 +66,10 @@ namespace hello::daw {
 
     UpdateTask::Kind UpdateTask::kind() const {
         return m_kind;
+    }
+
+    bool UpdateTask::installs() const {
+        return m_kind != Unmanaged;
     }
 
     UpdateTask::State UpdateTask::state() const {
@@ -109,10 +112,17 @@ namespace hello::daw {
     }
 
     void UpdateTask::prepare() {
-        if (!m_release || isRunning()) {
+        if (!m_release || isRunning() || !installs()) {
             return;
         }
-        if (m_kind == Portable && !m_treeUpdate->canReplace()) {
+        if (m_kind == Bundle && SoftwareTreeUpdate::isIsolated(m_treeUpdate->installDirectory())) {
+            fail(tr("%1 runs from the disk image or from a copy that macOS isolates, so that the "
+                    "update cannot be installed. Move %1 to the Applications folder, open it "
+                    "there, and update it again.")
+                     .arg(QCoreApplication::applicationName()));
+            return;
+        }
+        if ((m_kind == Portable || m_kind == Bundle) && !m_treeUpdate->canReplace()) {
             fail(tr("The folder that contains %1 cannot be written, so that the update cannot be "
                     "installed there. Download the new version from the page of the release.")
                      .arg(QDir::toNativeSeparators(m_treeUpdate->installDirectory())));
@@ -131,9 +141,15 @@ namespace hello::daw {
             return;
         }
         setState(Extracting);
-        // The program, whose presence confirms that the archive is that of the application
+        // The program, whose presence confirms that the archive is that of the application, in
+        // the layout of the asset rather than that of the running program, which may be a test
+        const auto name = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
         const auto program =
-            QStringLiteral("bin/") + QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+            (m_kind == Bundle ? QStringLiteral("Contents/MacOS/") : QStringLiteral("bin/")) + name;
+        if (m_kind == Bundle) {
+            m_treeUpdate->startImageCopy(file, program);
+            return;
+        }
         m_treeUpdate->startExtraction(file, program, m_settings.updates().extractionThreadCount());
     }
 

@@ -35,15 +35,21 @@ namespace hello::daw {
         m_mode = new QComboBox(widget);
         m_mode->addItem(tr("Manual"), UpdateSettings::Manual);
         m_mode->addItem(tr("Check and notify"), UpdateSettings::Notified);
-        m_mode->addItem(tr("Automatic"), UpdateSettings::Automatic);
-        m_mode->setCurrentIndex(std::max(0, m_mode->findData(m_settings.updates().mode())));
+        const auto task = m_checker.task();
+        if (task->installs()) {
+            m_mode->addItem(tr("Automatic"), UpdateSettings::Automatic);
+        }
+        m_mode->setCurrentIndex(std::max(0, m_mode->findData(storedMode())));
         form->addRow(tr("Update &mode:"), m_mode);
-        form->addRow(note(tr("Manual: updates are checked only from Help > Check for Updates.\n"
-                             "Check and notify: updates are checked at startup, at most once a "
-                             "day, and a new version is offered.\n"
-                             "Automatic: updates are checked at startup as well, and a new "
-                             "version is downloaded in the background and installed when the "
-                             "application quits.")));
+        auto modes = tr("Manual: updates are checked only from Help > Check for Updates.\n"
+                        "Check and notify: updates are checked at startup, at most once a day, "
+                        "and a new version is offered.");
+        if (task->installs()) {
+            modes += QLatin1Char('\n') +
+                     tr("Automatic: updates are checked at startup as well, and a new version is "
+                        "downloaded in the background and installed when the application quits.");
+        }
+        form->addRow(note(modes));
         m_source = new QComboBox(widget);
         // The names of the sources are those of the update manifest, untranslated.
         m_source->addItem(tr("Automatic"), QString());
@@ -60,9 +66,15 @@ namespace hello::daw {
         m_extractionThreads->setRange(1, 64);
         m_extractionThreads->setValue(m_settings.updates().extractionThreadCount());
         form->addRow(tr("&Extraction threads:"), m_extractionThreads);
-        form->addRow(note(tr("The number of threads that extract the archive of an update of "
-                             "the portable version. The default is %1.")
-                              .arg(UpdateSettings::defaultExtractionThreadCount)));
+        const auto threadsNote = note(tr("The number of threads that extract the archive of an "
+                                         "update of the portable version. The default is %1.")
+                                          .arg(UpdateSettings::defaultExtractionThreadCount));
+        form->addRow(threadsNote);
+        // Only the archive of the portable version is extracted.
+        if (task->kind() != UpdateTask::Portable) {
+            form->setRowVisible(m_extractionThreads, false);
+            form->setRowVisible(threadsNote, false);
+        }
         auto checkNow = new QPushButton(tr("Check &Now"), widget);
         m_lastCheck = note(QString());
         showLastCheck();
@@ -87,7 +99,7 @@ namespace hello::daw {
         if (!m_mode) {
             return false;
         }
-        return m_mode->currentData().toInt() != m_settings.updates().mode() ||
+        return m_mode->currentData().toInt() != storedMode() ||
                m_source->currentData().toString() != storedSource() ||
                m_extractionThreads->value() != m_settings.updates().extractionThreadCount();
     }
@@ -107,6 +119,15 @@ namespace hello::daw {
 
     QComboBox *UpdateSettingPage::sourceBox() const {
         return m_source;
+    }
+
+    UpdateSettings::Mode UpdateSettingPage::storedMode() const {
+        // An application that does not install updates treats the mode Automatic as Check and
+        // notify.
+        const auto mode = m_settings.updates().mode();
+        return mode == UpdateSettings::Automatic && !m_checker.task()->installs()
+                   ? UpdateSettings::Notified
+                   : mode;
     }
 
     QString UpdateSettingPage::storedSource() const {

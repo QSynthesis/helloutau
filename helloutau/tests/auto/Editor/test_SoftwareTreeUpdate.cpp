@@ -1,3 +1,7 @@
+#include <filesystem>
+#include <string>
+#include <vector>
+
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
@@ -8,11 +12,33 @@
 
 #include <zip.h>
 
+#include <stdcorelib/support/popen.h>
+
 #include <helloutau/Editor/SoftwareTreeUpdate.h>
 
 using namespace hello::daw;
 
+namespace fs = std::filesystem;
+
 namespace {
+
+    std::string utf8(const QString &text) {
+        const auto bytes = text.toUtf8();
+        return std::string(bytes.constData(), size_t(bytes.size()));
+    }
+
+    // Runs the program arguments and returns whether it exits with 0.
+    bool run(std::vector<std::string> arguments) {
+        stdc::Popen process;
+        process.args(std::move(arguments));
+        process.standardOutput(stdc::Popen::DeviceNull);
+        process.standardError(stdc::Popen::DeviceNull);
+        if (!process.start() || !process.wait()) {
+            return false;
+        }
+        const auto code = process.returnCode();
+        return code && *code == 0;
+    }
 
     // Writes an archive with the files in entries, each a name and a content.
     bool writeArchive(const QString &path,
@@ -68,6 +94,34 @@ private:
                                                {"helloutau-2/bin/program",    "new program"},
                                                {"helloutau-2/share/data.txt", "new data"   }
         });
+    }
+
+    QString imagePath() const {
+        return m_root.filePath(QStringLiteral("update.dmg"));
+    }
+
+    // Writes the disk image as the release packages it, with a link to the Applications folder
+    // and, if withBundle is true, a bundle with its program and a framework whose Current is a
+    // symbolic link. Only on macOS.
+    bool writeImage(bool withBundle) const {
+        const auto folder = m_root.filePath(QStringLiteral("image"));
+        QDir(folder).removeRecursively();
+        if (withBundle) {
+            const auto bundle = folder + QStringLiteral("/HelloUtau.app/Contents");
+            const auto versions = bundle + QStringLiteral("/Frameworks/Q.framework/Versions");
+            if (!writeFile(bundle + QStringLiteral("/MacOS/program"), "new program") ||
+                !writeFile(versions + QStringLiteral("/A/Q"), "framework")) {
+                return false;
+            }
+            fs::create_directory_symlink("A", fs::path(versions.toStdU16String()) / "Current");
+        } else if (!writeFile(folder + QStringLiteral("/readme.txt"), "no bundle")) {
+            return false;
+        }
+        fs::create_directory_symlink("/Applications",
+                                     fs::path(folder.toStdU16String()) / "Applications");
+        QFile::remove(imagePath());
+        return run({"/usr/bin/hdiutil", "create", "-volname", "Update", "-srcfolder", utf8(folder),
+                    "-format", "UDZO", "-quiet", utf8(imagePath())});
     }
 
 private Q_SLOTS:
@@ -171,6 +225,58 @@ private Q_SLOTS:
         QCoreApplication::processEvents();
         QCOMPARE(finished.size(), 1);
         QVERIFY(update.errorString().isEmpty());
+    }
+
+    // The bundle keeps the symbolic links of its frameworks.
+    void a_bundle_is_copied_from_a_disk_image() {
+#ifndef Q_OS_MACOS
+        QSKIP("Disk images are opened only on macOS.");
+#else
+        QVERIFY(writeImage(true));
+        SoftwareTreeUpdate update(installDirectory());
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
+        update.startImageCopy(imagePath(), QStringLiteral("Contents/MacOS/program"));
+        QVERIFY(update.isRunning());
+        QVERIFY(finished.wait(60000));
+        QVERIFY2(update.errorString().isEmpty(), qPrintable(update.errorString()));
+        QCOMPARE(contentOf(update.newDirectory() + QStringLiteral("/Contents/MacOS/program")),
+                 QByteArray("new program"));
+        const auto current = fs::path(update.newDirectory().toStdU16String()) /
+                             "Contents/Frameworks/Q.framework/Versions/Current";
+        QVERIFY(fs::is_symlink(current));
+        QCOMPARE(fs::read_symlink(current), fs::path("A"));
+#endif
+    }
+
+    // On other systems than macOS, every copy from a disk image fails.
+    void an_image_without_a_bundle_fails_and_removes_the_new_directory() {
+#ifdef Q_OS_MACOS
+        QVERIFY(writeImage(false));
+#endif
+        SoftwareTreeUpdate update(installDirectory());
+        QVERIFY(writeFile(update.newDirectory() + QStringLiteral("/stale.txt"), "stale"));
+        QSignalSpy finished(&update, &SoftwareTreeUpdate::finished);
+        update.startImageCopy(imagePath(), QStringLiteral("Contents/MacOS/program"));
+        QVERIFY(finished.wait(60000));
+        QVERIFY(!update.errorString().isEmpty());
+        QVERIFY(!QFileInfo::exists(update.newDirectory()));
+    }
+
+    void a_bundle_on_a_disk_image_is_isolated() {
+        QVERIFY(!SoftwareTreeUpdate::isIsolated(installDirectory()));
+#ifdef Q_OS_MACOS
+        QVERIFY(SoftwareTreeUpdate::isIsolated(
+            QStringLiteral("/private/var/folders/a/b/T/AppTranslocation/C/d/HelloUtau.app")));
+        QVERIFY(writeImage(true));
+        const auto mount = m_root.filePath(QStringLiteral("mount"));
+        QVERIFY(QDir().mkpath(mount));
+        QVERIFY(run({"/usr/bin/hdiutil", "attach", utf8(imagePath()), "-nobrowse", "-noautoopen",
+                     "-readonly", "-mountpoint", utf8(mount), "-quiet"}));
+        const bool isolated =
+            SoftwareTreeUpdate::isIsolated(mount + QStringLiteral("/HelloUtau.app"));
+        QVERIFY(run({"/usr/bin/hdiutil", "detach", utf8(mount), "-quiet"}));
+        QVERIFY(isolated);
+#endif
     }
 
     void the_directory_beside_the_installation_is_writable() {

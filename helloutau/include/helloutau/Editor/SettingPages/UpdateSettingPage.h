@@ -6,6 +6,7 @@
 #include <helloutau/Widgets/SettingPage.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
+#include <helloutau/Editor/Settings/UpdateSettings.h>
 
 class QComboBox;
 class QSpinBox;
@@ -36,6 +37,9 @@ namespace hello::daw {
         QWidget *createWidget() override;
 
     private:
+        // Returns the mode of the settings, with Automatic as Notified if the application does
+        // not install updates
+        UpdateSettings::Mode storedMode() const;
         // Returns the source of the settings, or an empty string for the automatic selection if
         // the update configuration has no source of that name
         QString storedSource() const;

@@ -46,21 +46,6 @@ namespace hello::daw {
             return QVersionNumber::fromString(QCoreApplication::applicationVersion());
         }
 
-        // Returns whether the program runs from the directory of an installation by the Windows
-        // installer. Such an installation is updated by the installer rather than by the archive.
-        bool isInstalled(const UpdateChecker::ManifestFile &manifest) {
-#ifdef Q_OS_WINDOWS
-            // The program is in the bin directory of the installation directory.
-            const auto directory =
-                QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/.."));
-            return kit::InnoSetup::isInstalledIn(manifest.innoSetupAppId,
-                                                 std::filesystem::path(directory.toStdU16String()));
-#else
-            Q_UNUSED(manifest);
-            return false;
-#endif
-        }
-
     }
 
     class UpdateChecker::Impl {
@@ -116,14 +101,16 @@ namespace hello::daw {
 
         // Acts on the task that the check at start began. In the mode Notified a release that
         // the user has not skipped is offered in the dialog. In the mode Automatic the release
-        // is prepared and its installation scheduled at exit.
+        // is prepared and its installation scheduled at exit, unless the task does not install
+        // updates, which treats the mode as Notified.
         void followStartup(UpdateTask::State state) {
             if (!atStartup) {
                 return;
             }
             switch (state) {
                 case UpdateTask::Available:
-                    if (settings.updates().mode() == UpdateSettings::Automatic) {
+                    if (settings.updates().mode() == UpdateSettings::Automatic &&
+                        task->installs()) {
                         task->prepare();
                         return;
                     }
@@ -244,9 +231,7 @@ namespace hello::daw {
         stdc_impl_t;
         impl.decl = this;
         impl.manifest = ManifestFile::read(fileName, &impl.manifestError);
-        const auto kind = impl.manifest && isInstalled(*impl.manifest)
-                              ? UpdateTask::Installed
-                              : UpdateTask::Portable;
+        const auto kind = applicationKind(impl.manifest ? *impl.manifest : ManifestFile());
         impl.task =
             new UpdateTask(settings, kind, SoftwareTreeUpdate::applicationInstallDirectory(), this);
         connect(impl.task, &UpdateTask::stateChanged, this, [this](UpdateTask::State state) {
@@ -315,7 +300,8 @@ namespace hello::daw {
         // Removed regardless of the result, so that no download remains in the temporary directory.
         // A failed update is downloaded again.
         QDir(downloadDirectory()).removeRecursively();
-        if (impl.task->kind() == UpdateTask::Portable) {
+        const auto kind = impl.task->kind();
+        if (kind == UpdateTask::Portable || kind == UpdateTask::Bundle) {
             SoftwareTreeUpdate(SoftwareTreeUpdate::applicationInstallDirectory()).removeRemnants();
         }
         const auto target = QVersionNumber::fromString(pending);
@@ -337,9 +323,41 @@ namespace hello::daw {
     }
 
     QString UpdateChecker::assetName(const QString &prefix, const QVersionNumber &version,
-                                     const QString &triplet, bool installer) {
-        return prefix + QLatin1Char('-') + version.toString() + QLatin1Char('-') + triplet +
-               (installer ? QStringLiteral("-setup.exe") : QStringLiteral("-portable.zip"));
+                                     const QString &triplet, UpdateTask::Kind kind) {
+        QString suffix;
+        switch (kind) {
+            case UpdateTask::Installed:
+                suffix = QStringLiteral("-setup.exe");
+                break;
+            case UpdateTask::Portable:
+                suffix = QStringLiteral("-portable.zip");
+                break;
+            case UpdateTask::Bundle:
+                suffix = QStringLiteral(".dmg");
+                break;
+            case UpdateTask::Unmanaged:
+                suffix = QStringLiteral("-portable.tar.xz");
+                break;
+        }
+        return prefix + QLatin1Char('-') + version.toString() + QLatin1Char('-') + triplet + suffix;
+    }
+
+    UpdateTask::Kind UpdateChecker::applicationKind(const ManifestFile &manifest) {
+#if defined(Q_OS_WINDOWS)
+        // An installation by the installer is updated by the installer rather than by the
+        // archive. The program is in the bin directory of the installation directory.
+        const auto directory = SoftwareTreeUpdate::applicationInstallDirectory();
+        return kit::InnoSetup::isInstalledIn(manifest.innoSetupAppId,
+                                             std::filesystem::path(directory.toStdU16String()))
+                   ? UpdateTask::Installed
+                   : UpdateTask::Portable;
+#elif defined(Q_OS_MACOS)
+        Q_UNUSED(manifest);
+        return UpdateTask::Bundle;
+#else
+        Q_UNUSED(manifest);
+        return UpdateTask::Unmanaged;
+#endif
     }
 
     bool UpdateChecker::offers(const kit::SoftwareRelease &release, const QVersionNumber &current,

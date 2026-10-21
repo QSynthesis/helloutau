@@ -91,6 +91,20 @@ private Q_SLOTS:
         QVERIFY(!shows(view, "checkAgain"));
     }
 
+    // A release for an application that does not install updates is offered for the page of the
+    // release only, and preparing it does nothing.
+    void an_unmanaged_release_is_offered_without_download() {
+        UpdateTask task(*m_settings, UpdateTask::Unmanaged, m_root.filePath(QStringLiteral("app")));
+        UpdateTaskView view(&task, *m_settings);
+        QVERIFY(!task.installs());
+        task.offer(releaseOf(QStringLiteral("2.0")), QStringLiteral("app-portable.tar.xz"));
+        QVERIFY(!shows(view, "download"));
+        QVERIFY(shows(view, "skip"));
+        QVERIFY(shows(view, "openPage"));
+        task.prepare();
+        QCOMPARE(task.state(), UpdateTask::Available);
+    }
+
     void skipping_records_the_version_and_leaves() {
         UpdateTask task(*m_settings, UpdateTask::Installed, m_root.filePath(QStringLiteral("app")));
         UpdateTaskView view(&task, *m_settings);

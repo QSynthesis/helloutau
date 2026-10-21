@@ -14,7 +14,7 @@
 
 其余均未实现，现行代码与本文的出入如下：
 
-- 「免安装版的更新」已接入主程序，尚未在真实的 release 上运行过完整的流程。
+- 「免安装版的更新」与「macOS 的自动更新」已接入主程序，尚未在真实的 release 上运行过完整的流程。
 
 ## 发布物
 
@@ -149,7 +149,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 
 ## macOS 与 Linux 的发布
 
-作者 2026-10-16 决定先完成 Windows 的正式部署。CI 自 2026-10-19 起打包 macOS 与 Linux（作者 2026-10-19 要求），两者的自动更新尚未实现。
+作者 2026-10-16 决定先完成 Windows 的正式部署。CI 自 2026-10-19 起打包 macOS 与 Linux（作者 2026-10-19 要求），macOS 的自动更新与 Linux 的更新检查见下文。
 
 - **macOS 的发布物**：只出 arm64，最低系统版本为 13.0，与 Qt 6.11 相同（作者 2026-10-19 决定）。overlay 的 macOS 三元组以 `VCPKG_OSX_DEPLOYMENT_TARGET` 指定同一版本，否则依赖库按编译机 SDK 的版本构建，在较旧的系统上无法载入。`Info.plist` 的 `LSMinimumSystemVersion` 取 `CMAKE_OSX_DEPLOYMENT_TARGET`。`CFBundleLocalizations` 列出英文与 `HELLOUTAU_LANGUAGES` 中的语言：bundle 只声明英文时，macOS 给程序的当前 locale 是英文（系统语言为简体中文时为 `en_CN`，2026-10-20 以探针实测），默认语言因此不是系统语言，翻译不载入，系统的打开与保存面板也是英文。列出之后当前 locale 为 `zh_CN`。以 DMG 发布，不另出 zip。DMG 中为 `HelloUtau.app` 与指向 `/Applications` 的链接，不加背景（作者 2026-10-19 决定），由 `hdiutil create -format UDZO` 生成。打开 DMG 时 Finder 先显示许可协议，用户同意后才挂载（作者 2026-10-19 要求）。协议是 DMG 的软件许可协议资源，由 `dist/installer/macos/sla.py` 从安装的 `LICENSE` 生成，以 `hdiutil udifrez` 写入，hdiutil 报告该命令已弃用，但没有其他写入方式。协议提供英文与简体中文两种语言，Finder 按系统语言选择，没有对应语言时显示英文。两种语言的按钮与说明各自翻译，正文都是英文的 `LICENSE`（作者 2026-10-20 要求以系统语言显示）。各平台的安装内容都带有 `LICENSE`，位于数据目录（`share/helloutau` 或 `Contents/Resources`）。Windows 安装包显示的协议与 DMG 的协议都取自安装的这一份，不读仓库中的文件（作者 2026-10-19 要求）。
 - **macOS 的签名**：ad-hoc 签名（`codesign --sign -`），不申请 Apple 的 Developer ID，不公证，同 DiffScope。Apple Silicon 只运行带签名的代码，ad-hoc 签名满足这一条件，但 Gatekeeper 不信任它。用户第一次打开下载的应用时须在「系统设置 > 隐私与安全性」中选择「仍要打开」。部署改写了二进制的运行路径，原有的签名随之失效，打包脚本因此由内向外重新签名：framework 之外的二进制、各个 framework、bundle 本身，再以 `codesign --verify --deep --strict` 检查。
@@ -159,10 +159,13 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
   - 两个模块的 `<模块>_MACOSX_BUNDLE_NAME` 取根目录的 `HELLO_MACOSX_BUNDLE_NAME`，即 `HelloUtau`，该名字在其他系统上不起作用。不构建应用时同样按 bundle 布局（作者 2026-10-19 决定）。
   - `cmake --install` 整体复制构建中的 bundle，因此不随应用发布的文件不得输出到 bundle 中：测试与只供测试的库以 qmsetup 的 `TEST` 输出到 `out/bin` 与 `out/lib`。静态库的归档与其他库同在 `Contents/Frameworks`，不安装开发文件（`HELLO_DEVEL` 关闭）时，qmsetup 在复制 bundle 之后、部署重新签名之前把它们从安装的 bundle 中删除，因为 codesign 拒绝含有归档的 bundle。测试启动的辅助程序由 `PROGRAMS` 以路径传给测试，不复制到测试旁边（见 `cmake/AddAutoTest.cmake`）。
   - 从 Finder 打开文件经 `QFileOpenEvent` 传入，`AppLoader` 把它作为远程命令交给插件系统（见 [`Plugins.md`](Plugins.md)「Core 插件」）。macOS 本身每个用户只运行一个 bundle 的实例，之后打开的文件交给已运行的实例。
-- **macOS 的自动更新**：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换。程序下载 DMG，以 `hdiutil attach` 挂载，退出后由 `hello-updater` 以新的 `.app` 替换旧的，再启动新版本，与 Sparkle 的做法相同。程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示，这一点尚未实测。须处理两种情形：
-  - 对 `.app` 所在的文件夹没有写权限，例如标准用户的「应用程序」文件夹，须请求授权，或提示用户手动更新。
-  - 直接从 DMG 或「下载」文件夹运行的应用会被系统移到只读的随机路径运行（App Translocation），无法更新，须检测出来并提示用户先把应用移到「应用程序」文件夹。
-- **Linux**：只出 tar.xz 压缩包，即 `helloutau-<version>-x86_64-linux-gcc-portable.tar.xz`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。最初为 zip，作者 2026-10-19 改为 tar.xz，因为 tar.xz 是 Linux 上通行的格式，原生保存文件权限与库的符号链接，压缩率也高于 zip。符号包同为 tar.xz。条目的属主写为 0，不带构建机的用户名。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装，发现新版本时打开下载页（作者 2026-10-18 决定），尚未实现。
+- **macOS 的自动更新**（作者 2026-10-21 要求实现）：安装即把 `.app` 拖入「应用程序」文件夹，没有安装记录，因此更新以 `.app` 为单位整体替换，与 Sparkle 的做法相同。`UpdateTask` 的种类为 `Bundle`，附件为 DMG，安装目录即 bundle 本身，其余步骤沿用「免安装版的更新」。
+  - 下载并校验 DMG 后，`SoftwareTreeUpdate::startImageCopy()` 在后台线程以 `/usr/bin/hdiutil attach -nobrowse -noautoopen -noverify -readonly -mountpoint <临时目录>` 挂载映像，以 `/usr/bin/ditto` 把映像根上唯一的 `.app` 复制为 `<bundle>.new`，再卸载映像，卸载失败时加 `-force` 重试。映像带有许可协议，`hdiutil` 从标准输入读取用户是否同意，收不到回答时取消挂载，因此程序写入 `Y`（2026-10-21 在 macOS 26.6.2 上实测，Sparkle 同样如此）。`ditto` 保留 framework 的符号链接与文件权限。复制没有进度，进度条显示为进行中。复制完成后确认 `Contents/MacOS/<程序名>` 存在。
+  - 退出后由 `hello-updater` 把 bundle 改名为 `<bundle>.old`，把 `<bundle>.new` 改名为 bundle，与免安装版相同。复制到 `updates` 中的更新程序保留其 ad-hoc 签名。
+  - bundle 位于只读的卷上，或路径中有 `AppTranslocation` 时，不下载，提示用户把应用移到「应用程序」文件夹，从那里打开后再更新（`SoftwareTreeUpdate::isIsolated()`）。直接从 DMG 运行的应用位于只读的映像上。下载后未经 Finder 移动的应用由系统复制到只读的随机路径运行，即 App Translocation。
+  - bundle 所在的文件夹不可写时，例如标准用户的「应用程序」文件夹，不请求管理员授权，提示用户从 release 页面下载新版本（作者 2026-10-21 决定），与免安装版位于 `Program Files` 中的情形相同。
+  - 程序自己下载的文件不带隔离属性，更新后应不再出现 Gatekeeper 的提示。ad-hoc 签名的应用每个版本的代码签名不同，系统可能因此再次询问「文稿」等文件夹的访问权限。这两点尚未以真实的 release 实测。
+- **Linux**：只出 tar.xz 压缩包，即 `helloutau-<version>-x86_64-linux-gcc-portable.tar.xz`，不出 AppImage 与发行版的包（作者 2026-10-16 决定）。最初为 zip，作者 2026-10-19 改为 tar.xz，因为 tar.xz 是 Linux 上通行的格式，原生保存文件权限与库的符号链接，压缩率也高于 zip。符号包同为 tar.xz。条目的属主写为 0，不带构建机的用户名。以 `ubuntu-22.04` 构建，要求 glibc 2.35 以上。免安装版的布局同 Windows：`bin` 为程序，`lib` 为库，`lib/Qt/plugins` 为 Qt 的插件，`share` 为数据。系统库目录（`/lib`、`/usr/lib` 及其子目录）中的库由系统提供，不随包发布，例如显卡驱动的 libGL 与 libxcb。Qt 自带的 ICU 随包发布（qmsetup 的 `--standard`）。Wayland 与 EGL 的平台配套插件目前随包发布，以后由 qmsetup 按所选的平台插件排除。自动更新只检查不安装（作者 2026-10-18 决定，2026-10-21 确认不为解压 tar.xz 引入新的依赖）：`UpdateTask` 的种类为 `Unmanaged`，以 `-portable.tar.xz` 判断 release 是否齐全，更新对话框不提供下载，只提供 release 页面。设置页不列出「自动更新」，设置中记录的「自动更新」按「检查并提示」处理。
 - **Linux 的桌面登记**（作者 2026-10-21 要求）：免安装版没有安装步骤，而桌面项的 `Exec` 须为程序的绝对路径，因此包的根目录附两个脚本，由 `package.sh` 放入，不由 `cmake --install` 安装，因为装到 `/usr` 时 `share` 中的文件已在系统的位置。`register-desktop.sh` 把所在的文件夹登记到当前用户的桌面：应用菜单中的项与桌面上的快捷方式默认都创建（作者 2026-10-21 决定），分别以 `--no-menu` 与 `--no-desktop` 关闭。`--no-menu` 只把桌面项标为 `NoDisplay`，桌面项本身仍然写入，因为桌面按它为窗口取图标，并为文件类型找到程序。文件类型同 Windows 安装包，默认只在 `.usth` 的「打开方式」中列出 HelloUtau，`--ust` 与 `--uar` 另加，`--no-usth` 去掉，任何类型的默认程序都不改变。桌面项写到 `~/.local/share/applications`，程序的路径按 Desktop Entry Specification 的规则转义，图标复制到 `~/.local/share/icons/hicolor`，所选类型的声明复制到 `~/.local/share/mime/packages`，之后更新桌面的缓存。快捷方式写到 `xdg-user-dir DESKTOP` 所指的目录，设为可执行，并以 `gio` 标为可信，因为 GNOME 只启动可信的快捷方式。文件夹移动后再运行一次即更新，最后一次运行的选项取代以前的选项。`unregister-desktop.sh` 删除这些文件，不论由哪个文件夹登记，用户的设置、音源与插件不受影响。
 
 ## 应用图标
@@ -264,7 +267,7 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 
 ### 安装版与免安装版的区分
 
-若存在 `Software\Microsoft\Windows\CurrentVersion\Uninstall\<AppId>_is1`（先查 HKCU，再查 HKLM），且其 `InstallLocation` 与程序的安装目录相同，则为安装版，否则为免安装版。安装版下载安装包，免安装版下载 zip。判断由 `HelloKitUpdate` 的 `kit::InnoSetup`（`hellokit/Update/Windows/`，只在 Windows 上编译）完成，以 `std::filesystem::equivalent` 比较目录，因为记录的目录以分隔符结尾，大小写也可能不同。其他系统上一律视为免安装版。
+若存在 `Software\Microsoft\Windows\CurrentVersion\Uninstall\<AppId>_is1`（先查 HKCU，再查 HKLM），且其 `InstallLocation` 与程序的安装目录相同，则为安装版，否则为免安装版。安装版下载安装包，免安装版下载 zip。判断由 `HelloKitUpdate` 的 `kit::InnoSetup`（`hellokit/Update/Windows/`，只在 Windows 上编译）完成，以 `std::filesystem::equivalent` 比较目录，因为记录的目录以分隔符结尾，大小写也可能不同。macOS 上为 bundle，其他系统上不安装更新，见「macOS 与 Linux 的发布」。
 
 ### 安装版的更新
 
@@ -321,7 +324,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
 - `kit::ZipExtractor`（`HelloKitSupport`，私有依赖 libzip）：安全解压 zip，检查的规则见 `hellokit/Support/ZipExtractor.h`。由主程序使用，将来安装音源、插件压缩包时同样使用。放在 `HelloKitSupport` 中而不另设子库（作者 2026-10-11 决定）。不带 UTF-8 标志的非 ASCII 条目名由调用方提供的解码函数解码，未提供时拒绝整个压缩包。
 - 更新程序 `hello-updater`（`hellokit/tools/updater`）：免安装版的目录替换，参数全部来自命令行，不含任何 HelloUtau 特有的内容。它不拆出库，因为它只能依赖标准库与系统接口，库会成为它的依赖。测试在 `tests/auto/tools/updater` 中实际运行它，检查替换与回滚的结果。
 - 试听程序 `hello-plugin-play`（`helloutau/tools/plugin-play`）：原版插件所用 playinplugin（Windows 上为 playinplugin.exe）的兼容程序，与 `hello-updater` 一样只依赖标准库与系统接口，安装在 `bin` 中，由设置页复制到插件文件夹，见 [`PluginPlay.md`](PluginPlay.md)。
-- `SoftwareTreeUpdate`（helloutau，`HelloUtauEditor`）：免安装版更新中与界面无关的部分。在后台线程把 zip 解压到 `<安装目录>.new` 并检查程序存在，失败或取消时删除 `.new`。生成 `hello-updater` 的参数并把它复制到 `updates`。下次启动时读取更新程序的日志，删除残留的 `.new` 与 `.old`。
+- `SoftwareTreeUpdate`（helloutau，`HelloUtauEditor`）：免安装版与 macOS 的 bundle 的更新中与界面无关的部分。在后台线程把 zip 解压到 `<安装目录>.new`，或在 macOS 上从 DMG 复制 bundle，并检查程序存在，失败或取消时删除 `.new`。生成 `hello-updater` 的参数并把它复制到 `updates`。下次启动时读取更新程序的日志，删除残留的 `.new` 与 `.old`。
 - 临时目录管理器：`HelloKitSupport`。
 - 解压 zip 使用 libzip（BSD 许可证，vcpkg 有端口，作者 2026-10-11 决定），动态链接，与其他 vcpkg 依赖相同。不采用 Qt 的 `QZipReader`：它是私有接口，不带 UTF-8 标志的条目名按本机代码页解码而取不到原始字节，`extractAll()` 也不检查路径。
   - 以 `ZIP_FL_ENC_RAW` 取得条目名的原始字节。音源的压缩包常以 Shift_JIS 或 GBK 写条目名而不标 UTF-8，按 `CLAUDE.md`「编码」，这些字节必须交给 `winacp` 解码，不能由解压库自行转换。

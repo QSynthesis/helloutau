@@ -2,6 +2,7 @@
 #define HELLOUTAU_EDITOR_SOFTWARETREEUPDATE_H
 
 #include <atomic>
+#include <functional>
 #include <memory>
 
 #include <QtCore/QObject>
@@ -19,23 +20,30 @@ namespace hello::kit {
 namespace hello::daw {
 
     /// The update that replaces the file tree of the installation as a whole, as the portable
-    /// application is updated: the extraction of the new version into
+    /// application and the bundle of macOS are updated: the extraction of the new version into
     /// <tt><installation>.new</tt> beside the installation directory, and the replacement of the
-    /// installation directory by \c hello-updater after the application quits. See the update of
-    /// the portable application in docs/Distribution.md.
+    /// installation directory by \c hello-updater after the application quits. The installation
+    /// directory of a bundle is the bundle. See the update of the portable application and the
+    /// automatic update of macOS in docs/Distribution.md.
     class HELLOUTAU_EDITOR_EXPORT SoftwareTreeUpdate : public QObject {
         Q_OBJECT
     public:
-        /// Constructs the update of the installation in \a installDirectory, the parent of the
-        /// directory of the program.
+        /// Constructs the update of the installation in \a installDirectory, as
+        /// applicationInstallDirectory() returns it for the running application.
         explicit SoftwareTreeUpdate(const QString &installDirectory, QObject *parent = nullptr);
 
         /// Cancels a running extraction and waits for it to end.
         ~SoftwareTreeUpdate();
 
-        /// Returns the installation directory of the running application, the parent of the
-        /// directory of the program.
+        /// Returns the installation directory of the running application: the bundle on macOS,
+        /// and the parent of the directory of the program on other systems.
         static QString applicationInstallDirectory();
+
+        /// Returns whether the bundle \a bundle is on a read-only volume, as in a mounted disk
+        /// image, or in the copy of App Translocation, from which macOS runs a downloaded
+        /// application that the user has not moved. An update cannot replace such a bundle.
+        /// Returns false on other systems.
+        static bool isIsolated(const QString &bundle);
 
         /// Returns the file name of \c hello-updater, with \c .exe on Windows.
         static QString updaterFileName();
@@ -63,8 +71,16 @@ namespace hello::daw {
         /// extraction fails, newDirectory() is removed. A running extraction is canceled first.
         void startExtraction(const QString &archive, const QString &program, int threadCount);
 
-        /// Cancels the running extraction without finished(). newDirectory() is removed on the
-        /// thread of the extraction once it stops.
+        /// Copies the single bundle at the root of the disk image \a diskImage into
+        /// newDirectory() on another thread, as startExtraction() extracts an archive, and emits
+        /// finished() once the copy ends. The image is mounted with \c hdiutil, which accepts its
+        /// license agreement, and the bundle is copied with \c ditto, which keeps the symbolic
+        /// links of the frameworks. The copy reports no progress. Only on macOS. On other
+        /// systems the copy fails.
+        void startImageCopy(const QString &diskImage, const QString &program);
+
+        /// Cancels the running extraction or copy without finished(). newDirectory() is removed
+        /// on the thread of the extraction once it stops.
         void cancel();
 
         /// Returns whether an extraction is running.
@@ -100,6 +116,10 @@ namespace hello::daw {
         void finished();
 
     private:
+        void startThread(std::function<void()> work);
+        // Copies the bundle of diskImage into newDirectory() on the thread of the copy, and
+        // returns the reason of a failure, or an empty string
+        QString copyFromImage(const QString &diskImage);
         void stopExtraction();
         void finishExtraction();
 

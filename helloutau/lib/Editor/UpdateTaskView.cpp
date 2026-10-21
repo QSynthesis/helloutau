@@ -196,9 +196,15 @@ namespace hello::daw {
                 m_checkAgain->show();
                 break;
             case UpdateTask::Available:
-                m_message->setText(tr("%1 %2 is available. The current version is %3.")
-                                       .arg(name, version, current));
-                m_download->show();
+                if (m_task->installs()) {
+                    m_message->setText(tr("%1 %2 is available. The current version is %3.")
+                                           .arg(name, version, current));
+                    m_download->show();
+                } else {
+                    m_message->setText(tr("%1 %2 is available. The current version is %3. "
+                                          "Download the new version from the page of the release.")
+                                           .arg(name, version, current));
+                }
                 m_skip->show();
                 m_openPage->show();
                 break;

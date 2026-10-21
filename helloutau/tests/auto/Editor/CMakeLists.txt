@@ -21,8 +21,9 @@ helloutau_add_auto_test(test_UpdateChecker.cpp HelloUtauEditor)
 helloutau_add_auto_test(test_UtauFolderSearch.cpp HelloUtauEditor)
 
 # The tests write their archives with libzip, and give the update the updater of the build.
+# test_SoftwareTreeUpdate writes its disk images with hdiutil, which stdc::Popen runs.
 helloutau_add_auto_test(test_SoftwareTreeUpdate.cpp HelloUtauEditor libzip::zip
-    PROGRAMS hello-updater)
+    stdcorelib::stdcorelib PROGRAMS hello-updater)
 helloutau_add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip PROGRAMS hello-updater)
 helloutau_add_auto_test(test_UpdateTaskView.cpp HelloUtauEditor)
 

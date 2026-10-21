@@ -9,6 +9,17 @@
 #include <QtCore/QTemporaryFile>
 #include <QtCore/QThread>
 
+#ifdef Q_OS_MACOS
+#  include <sys/mount.h>
+
+#  include <string>
+#  include <vector>
+
+#  include <QtCore/QTemporaryDir>
+
+#  include <stdcorelib/support/popen.h>
+#endif
+
 #include <hellokit/Support/ZipExtractor.h>
 
 namespace fs = std::filesystem;
@@ -21,6 +32,49 @@ namespace hello::daw {
             return fs::path(path.toStdU16String());
         }
 
+#ifdef Q_OS_MACOS
+        std::string utf8(const QString &text) {
+            const auto bytes = text.toUtf8();
+            return std::string(bytes.constData(), size_t(bytes.size()));
+        }
+
+        struct ToolResult {
+            bool succeeded = false;
+            // The error output of the tool, or the reason why it did not run
+            QString message;
+        };
+
+        // Runs the system tool \a arguments with \a input on its standard input until it exits,
+        // or until \a canceled is set, which kills it.
+        ToolResult runTool(std::vector<std::string> arguments, const std::string &input,
+                           const std::atomic<bool> &canceled) {
+            stdc::Popen process;
+            process.args(std::move(arguments));
+            process.standardInput(stdc::Popen::Pipe);
+            process.standardOutput(stdc::Popen::DeviceNull);
+            process.standardError(stdc::Popen::Pipe);
+            if (!process.start()) {
+                return {false, QString::fromStdString(process.errorMessage())};
+            }
+            // Short rounds, so that a cancellation stops the tool
+            constexpr int round = 100;
+            auto output = process.communicate(input, round);
+            while (!output && process.errorCode() == std::errc::timed_out) {
+                if (canceled) {
+                    process.kill();
+                    process.communicate();
+                    return {false, {}};
+                }
+                output = process.communicate({}, round);
+            }
+            if (!output) {
+                return {false, QString::fromStdString(process.errorMessage())};
+            }
+            const auto code = process.returnCode();
+            return {code && *code == 0, QString::fromStdString(std::get<1>(*output)).trimmed()};
+        }
+#endif
+
     }
 
     SoftwareTreeUpdate::SoftwareTreeUpdate(const QString &installDirectory, QObject *parent)
@@ -32,7 +86,28 @@ namespace hello::daw {
     }
 
     QString SoftwareTreeUpdate::applicationInstallDirectory() {
+#ifdef Q_OS_MACOS
+        // The program is in Contents/MacOS of the bundle.
+        return QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/../.."));
+#else
         return QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/.."));
+#endif
+    }
+
+    bool SoftwareTreeUpdate::isIsolated(const QString &bundle) {
+#ifdef Q_OS_MACOS
+        // The copies of App Translocation are in a directory of this name, on a read-only
+        // mount as a disk image is.
+        if (bundle.contains(QStringLiteral("/AppTranslocation/"))) {
+            return true;
+        }
+        struct statfs volume;
+        return ::statfs(QFile::encodeName(bundle).constData(), &volume) == 0 &&
+               (volume.f_flags & MNT_RDONLY) != 0;
+#else
+        Q_UNUSED(bundle);
+        return false;
+#endif
     }
 
     QString SoftwareTreeUpdate::updaterFileName() {
@@ -90,7 +165,7 @@ namespace hello::daw {
         const auto target = pathOf(newDirectory());
         const auto source = pathOf(archive);
         const auto programPath = pathOf(newDirectory() + QLatin1Char('/') + program);
-        m_thread.reset(QThread::create([this, target, source, programPath, archive, program] {
+        startThread([this, target, source, programPath, archive, program] {
             std::error_code ec;
             fs::remove_all(target, ec);
             if (ec) {
@@ -111,14 +186,39 @@ namespace hello::daw {
             if (!m_threadError.isEmpty() || m_canceled) {
                 fs::remove_all(target, ec);
             }
-        }));
-        const int generation = ++m_generation;
-        connect(m_thread.get(), &QThread::finished, this, [this, generation] {
-            if (generation == m_generation) {
-                finishExtraction();
+        });
+    }
+
+    void SoftwareTreeUpdate::startImageCopy(const QString &diskImage, const QString &program) {
+        stopExtraction();
+        m_canceled = false;
+        m_threadError.clear();
+        m_errorString.clear();
+        m_extractor.reset();
+
+        const auto target = pathOf(newDirectory());
+        const auto programPath = pathOf(newDirectory() + QLatin1Char('/') + program);
+        startThread([this, target, programPath, diskImage, program] {
+            std::error_code ec;
+            fs::remove_all(target, ec);
+            if (ec) {
+                m_threadError = tr("The folder %1 cannot be removed.")
+                                    .arg(QDir::toNativeSeparators(newDirectory()));
+                return;
+            }
+            if (m_canceled) {
+                return;
+            }
+            m_threadError = copyFromImage(diskImage);
+            if (m_threadError.isEmpty() && !m_canceled && !fs::is_regular_file(programPath, ec)) {
+                m_threadError = tr("The disk image %1 does not contain the program %2.")
+                                    .arg(QDir::toNativeSeparators(diskImage),
+                                         QDir::toNativeSeparators(program));
+            }
+            if (!m_threadError.isEmpty() || m_canceled) {
+                fs::remove_all(target, ec);
             }
         });
-        m_thread->start();
     }
 
     void SoftwareTreeUpdate::cancel() {
@@ -126,7 +226,9 @@ namespace hello::daw {
             return;
         }
         m_canceled = true;
-        m_extractor->cancel();
+        if (m_extractor) {
+            m_extractor->cancel();
+        }
     }
 
     bool SoftwareTreeUpdate::isRunning() const {
@@ -177,6 +279,72 @@ namespace hello::daw {
             return {};
         }
         return QString::fromUtf8(file.readAll()).trimmed();
+    }
+
+    void SoftwareTreeUpdate::startThread(std::function<void()> work) {
+        m_thread.reset(QThread::create(std::move(work)));
+        const int generation = ++m_generation;
+        connect(m_thread.get(), &QThread::finished, this, [this, generation] {
+            if (generation == m_generation) {
+                finishExtraction();
+            }
+        });
+        m_thread->start();
+    }
+
+    QString SoftwareTreeUpdate::copyFromImage(const QString &diskImage) {
+#ifdef Q_OS_MACOS
+        QTemporaryDir mount(QDir::tempPath() + QStringLiteral("/hello-update-XXXXXX"));
+        if (!mount.isValid()) {
+            return tr("A temporary folder cannot be created: %1").arg(mount.errorString());
+        }
+        // hdiutil reads the answer to the license agreement of the image from its standard
+        // input, and cancels the mount without the answer.
+        const auto attached =
+            runTool({"/usr/bin/hdiutil", "attach", utf8(diskImage), "-nobrowse", "-noautoopen",
+                     "-noverify", "-readonly", "-mountpoint", utf8(mount.path())},
+                    "Y\n", m_canceled);
+        if (!attached.succeeded) {
+            return m_canceled ? QString()
+                              : tr("The disk image %1 cannot be opened: %2")
+                                    .arg(QDir::toNativeSeparators(diskImage), attached.message);
+        }
+        QString error;
+        const auto bundles =
+            QDir(mount.path())
+                .entryList({QStringLiteral("*.app")}, QDir::Dirs | QDir::NoDotAndDotDot);
+        if (bundles.size() != 1) {
+            error = tr("The disk image %1 does not contain exactly one application.")
+                        .arg(QDir::toNativeSeparators(diskImage));
+        } else {
+            const auto copied =
+                runTool({"/usr/bin/ditto", utf8(mount.path() + QLatin1Char('/') + bundles.first()),
+                         utf8(newDirectory())},
+                        {}, m_canceled);
+            if (!copied.succeeded && !m_canceled) {
+                error = tr("The application cannot be copied from the disk image %1: %2")
+                            .arg(QDir::toNativeSeparators(diskImage), copied.message);
+            }
+        }
+        // Detached after a failure and a cancellation as well, which therefore do not stop it
+        const std::atomic<bool> uncanceled = false;
+        const auto detach = [&mount, &uncanceled](const char *option) {
+            std::vector<std::string> arguments{"/usr/bin/hdiutil", "detach", utf8(mount.path()),
+                                               "-quiet"};
+            if (option) {
+                arguments.emplace_back(option);
+            }
+            return runTool(std::move(arguments), {}, uncanceled).succeeded;
+        };
+        if (!detach(nullptr) && !detach("-force")) {
+            // The removal of the folder would reach into the volume that remains mounted.
+            mount.setAutoRemove(false);
+        }
+        return error;
+#else
+        Q_UNUSED(diskImage);
+        return tr("Disk images can be opened only on macOS.");
+#endif
     }
 
     void SoftwareTreeUpdate::stopExtraction() {
