@@ -1,6 +1,6 @@
 # 受信任程序的完整性
 
-> 状态：设计，作者 2026-10-21 审阅通过，尚未实现。
+> 状态：已实现（2026-10-21），设计由作者同日审阅通过。
 
 本文档规定 HelloUtau 如何确认一个已受信任的外部程序仍是用户信任时的那个文件：工程中的合成工具（`SynthToolTrust`）与经典插件的程序（`ClassicPluginTrust`）。信任本身的规则见 [`../CLAUDE.md`](../CLAUDE.md)「安全底线」第一条与 [`note.md`](note.md)「安全行为」，本文档只补充信任之后的部分。通用的部分放在 `HelloKitSupport`，两种信任与渲染只是它的使用者（作者 2026-10-21 要求）。
 
@@ -67,9 +67,9 @@
 
 ## 接入
 
-- **合成工具**：`SynthToolTrust::isTrusted()` 与 `trust()` 改用缓存。`ProjectWindow` 在每个渲染任务开始时为经由信任而允许的工程合成工具建立 `FileGuard`，随 `kit::SynthTools` 交给运行器。设置中的合成工具不经哈希信任，不建立守护。
-- **运行器**：`ThreadedSynthRunner` 与 `RealtimeSynth` 在每次调用 `SynthToolProcess::run()` 之前检查守护，`ClassicSynthRunner` 在执行脚本之前检查。三者传给 `SynthToolProcess` 的 `canceled` 回调都并入 `!guard->isIntact()`，因此脚本运行期间的替换在 100 毫秒内终止脚本及其启动的所有进程，与取消相同。
-- **结果**：守护失效时渲染以失败结束，诊断为「重采样器 %1 在信任之后发生了变化，渲染已停止」，与取消区分。信任记录不必显式撤销：变化后的文件指纹不同，下次开始播放时重新询问。
+- **合成工具**：`SynthToolTrust::isTrusted()` 与 `trust()` 改用缓存。`SynthToolTrust::trustedFile()` 返回经由信任才允许运行的合成工具的规范路径与记录的 SHA-256，`ProjectWindow` 与插件预览把它们放入 `kit::SynthTools::trusted`，两种角色是同一个程序时只放一次。设置中的合成工具不经哈希信任，不放入。
+- **运行器**：守护由 `SynthRunner::holdTrusted()` 建立，`SynthRunner::reportChange()` 报告变化，两者是公开的静态函数，三个运行器与 `RealtimeSynth` 共用。`ThreadedSynthRunner` 与 `ClassicSynthRunner` 在一次 `render()` 中持有守护。`RealtimeSynth` 在整个实时预览期间存在，因此每次启动重采样器时建立守护、进程结束即释放，缓存使再次建立只读取身份。发现变化后不再启动重采样器，并只报告一次。`ThreadedSynthRunner` 在启动每个重采样器之前检查守护，各运行器传给 `SynthToolProcess` 的 `canceled` 回调都并入守护的检查，因此经典模式的脚本运行期间的替换在 100 毫秒内终止脚本及其启动的所有进程，与取消相同。
+- **结果**：守护失效时渲染以失败结束，诊断为「%1 在信任之后发生了变化。渲染已停止。」，与取消区分。守护建立失败时渲染不开始。信任记录不必显式撤销：变化后的文件指纹不同，下次开始播放时重新询问。
 - **插件**：`ClassicPluginRun` 在确认信任之后为插件的程序建立守护，持有到插件运行结束。启动之前检查一次。运行期间显示的是带「取消」的模态对话框（`waitFor()`），对话框以 100 毫秒的定时器检查守护，失效时取消插件运行，与「取消」相同，并报告原因。以 `ShellExecuteEx` 启动、无法观察结束的插件同样如此，守护持有到用户点「完成」。
 
 ## 测试
@@ -80,7 +80,7 @@
 - 缓存：身份不变时不再读取内容（以计数的测试钩子确认），变化后重新计算。多线程同时查询。
 - 守护：Windows 上持有期间写入、重命名与删除都失败。所有平台上修改文件后 `isIntact()` 为假，`changedFile()` 指出该文件。预期哈希不符时 `hold()` 失败。
 - 写权限（macOS 与 Linux）：文件或目录 `chmod g+w`、`o+w` 后给出原因，带粘滞位的目录只检查文件。
-- 运行器：以替代的 `SynthToolProcess` 在渲染中途替换文件，确认渲染以守护失效结束。经典模式在 Linux 上以一个长时间运行的脚本确认 100 毫秒内终止。
+- 运行器（`test_ThreadedSynthRunner`、`test_ClassicSynthRunner`）：内容与信任时不同的合成工具使渲染不开始。以替代的 `SynthToolProcess` 在渲染或脚本运行中途改写被信任的文件，确认 macOS 与 Linux 上以守护失效结束而非取消，Windows 上改写失败、渲染照常进行。经典模式的替身在运行期间轮询 `canceled`，与 `SynthToolProcess::runScript()` 相同，脚本的终止本身由 `test_SynthToolProcess` 覆盖。
 - 两种信任：清理规则与读不出时拒绝信任。
 
 ## 接口的一致性

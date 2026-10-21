@@ -83,6 +83,11 @@ namespace hello::kit {
             fail(diagnostics, tr("There is nothing to render."));
             return outcome;
         }
+        // The trusted synth tools stay as they were trusted until the render ends.
+        const auto guard = holdTrusted(synthTools, diagnostics);
+        if (!guard) {
+            return outcome;
+        }
 
         // The scripts are generated even if no directory is given, so that a plan that the
         // classic strategy refuses is refused here as well. They are written only into a given
@@ -184,7 +189,10 @@ namespace hello::kit {
                     continue;
                 }
                 pool.start([&, i] {
-                    if (stopped.load()) {
+                    // A changed resampler is not started, which matters on the systems that
+                    // cannot keep it from being replaced.
+                    if (stopped.load() || !guard->isIntact()) {
+                        stopped.store(true);
                         return;
                     }
                     auto &result = outcomes[i];
@@ -209,10 +217,10 @@ namespace hello::kit {
                 });
             }
 
-            // Queried while the pool runs, so that a canceled render starts no further notes and
-            // kills the running calls.
+            // Queried while the pool runs, so that a canceled render, or one whose resampler
+            // changed, starts no further notes and kills the running calls.
             while (!pool.waitForDone(50)) {
-                if (canceled()) {
+                if (canceled() || !guard->isIntact()) {
                     stopped.store(true);
                     aborted.store(true);
                 }
@@ -224,6 +232,9 @@ namespace hello::kit {
             diagnostics.append(outcomes.at(i).diagnostics);
         }
 
+        if (reportChange(*guard, diagnostics)) {
+            return outcome;
+        }
         if (stopped.load() && !stopOnFirstFailure) {
             outcome.canceled = true;
             return outcome;
@@ -300,21 +311,24 @@ namespace hello::kit {
 
         // These calls append to a single file and therefore run sequentially on one thread. The
         // header and the data of a canceled render are removed.
+        // A changed wavtool stops the render as a cancellation would, and is reported as a
+        // failure.
+        const auto stopping = [&] { return canceled() || !guard->isIntact(); };
         for (const auto &step : steps) {
-            if (canceled()) {
+            if (stopping()) {
                 fs::remove(header, error);
                 fs::remove(data, error);
-                outcome.canceled = true;
+                outcome.canceled = !reportChange(*guard, diagnostics);
                 return outcome;
             }
             if (!step.resamples() || fs::exists(step.cacheFile)) {
                 const auto before = writtenSize();
                 const auto run = synthTool->run(synthTools.wavtool, step.wavtoolArguments,
-                                                diagnostics, canceled);
+                                                diagnostics, stopping);
                 if (run.canceled) {
                     fs::remove(header, error);
                     fs::remove(data, error);
-                    outcome.canceled = true;
+                    outcome.canceled = !reportChange(*guard, diagnostics);
                     return outcome;
                 }
                 if (!run.started) {

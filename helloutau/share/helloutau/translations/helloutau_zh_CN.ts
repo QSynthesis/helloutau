@@ -3434,8 +3434,20 @@ Open it now?</source>
 <context>
     <name>hello::daw::SynthToolTrust</name>
     <message>
+        <source>%1 cannot be read.</source>
+        <translation>无法读取 %1。</translation>
+    </message>
+    <message>
         <source>Trust Project Synth Tools</source>
         <translation>信任工程中的合成工具</translation>
+    </message>
+    <message>
+        <source>Trust cannot be recorded for the rendering tools of the project, for the following reasons:
+
+%1</source>
+        <translation>无法为工程的渲染工具建立信任，原因如下：
+
+%1</translation>
     </message>
     <message numerus="yes">
         <source>The project specifies %n rendering tool(s) that are not trusted:
@@ -5152,6 +5164,39 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     </message>
 </context>
 <context>
+    <name>hello::kit::FileFingerprint</name>
+    <message>
+        <source>%1 cannot be read: %2</source>
+        <translation>无法读取 %1：%2</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::FileGuard</name>
+    <message>
+        <source>%1 has changed since it was trusted.</source>
+        <translation>%1 在信任之后发生了变化。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::FilePermissions</name>
+    <message>
+        <source>Other users can write to %1.</source>
+        <translation>其他用户可以写入 %1。</translation>
+    </message>
+    <message>
+        <source>The members of the group of %1 can write to it.</source>
+        <translation>%1 所属组的成员可以写入它。</translation>
+    </message>
+    <message>
+        <source>%1 belongs to another user.</source>
+        <translation>%1 属于另一个用户。</translation>
+    </message>
+    <message>
+        <source>the folder %1</source>
+        <translation>文件夹 %1</translation>
+    </message>
+</context>
+<context>
     <name>hello::kit::FolderAccess</name>
     <message>
         <source>macOS denies %1 the access. Allow the access to the folder in System Settings, Privacy &amp; Security, Files and Folders.</source>
@@ -5958,6 +6003,17 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>This voice bank has no sample for &quot;%1&quot;, so the note is silent.</source>
         <translation>此音源没有「%1」的采样，因此该音符静音。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::SynthRunner</name>
+    <message>
+        <source>%1 The render did not start.</source>
+        <translation>%1渲染没有开始。</translation>
+    </message>
+    <message>
+        <source>%1 The render stopped.</source>
+        <translation>%1渲染已停止。</translation>
     </message>
 </context>
 <context>

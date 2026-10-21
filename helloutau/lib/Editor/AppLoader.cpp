@@ -27,6 +27,7 @@
 #include <hellokit/NativeSystem/NativeMessageBox.h>
 #include <hellokit/NativeSystem/NativeProcess.h>
 #include <hellokit/Support/ExitLauncher.h>
+#include <hellokit/Support/FileIntegrity.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/SingleProcessPeer.h>
 #include <hellokit/Support/TemporaryStorage.h>
@@ -132,6 +133,8 @@ namespace hello::daw {
         std::optional<kit::TemporaryStorage> temporaryStorage;
         std::optional<kit::ExitLauncher> exitLauncher;
         std::optional<kit::TranslationLoader> translations;
+        // The fingerprints of the trusted programs, see docs/ProgramIntegrity.md
+        kit::FileFingerprintCache fingerprints;
         stdc::pluginsystem::PluginSystem system{AppLoader::pluginIid,
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;

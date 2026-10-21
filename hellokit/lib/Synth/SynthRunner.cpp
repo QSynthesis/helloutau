@@ -14,6 +14,10 @@ namespace hello::kit {
 
     namespace {
 
+        class Messages {
+            Q_DECLARE_TR_FUNCTIONS(hello::kit::SynthRunner)
+        };
+
         /// The number at the start of a fragment name, which identifies the note.
         std::optional<int> noteOf(const fs::path &file) {
             const auto name = QString::fromStdU16String(file.filename().u16string());
@@ -69,6 +73,28 @@ namespace hello::kit {
         failure.run = std::move(run);
         failure.file = step.cacheFile;
         return failure;
+    }
+
+    std::optional<FileGuard> SynthRunner::holdTrusted(const SynthTools &synthTools,
+                                                      DiagnosticList &diagnostics) {
+        QString reason;
+        auto guard = FileGuard::hold(synthTools.trusted, &reason);
+        if (!guard) {
+            diagnostics.push_back({Diagnostic::Error,
+                                   Messages::tr("%1 The render did not start.").arg(reason),
+                                   std::nullopt});
+        }
+        return guard;
+    }
+
+    bool SynthRunner::reportChange(const FileGuard &guard, DiagnosticList &diagnostics) {
+        if (guard.isIntact()) {
+            return false;
+        }
+        diagnostics.push_back({Diagnostic::Error,
+                               Messages::tr("%1 The render stopped.").arg(guard.changeMessage()),
+                               std::nullopt});
+        return true;
     }
 
     int SynthRunner::removeSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const {

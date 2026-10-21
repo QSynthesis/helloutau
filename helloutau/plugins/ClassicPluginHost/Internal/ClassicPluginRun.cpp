@@ -2,6 +2,7 @@
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
+#include <QtCore/QTimer>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
@@ -13,6 +14,7 @@
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
+#include <hellokit/Support/FileIntegrity.h>
 #include <hellokit/Support/JsonInterop.h>
 
 #include <helloutau/Editor/AppLoader.h>
@@ -42,9 +44,13 @@ namespace hello::daw {
         }
 
         // Shows a message box in which the user trusts a program that has not run before or has
-        // changed since its last run, and returns whether the program is trusted. Without a
-        // loader, which stores the trust records, the message box is shown each time.
-        bool askTrust(QWidget *parent, const ClassicPlugin &plugin) {
+        // changed since its last run. Without a loader, which stores the trust records, the
+        // message box is shown each time.
+        //
+        // Returns the SHA-256 of the trusted program, which is held unchanged while it runs, or
+        // std::nullopt if the program is not trusted. The SHA-256 is read before the state, so
+        // that a program replaced in between is found changed when it is held.
+        std::optional<QString> askTrust(QWidget *parent, const ClassicPlugin &plugin) {
             namespace json = stdc::json;
             using A = ClassicPluginTrust;
             const auto loader = AppLoader::instance();
@@ -52,9 +58,19 @@ namespace hello::daw {
                                               loader->pluginSettings().userData(), A::userDataPath)
                                               .toArray(json::Array())
                                         : json::Array();
+            const auto fingerprint = kit::FileFingerprintCache::fingerprintOf(plugin.program);
             const auto state = A::stateOf(records, plugin);
-            if (state == A::Trusted) {
-                return true;
+            if (state == A::Trusted && fingerprint) {
+                return fingerprint->sha256();
+            }
+            // A program that cannot be trusted is reported rather than offered.
+            if (const auto reason = A::refusalOf(plugin)) {
+                QMessageBox::warning(parent, ClassicPluginRun::tr("Run Plugin"),
+                                     ClassicPluginRun::tr("Trust cannot be recorded for the "
+                                                          "program of the plugin \"%1\", for the "
+                                                          "following reason:\n\n%2")
+                                         .arg(plugin.name, *reason));
+                return std::nullopt;
             }
             const auto question =
                 state == A::Changed
@@ -69,15 +85,20 @@ namespace hello::daw {
                     ClassicPluginRun::tr("Run the program only if its source is trusted."),
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (answer != QMessageBox::Yes) {
-                return false;
+                return std::nullopt;
+            }
+            // A program that became unreadable since the question is not trusted.
+            const auto trusted = A::trusted(records, plugin);
+            if (!trusted) {
+                return std::nullopt;
             }
             if (loader) {
                 loader->updatePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
                     kit::JsonInterop::insertAt(settings.userData(), A::userDataPath,
-                                               json::Value(A::trusted(records, plugin)));
+                                               json::Value(*trusted));
                 });
             }
-            return true;
+            return fingerprint ? std::optional(fingerprint->sha256()) : std::nullopt;
         }
 
         QString messagesOf(const kit::DiagnosticList &diagnostics) {
@@ -89,9 +110,18 @@ namespace hello::daw {
         }
 
         // Shows a modal dialog until the run ends, with Cancel, and with Done if the end of the
-        // program cannot be observed. Returns whether the run ended without cancellation.
-        bool waitFor(QWidget *parent, const ClassicPlugin &plugin, ClassicPluginRunner &runner) {
+        // program cannot be observed. A change of the program held by guard cancels the run.
+        // Returns whether the run ended without cancellation.
+        bool waitFor(QWidget *parent, const ClassicPlugin &plugin, ClassicPluginRunner &runner,
+                     const kit::FileGuard &guard) {
             QDialog dialog(parent);
+            QTimer check;
+            QObject::connect(&check, &QTimer::timeout, &dialog, [&] {
+                if (!guard.isIntact()) {
+                    dialog.reject();
+                }
+            });
+            check.start(100);
             dialog.setWindowTitle(plugin.name);
             const auto layout = new QVBoxLayout(&dialog);
             layout->addWidget(new QLabel(
@@ -137,7 +167,16 @@ namespace hello::daw {
             count = selected.last() - first + 1;
         }
 
-        if (!askTrust(window, plugin)) {
+        const auto sha256 = askTrust(window, plugin);
+        if (!sha256) {
+            return;
+        }
+        // The trusted program stays unchanged until the run ends, see docs/ProgramIntegrity.md.
+        QString reason;
+        const QList<kit::FileGuard::File> files{{plugin.program, *sha256}};
+        const auto guard = kit::FileGuard::hold(files, &reason);
+        if (!guard) {
+            QMessageBox::critical(window, plugin.name, reason);
             return;
         }
 
@@ -165,7 +204,11 @@ namespace hello::daw {
             if (const auto processId = runner.processId()) {
                 preview.start(*processId);
             }
-            if (!waitFor(window, plugin, runner) || runner.isUnchanged()) {
+            if (!waitFor(window, plugin, runner, *guard) || runner.isUnchanged()) {
+                // A program changed during the run is reported, and its result is not applied.
+                if (!guard->isIntact()) {
+                    QMessageBox::critical(window, plugin.name, guard->changeMessage());
+                }
                 return;
             }
         }

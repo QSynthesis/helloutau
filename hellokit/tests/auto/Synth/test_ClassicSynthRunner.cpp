@@ -3,8 +3,11 @@
 /// this repository. Covered is **the content written into the script**, which is where the risk
 /// lies. See test_ThreadedSynthRunner.cpp for the remaining coverage gap.
 
+#include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <memory>
+#include <thread>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QDir>
@@ -165,6 +168,46 @@ private:
 
         std::unique_ptr<SynthToolProcess> makeSynthToolProcess() const override {
             return std::make_unique<ScriptStandIn>(written, ending);
+        }
+    };
+
+    /// A script during which the trusted synth tool \a trusted is appended to, and which then
+    /// runs until the runner asks it to stop, for at most five seconds. On Windows, where the
+    /// held file cannot be written, the script ends normally.
+    class ChangingScriptStandIn : public SynthToolProcess {
+    public:
+        explicit ChangingScriptStandIn(std::filesystem::path trusted)
+            : m_trusted(std::move(trusted)) {
+        }
+
+        SynthToolRun runScript(const std::filesystem::path &, DiagnosticList &,
+                               const std::function<bool()> &canceled) const override {
+            SynthToolRun run;
+            run.started = true;
+            QFile file(QString::fromStdU16String(m_trusted.u16string()));
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
+                run.exitCode = 0;
+                return run;
+            }
+            file.write("b");
+            file.close();
+            for (int i = 0; i < 500 && !run.canceled; ++i) {
+                run.canceled = canceled && canceled();
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            return run;
+        }
+
+    private:
+        std::filesystem::path m_trusted;
+    };
+
+    class ChangingScriptRunner : public ClassicSynthRunner {
+    public:
+        std::filesystem::path trusted;
+
+        std::unique_ptr<SynthToolProcess> makeSynthToolProcess() const override {
+            return std::make_unique<ChangingScriptStandIn>(trusted);
         }
     };
 
@@ -774,6 +817,42 @@ private Q_SLOTS:
                 std::filesystem::remove(step.cacheFile);
             }
         }
+    }
+
+    // The script starts the synth tools itself, so that a trusted synth tool that changes while
+    // it runs is detected through the query of the cancellation, which kills the script. The
+    // render is then a failure, not a cancellation. See docs/ProgramIntegrity.md.
+    void a_trusted_synth_tool_that_changes_kills_the_script() {
+        const auto p = planOfNotes(1);
+        QVERIFY(p.has_value());
+        write(QStringLiteral("trusted/resampler"), "a");
+        ChangingScriptRunner runner;
+        runner.trusted = root() / "trusted" / "resampler";
+        auto tools = synthTools();
+        tools.trusted = {
+            {runner.trusted,
+             QStringLiteral("ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb")}
+        };
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, tools, nullptr, diagnostics);
+        QVERIFY(!outcome.canceled);
+#ifdef Q_OS_WIN
+        QCOMPARE(QFileInfo(QString::fromStdU16String(runner.trusted.u16string())).size(), 1);
+#else
+        QVERIFY(!outcome.rendered);
+        QVERIFY(std::any_of(diagnostics.cbegin(), diagnostics.cend(), [](const auto &d) {
+            return d.severity == Diagnostic::Error &&
+                   d.message.contains(QStringLiteral("resampler"));
+        }));
+#endif
+        // A content other than the trusted one keeps the script from starting.
+        write(QStringLiteral("trusted/resampler"), "c");
+        diagnostics.clear();
+        const auto refused = runner.render(*p, tools, nullptr, diagnostics);
+        QVERIFY(!refused.rendered);
+        QVERIFY(!refused.canceled);
+        QVERIFY(!diagnostics.isEmpty());
     }
 
     // Fragments that existed before the script and that it did not rewrite are kept, also if

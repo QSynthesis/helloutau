@@ -3,14 +3,13 @@
 #include <algorithm>
 
 #include <QtCore/QCoreApplication>
-#include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
-#include <QtCore/QFile>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtWidgets/QMessageBox>
 
 #include <hellokit/Document/Project.h>
+#include <hellokit/Support/FileIntegrity.h>
 
 #include "AppSettings.h"
 
@@ -27,13 +26,20 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
+        // Returns the SHA-256 of path, read again only if the file has changed, or an empty
+        // string if it cannot be read.
         QString sha256Of(const std::filesystem::path &path) {
-            QFile file(textOf(path));
-            QCryptographicHash hash(QCryptographicHash::Sha256);
-            if (!file.open(QIODevice::ReadOnly) || !hash.addData(&file)) {
-                return {};
-            }
-            return QString::fromLatin1(hash.result().toHex());
+            const auto fingerprint = kit::FileFingerprintCache::fingerprintOf(path);
+            return fingerprint ? fingerprint->sha256() : QString();
+        }
+
+        // Returns whether the record of filePath is to be kept: the file exists, or its folder
+        // cannot be reached, as on a disconnected drive.
+        bool isLive(const QString &filePath) {
+            const auto path = std::filesystem::path(filePath.toStdU16String());
+            std::error_code error;
+            return std::filesystem::exists(path, error) ||
+                   !std::filesystem::is_directory(path.parent_path(), error);
         }
 
         QJsonArray entries(const AppSettings &settings) {
@@ -96,22 +102,55 @@ namespace hello::daw {
         return false;
     }
 
-    void SynthToolTrust::trust(AppSettings &settings, const QString &value,
+    std::optional<kit::FileGuard::File>
+        SynthToolTrust::trustedFile(const AppSettings &settings, const QString &value,
+                                    const std::filesystem::path &utau) {
+        if (samePath(value, settings.rendering().resampler(), utau) ||
+            samePath(value, settings.rendering().wavtool(), utau) ||
+            !isTrusted(settings, value, utau)) {
+            return std::nullopt;
+        }
+        std::error_code error;
+        const auto absolute = std::filesystem::weakly_canonical(pathOf(value, utau), error);
+        if (error) {
+            return std::nullopt;
+        }
+        // The content that isTrusted() has just found recorded, read from the cache
+        return kit::FileGuard::File{absolute, sha256Of(absolute)};
+    }
+
+    std::optional<QString> SynthToolTrust::refusalOf(const QString &value,
+                                                     const std::filesystem::path &utau) {
+        const auto path = pathOf(value, utau);
+        std::error_code error;
+        const auto absolute = std::filesystem::weakly_canonical(path, error);
+        QString reason;
+        if (error || absolute.empty() ||
+            !kit::FileFingerprintCache::fingerprintOf(absolute, &reason)) {
+            return reason.isEmpty() ? Messages::tr("%1 cannot be read.").arg(textOf(path)) : reason;
+        }
+        return kit::FilePermissions::writableByOthers(absolute);
+    }
+
+    bool SynthToolTrust::trust(AppSettings &settings, const QString &value,
                                const std::filesystem::path &utau) {
         const auto path = pathOf(value, utau);
         std::error_code error;
         const auto absolute = std::filesystem::weakly_canonical(path, error);
         if (error || absolute.empty() || !exists(value, utau)) {
-            return;
+            return false;
         }
         const auto filePath = textOf(absolute);
         const auto sha256 = sha256Of(absolute);
         if (sha256.isEmpty()) {
-            return;
+            return false;
         }
+        // One record for each path, and none for a file that is gone
         auto array = entries(settings);
         for (qsizetype i = array.size(); i-- > 0;) {
-            if (array.at(i).toObject().value(QStringLiteral("filePath")).toString() == filePath) {
+            const auto recorded =
+                array.at(i).toObject().value(QStringLiteral("filePath")).toString();
+            if (recorded == filePath || !isLive(recorded)) {
                 array.removeAt(i);
             }
         }
@@ -120,6 +159,7 @@ namespace hello::daw {
             {QStringLiteral("sha256"), sha256}
         });
         settings.setValue(QLatin1String(Key), array);
+        return true;
     }
 
     bool SynthToolTrust::isAllowed(const AppSettings &settings, const QString &value,
@@ -154,6 +194,21 @@ namespace hello::daw {
         if (asked.isEmpty()) {
             return true;
         }
+        // A synth tool that cannot be trusted is reported rather than offered.
+        QStringList refusals;
+        for (const auto &value : asked) {
+            if (const auto reason = refusalOf(value, utau)) {
+                refusals.push_back(*reason);
+            }
+        }
+        if (!refusals.isEmpty()) {
+            QMessageBox::warning(
+                parent, Messages::tr("Trust Project Synth Tools"),
+                Messages::tr("Trust cannot be recorded for the rendering tools of the project, "
+                             "for the following reasons:\n\n%1")
+                    .arg(refusals.join(QLatin1Char('\n'))));
+            return false;
+        }
         // The canonical path is shown, so that the user sees the program to which a relative
         // path such as resampler.exe\..\..\x.exe resolves.
         QStringList paths;
@@ -172,10 +227,12 @@ namespace hello::daw {
         if (answer != QMessageBox::Yes) {
             return false;
         }
+        // A file that became unreadable since the question is not trusted.
+        bool trusted = true;
         for (const auto &value : asked) {
-            trust(settings, value, utau);
+            trusted = trust(settings, value, utau) && trusted;
         }
-        return true;
+        return trusted;
     }
 
 }

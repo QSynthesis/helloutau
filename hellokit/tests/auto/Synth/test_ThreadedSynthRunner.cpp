@@ -10,6 +10,7 @@
 /// synth tools. That is covered by \c tests/manual/utaucompare , which compares against the UTAU
 /// render of the same project.
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <fstream>
@@ -173,6 +174,10 @@ namespace {
     private:
         PollingStandIn::Behaviour m_behaviour;
     };
+
+    /// The SHA-256 of "a", the content of a trusted synth tool of the tests
+    const QString sha256OfA =
+        QStringLiteral("ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
 
     /// Returns the fragment that the resampler arguments \a arguments request.
     std::filesystem::path fragmentOf(const QStringList &arguments) {
@@ -719,6 +724,79 @@ private Q_SLOTS:
         for (const auto &step : p->steps()) {
             QVERIFY(!std::filesystem::exists(step.cacheFile));
         }
+    }
+
+    // A trusted synth tool whose content differs from the trusted one keeps the render from
+    // starting, which is a failure rather than a cancellation. See docs/ProgramIntegrity.md.
+    void a_changed_trusted_synth_tool_keeps_the_render_from_starting() {
+        const auto p = plan(2);
+        QVERIFY(p.has_value());
+        write(QStringLiteral("trusted/resampler"), "changed");
+        auto synthTools = somewhere();
+        synthTools.trusted = {
+            {root() / "trusted" / "resampler", sha256OfA}
+        };
+        std::atomic_int calls{0};
+        PollingRunner runner(
+            [&](const std::filesystem::path &, const QStringList &, const std::function<bool()> &) {
+                ++calls;
+                return SynthToolRun{};
+            });
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+        QVERIFY(!outcome.rendered);
+        QVERIFY(!outcome.canceled);
+        QCOMPARE(calls.load(), 0);
+        QVERIFY(!diagnostics.isEmpty());
+        QCOMPARE(diagnostics.last().severity, Diagnostic::Error);
+    }
+
+    // A trusted resampler that changes while it runs stops the render, which kills the running
+    // calls as a cancellation would and is reported as a failure. On Windows the held file
+    // cannot be changed, and the render goes on.
+    void a_trusted_synth_tool_that_changes_stops_the_render() {
+        const auto p = plan(2);
+        QVERIFY(p.has_value());
+        write(QStringLiteral("trusted/resampler"), "a");
+        const auto trusted = root() / "trusted" / "resampler";
+        auto synthTools = somewhere();
+        synthTools.trusted = {
+            {trusted, sha256OfA}
+        };
+        std::atomic_bool written{false};
+        PollingRunner runner([&](const std::filesystem::path &program, const QStringList &arguments,
+                                 const std::function<bool()> &canceled) {
+            SynthToolRun run;
+            run.started = true;
+            if (program != synthTools.resampler) {
+                return run;
+            }
+            if (!written.exchange(true)) {
+                QFile file(QString::fromStdU16String(trusted.u16string()));
+                if (file.open(QIODevice::WriteOnly | QIODevice::Append)) {
+                    file.write("b");
+                    file.close();
+                    run.canceled = waitForCancellation(canceled);
+                    return run;
+                }
+            }
+            std::ofstream(fragmentOf(arguments), std::ios::binary) << "RIFF";
+            return run;
+        });
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+        QVERIFY(!outcome.canceled);
+#ifdef Q_OS_WIN
+        QCOMPARE(QFileInfo(QString::fromStdU16String(trusted.u16string())).size(), 1);
+#else
+        QVERIFY(!outcome.rendered);
+        QVERIFY(std::any_of(diagnostics.cbegin(), diagnostics.cend(), [](const auto &d) {
+            return d.severity == Diagnostic::Error &&
+                   d.message.contains(QStringLiteral("resampler"));
+        }));
+#endif
     }
 
     // A resampler killed at its time limit counts as failed, and its fragment is removed.

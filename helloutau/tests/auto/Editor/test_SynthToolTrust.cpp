@@ -1,5 +1,6 @@
 #include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <QtCore/QJsonArray>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtTest/QTest>
@@ -87,6 +88,37 @@ private Q_SLOTS:
         QVERIFY(SynthToolTrust::isAllowed(*m_settings, pathIn("utau/wavtool.exe"), m_utau));
         QVERIFY(SynthToolTrust::isAllowed(*m_settings, QStringLiteral("resampler.exe"), m_utau));
         QVERIFY(!SynthToolTrust::isAllowed(*m_settings, pathIn("evil/tool.exe"), m_utau));
+    }
+
+    // A file that cannot be read is not trusted, and the reason is given.
+    void an_unreadable_synth_tool_is_not_trusted() {
+        const auto missing = pathIn("evil/missing.exe");
+        QVERIFY(!SynthToolTrust::trust(*m_settings, missing, m_utau));
+        const auto reason = SynthToolTrust::refusalOf(missing, m_utau);
+        QVERIFY(reason);
+        QVERIFY(reason->contains(QStringLiteral("missing.exe")));
+        QVERIFY(!SynthToolTrust::refusalOf(pathIn("evil/tool.exe"), m_utau));
+    }
+
+    // Writing a record replaces that of the same path, removes the records of the files that
+    // are gone from a folder that exists, and keeps those of a folder that cannot be reached.
+    void the_records_of_synth_tools_that_are_gone_are_removed() {
+        writeFile(pathIn("gone/tool.exe"), "gone");
+        writeFile(pathIn("away/tool.exe"), "away");
+        const auto count = [this] {
+            return m_settings->value(QStringLiteral("synthToolTrust/trusted")).toArray().size();
+        };
+        QVERIFY(SynthToolTrust::trust(*m_settings, pathIn("gone/tool.exe"), m_utau));
+        QVERIFY(SynthToolTrust::trust(*m_settings, pathIn("away/tool.exe"), m_utau));
+        QVERIFY(SynthToolTrust::trust(*m_settings, pathIn("evil/tool.exe"), m_utau));
+        QVERIFY(SynthToolTrust::trust(*m_settings, pathIn("evil/tool.exe"), m_utau));
+        QCOMPARE(count(), 3);
+
+        QVERIFY(QFile::remove(pathIn("gone/tool.exe")));
+        QVERIFY(QDir(pathIn("away")).removeRecursively());
+        QVERIFY(SynthToolTrust::trust(*m_settings, pathIn("evil/tool.exe"), m_utau));
+        QCOMPARE(count(), 2);
+        QVERIFY(SynthToolTrust::isTrusted(*m_settings, pathIn("evil/tool.exe"), m_utau));
     }
 
     // A trust record holds the content of the file, so that a changed file is no longer

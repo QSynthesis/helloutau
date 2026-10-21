@@ -8,6 +8,7 @@
 #include <QtCore/QList>
 
 #include <hellokit/Support/Diagnostic.h>
+#include <hellokit/Support/FileIntegrity.h>
 
 #include <hellokit/Synth/SynthFailure.h>
 #include <hellokit/Synth/SynthToolProcess.h>
@@ -25,6 +26,12 @@ namespace hello::kit {
     struct SynthTools {
         std::filesystem::path resampler;
         std::filesystem::path wavtool;
+
+        /// The synth tools that run only because the user trusted them, with the SHA-256 that
+        /// they had then. A runner holds them unchanged for one render and stops the render if
+        /// one changes, see docs/ProgramIntegrity.md. Empty for the synth tools of the settings,
+        /// which require no trust.
+        QList<FileGuard::File> trusted;
     };
 
     /// The result of a render.
@@ -122,6 +129,20 @@ namespace hello::kit {
                                     SynthObserver *observer, DiagnosticList &diagnostics) const = 0;
 
         void setOutputLog(std::shared_ptr<SynthToolOutputLog> outputLog) const;
+
+        /// Holds the trusted synth tools of \a synthTools while they run. A synth tool that has
+        /// changed since it was trusted, or cannot be read, is reported to \a diagnostics. Every
+        /// runner and RealtimeSynth hold them through this function.
+        ///
+        /// \return the guard, which holds no file if no synth tool is trusted, or
+        ///         \c std::nullopt if the synth tools must not run
+        static std::optional<FileGuard> holdTrusted(const SynthTools &synthTools,
+                                                    DiagnosticList &diagnostics);
+
+        /// Returns whether a synth tool of \a guard has changed while it was held, and reports
+        /// the change to \a diagnostics if so. A render stopped by a change is a failure, not a
+        /// cancellation.
+        static bool reportChange(const FileGuard &guard, DiagnosticList &diagnostics);
 
     protected:
         /// Creates the object that starts one synth tool.

@@ -13,6 +13,7 @@
 
 #include <hellokit/AudioFile/WaveAudio.h>
 
+#include <hellokit/Synth/SynthRunner.h>
 #include <hellokit/Synth/WavtoolMixer.h>
 
 namespace hello::kit {
@@ -72,6 +73,9 @@ namespace hello::kit {
         // Written under the lock. The flag is atomic because each synth tool call reads it without
         // the lock to determine whether to kill the synth tool.
         std::atomic_bool stopping{false};
+        // Set once a trusted resampler is found changed, after which no resampler runs. The
+        // change is reported once.
+        std::atomic_bool distrusted{false};
 
         // From the current plan
         QList<SynthStep> steps;
@@ -149,16 +153,42 @@ namespace hello::kit {
                 std::error_code error;
                 if (step.resamples() && !fs::exists(step.cacheFile, error)) {
                     fs::create_directories(directory, error);
-                    const auto run =
-                        synthTool->run(synthTools.resampler, step.resamplerArguments,
-                                       synthToolDiagnostics, [this] { return stopping.load(); });
+                    // The trusted resampler is held for this call alone rather than for the
+                    // whole preview, so that it is not locked while the window is open. Holding
+                    // it again reads only its identity once the cache knows its content.
+                    DiagnosticList trustDiagnostics;
+                    auto guard = distrusted.load()
+                                     ? std::nullopt
+                                     : SynthRunner::holdTrusted(synthTools, trustDiagnostics);
+                    std::optional<SynthToolRun> run;
+                    if (guard) {
+                        run = synthTool->run(
+                            synthTools.resampler, step.resamplerArguments, synthToolDiagnostics,
+                            [this, &guard] { return stopping.load() || !guard->isIntact(); });
+                        if (SynthRunner::reportChange(*guard, trustDiagnostics)) {
+                            guard.reset();
+                        }
+                    }
+                    if (!guard) {
+                        // The note fails without its resampler, and the reason is reported once.
+                        if (run) {
+                            fs::remove(step.cacheFile, error);
+                        }
+                        lock.lock();
+                        if (!distrusted.exchange(true)) {
+                            diagnostics.append(trustDiagnostics);
+                        }
+                        fragments[step.cacheFile].state = Failed;
+                        changed.notify_all();
+                        continue;
+                    }
                     resamplerRun = run;
                     // A killed resampler may have written part of the fragment, which the next
                     // render would reuse as complete.
-                    if (run.canceled || run.timedOut) {
+                    if (run->canceled || run->timedOut) {
                         fs::remove(step.cacheFile, error);
                     }
-                    if (run.canceled) {
+                    if (run->canceled) {
                         lock.lock();
                         fragments[step.cacheFile].state = Waiting;
                         changed.notify_all();

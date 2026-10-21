@@ -228,6 +228,14 @@
         <translation>运行插件</translation>
     </message>
     <message>
+        <source>Trust cannot be recorded for the program of the plugin &quot;%1&quot;, for the following reason:
+
+%2</source>
+        <translation>无法为插件「%1」的程序建立信任，原因如下：
+
+%2</translation>
+    </message>
+    <message>
         <source>Run the program only if its source is trusted.</source>
         <translation>仅在程序来源可信时运行。</translation>
     </message>

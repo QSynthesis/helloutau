@@ -356,6 +356,14 @@ namespace hello::kit {
             return outcome;
         }
 
+        // The trusted synth tools stay as they were trusted until the script ends. The script
+        // starts them itself, so that a change is detected while it runs and kills it, as a
+        // cancellation does.
+        const auto guard = holdTrusted(synthTools, diagnostics);
+        if (!guard) {
+            return outcome;
+        }
+
         // The script removes the track file first as well, but a script that does not start
         // would leave the file of the previous render, to be taken for the result.
         fs::remove(plan.outputFile(), error);
@@ -381,8 +389,9 @@ namespace hello::kit {
             }
         }
 
-        const auto run = synthTool->runScript(
-            scriptPath, diagnostics, [observer] { return observer && observer->canceled(); });
+        const auto run = synthTool->runScript(scriptPath, diagnostics, [observer, &guard] {
+            return (observer && observer->canceled()) || !guard->isIntact();
+        });
 
         // The script was killed during one of its synth tool calls, and the resampler of that call
         // may have written part of its fragment. The script runs the notes in track order. That
@@ -403,7 +412,7 @@ namespace hello::kit {
         }
 
         if (run.canceled) {
-            outcome.canceled = true;
+            outcome.canceled = !reportChange(*guard, diagnostics);
             return outcome;
         }
 

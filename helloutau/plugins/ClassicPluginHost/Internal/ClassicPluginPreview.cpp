@@ -171,6 +171,17 @@ namespace hello::daw {
             kit::SynthTools tools;
             tools.wavtool = SynthToolTrust::resolved(project.settings.wavtool, utau);
             tools.resampler = SynthToolTrust::resolved(project.settings.resampler, utau);
+            // The synth tools that run because the user trusted them stay unchanged while they
+            // run, as in the project window. Both roles may name one program.
+            for (const auto &value : values) {
+                const auto file = SynthToolTrust::trustedFile(settings, value, utau);
+                if (file && std::none_of(tools.trusted.cbegin(), tools.trusted.cend(),
+                                         [&](const kit::FileGuard::File &other) {
+                                             return other.path == file->path;
+                                         })) {
+                    tools.trusted.push_back(*file);
+                }
+            }
             return tools;
         }
 
