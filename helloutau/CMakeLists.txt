@@ -150,13 +150,30 @@ if(HELLO_INSTALL AND HELLO_DEPLOY AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         endif()
     endif()
 
+    # Linux: Qt names xcb only, and the program then runs through XWayland in a Wayland session,
+    # blurred at a fractional scale. With wayland, the plugins of the types of the Wayland
+    # client serve the platform plugin. The device integrations serve the platform eglfs, which
+    # is not deployed.
+    set(_qt_plugin_options)
+    set(_qt_plugins_exclude tls/qopensslbackend generic/qinsighttracker)
+    if(NOT WIN32 AND NOT APPLE)
+        list(APPEND _qt_plugin_options QT_PLUGINS_PLATFORMS xcb wayland)
+        list(APPEND _qt_plugins_exclude
+            egldeviceintegrations/qeglfs-emu-integration
+            egldeviceintegrations/qeglfs-kms-egldevice-integration
+            egldeviceintegrations/qeglfs-kms-integration
+            egldeviceintegrations/qeglfs-x11-integration
+        )
+    endif()
+
     qm_deploy_directory(.
         LIBRARY_DIR ${_library_dir}
         PLUGIN_DIR ${_qt_plugin_dir}
         EXTRA_SEARCHING_PATHS ${_searching_paths}
         QT_PLUGINS
         QT_PLUGINS_EXCLUDE_MODULES Qml Quick
-        QT_PLUGINS_EXCLUDE tls/qopensslbackend generic/qinsighttracker
+        QT_PLUGINS_EXCLUDE ${_qt_plugins_exclude}
+        ${_qt_plugin_options}
         STANDARD
         VERBOSE
         COMMENT "Deploying Qt and the libraries that the installed binaries require"
