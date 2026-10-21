@@ -27,8 +27,12 @@ namespace hello::daw {
         m_list = new QTreeWidget();
         m_list->setRootIsDecorated(false);
         m_list->setHeaderLabels({tr("Folder"), tr("Version"), tr("Found in")});
-        m_list->header()->setSectionResizeMode(folderColumn, QHeaderView::Stretch);
-        m_list->header()->setStretchLastSection(false);
+        // Every column is dragged by the user, and the candidates do not resize them. The last
+        // column takes the remaining width.
+        m_list->header()->setSectionResizeMode(QHeaderView::Interactive);
+        m_list->header()->setStretchLastSection(true);
+        m_list->setColumnWidth(folderColumn, 440);
+        m_list->setColumnWidth(1, 150);
 
         m_status = new QLabel();
         m_status->setWordWrap(true);
@@ -107,8 +111,6 @@ namespace hello::daw {
         if (!m_list->currentItem()) {
             m_list->setCurrentItem(item);
         }
-        m_list->resizeColumnToContents(1);
-        m_list->resizeColumnToContents(2);
         updateStatus();
     }
 
