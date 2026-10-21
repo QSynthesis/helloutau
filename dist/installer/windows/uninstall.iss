@@ -1,5 +1,5 @@
-; The page of the uninstaller that offers to remove the settings and the temporary files as well.
-; See docs/Distribution.md.
+; The page of the uninstaller that offers to remove the user settings and the temporary files as
+; well, each with a check box of its own. See docs/Distribution.md.
 ;
 ; The uninstaller of Inno Setup has no wizard pages, so the page is added to the inner notebook of
 ; the window of the uninstaller, before its page of the progress. The page therefore has the
@@ -11,7 +11,8 @@
 
 var
     OptionsPage: TNewNotebookPage;
-    RemoveDataCheckBox: TNewCheckBox;
+    RemoveSettingsCheckBox: TNewCheckBox;
+    RemoveTemporaryCheckBox: TNewCheckBox;
     UninstallButton: TNewButton;
 
 // Removes OpenVPI\HelloUtau in Parent, and then OpenVPI if it is empty. RemoveDir() removes only
@@ -27,20 +28,45 @@ begin
     RemoveDir(Organization);
 end;
 
+// Returns whether CheckBox exists and is checked. A silent uninstallation creates neither check
+// box, so that it removes nothing of the user.
+function IsChecked(CheckBox: TNewCheckBox): Boolean;
+begin
+    Result := (CheckBox <> nil) and CheckBox.Checked;
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-    if (CurUninstallStep <> usPostUninstall) or (RemoveDataCheckBox = nil) or
-        not RemoveDataCheckBox.Checked then
+    if CurUninstallStep <> usPostUninstall then
         Exit;
     // OpenVPI\HelloUtau in the documents folder is never removed. It holds the voice banks and
     // the plugins of the user, which the user usually obtained elsewhere and arranged by hand,
     // and which cannot be restored. diffscope removes its documents folder, whereas HelloUtau
     // does not.
-    RemoveAppDirectory(ExpandConstant('{userappdata}'));
-    RemoveAppDirectory(ExpandConstant('{localappdata}'));
+    if IsChecked(RemoveSettingsCheckBox) then
+    begin
+        RemoveAppDirectory(ExpandConstant('{userappdata}'));
+        RemoveAppDirectory(ExpandConstant('{localappdata}'));
+    end;
     // The temporary files of the application are in one directory, see TemporaryStorage.
-    RemoveAppDirectory(GetEnv('TMP'));
-    RemoveAppDirectory(GetEnv('TEMP'));
+    if IsChecked(RemoveTemporaryCheckBox) then
+    begin
+        RemoveAppDirectory(GetEnv('TMP'));
+        RemoveAppDirectory(GetEnv('TEMP'));
+    end;
+end;
+
+// Returns a check box of the page at Top with Caption, checked.
+function CreatePageCheckBox(const Caption: String; const Top: Integer): TNewCheckBox;
+begin
+    Result := TNewCheckBox.Create(UninstallProgressForm);
+    Result.Parent := OptionsPage;
+    Result.Left := UninstallProgressForm.StatusLabel.Left;
+    Result.Top := Top;
+    Result.Width := UninstallProgressForm.StatusLabel.Width;
+    Result.Height := ScaleY(17);
+    Result.Caption := Caption;
+    Result.Checked := True;
 end;
 
 // Returns a text of the page at Top, which wraps within the width of the status label of the
@@ -79,18 +105,14 @@ begin
 
     Text := CreatePageText(ExpandConstant('{cm:UninstallOptionsLabel}'), Form.StatusLabel.Top, 0);
 
-    RemoveDataCheckBox := TNewCheckBox.Create(Form);
-    RemoveDataCheckBox.Parent := OptionsPage;
-    RemoveDataCheckBox.Left := Form.StatusLabel.Left;
-    RemoveDataCheckBox.Top := Text.Top + Text.Height + ScaleY(16);
-    RemoveDataCheckBox.Width := Form.StatusLabel.Width;
-    RemoveDataCheckBox.Height := ScaleY(17);
-    RemoveDataCheckBox.Caption := ExpandConstant('{cm:RemoveUserData}');
-    RemoveDataCheckBox.Checked := True;
+    RemoveSettingsCheckBox := CreatePageCheckBox(ExpandConstant('{cm:RemoveUserSettings}'),
+        Text.Top + Text.Height + ScaleY(16));
+    RemoveTemporaryCheckBox := CreatePageCheckBox(ExpandConstant('{cm:RemoveTemporaryFiles}'),
+        RemoveSettingsCheckBox.Top + RemoveSettingsCheckBox.Height + ScaleY(8));
 
-    // Indented as far as the caption of the check box
+    // Below both check boxes, which it concerns alike
     CreatePageText(ExpandConstant('{cm:RemoveUserDataNote}'),
-        RemoveDataCheckBox.Top + RemoveDataCheckBox.Height + ScaleY(4), ScaleX(18));
+        RemoveTemporaryCheckBox.Top + RemoveTemporaryCheckBox.Height + ScaleY(12), 0);
 
     // Uninstall to the left of Cancel, both as wide as the wider caption requires, with the right
     // edge of Cancel kept

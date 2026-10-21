@@ -189,7 +189,10 @@ Qt 与其他依赖库由 `cmake --install` 部署，即 `helloutau/CMakeLists.tx
 
 卸载程序在开始卸载前显示一页选项，写法同 diffscope 的 `uninstall.iss.in`：
 
-- 「删除设置与临时文件」，默认勾选（作者 2026-10-11 决定，同 diffscope）：删除应用数据目录下的 `OpenVPI\HelloUtau`（`{userappdata}`，若存在则同时删除 `{localappdata}` 下的同名目录），以及 `TMP` 与 `TEMP` 两个环境变量所指目录下的 `OpenVPI\HelloUtau`。各处的 `OpenVPI` 目录删除后为空时一并删除。
+- 两个复选框，都默认勾选（作者 2026-10-11 决定，同 diffscope，2026-10-21 拆为两项并改名）：
+  - 「删除用户设置」：删除应用数据目录下的 `OpenVPI\HelloUtau`（`{userappdata}`，若存在则同时删除 `{localappdata}` 下的同名目录）。
+  - 「删除临时文件」：删除 `TMP` 与 `TEMP` 两个环境变量所指目录下的 `OpenVPI\HelloUtau`。
+  - 各处的 `OpenVPI` 目录删除后为空时一并删除。两个复选框下方说明文档目录中的音源与插件无论如何都保留。
 - 文档目录下的 `OpenVPI\HelloUtau` 不删除，因为其中是用户的音源与插件，往往是用户从别处取得、自行整理的文件，删除后无法恢复。这一点与 diffscope 不同。卸载脚本中删除目录的代码处须以注释写明这一理由，以免日后照 diffscope 补上。
 - 选项只在交互卸载时显示。静默卸载（`/SILENT`、`/VERYSILENT`）不删除任何用户数据。
 - 选项只作用于执行卸载的用户。「为所有用户安装」时，其他用户的应用数据与临时文件不受影响。
