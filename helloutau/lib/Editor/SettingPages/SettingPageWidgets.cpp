@@ -31,10 +31,11 @@ namespace hello::daw {
         auto button = new QPushButton(SettingPage::tr("Browse..."));
         QObject::connect(button, &QPushButton::clicked, owner, [owner, edit, directory] {
             const auto chosen =
-                directory ? QFileDialog::getExistingDirectory(
-                                owner, SettingPage::tr("Choose Folder"), edit->text())
-                          : QFileDialog::getOpenFileName(owner, SettingPage::tr("Choose Program"),
-                                                         edit->text());
+                directory
+                    ? QFileDialog::getExistingDirectory(owner, SettingPage::tr("Choose Folder"),
+                                                        edit->text())
+                    : QFileDialog::getOpenFileName(owner, SettingPage::tr("Choose Program"),
+                                                   edit->text());
             if (!chosen.isEmpty()) {
                 edit->setText(QDir::toNativeSeparators(chosen));
             }
