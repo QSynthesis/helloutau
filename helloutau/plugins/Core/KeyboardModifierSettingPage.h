@@ -13,7 +13,9 @@
 #include <Core/CorePluginGlobal.h>
 
 class QComboBox;
+class QLabel;
 class QPushButton;
+class QTabWidget;
 
 namespace hello::daw {
 
@@ -24,8 +26,9 @@ namespace hello::daw {
     /// that scrolls its groups, as the keymap scrolls its commands, and Restore Defaults is
     /// beside the tabs. Each scheme has a group of boxes, one for each role. The boxes ignore the
     /// wheel, which scrolls the tab instead, so that a scroll does not change a binding. The page
-    /// edits a copy of the bindings. apply() rejects bindings that conflict, gives the others to
-    /// the editor and writes them with Editor::saveKeymap().
+    /// edits a copy of the bindings, marks the conflicting boxes as they change, and apply()
+    /// rejects bindings that conflict, gives the others to the editor and writes them with
+    /// Editor::saveKeymap().
     class COREPLUGIN_EXPORT KeyboardModifierSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -38,6 +41,17 @@ namespace hello::daw {
 
         /// Restores every modifier binding of every kind of window to its default.
         void restoreDefaults();
+
+        /// Returns a line for each conflict of the bindings as the page has them, with the kind
+        /// of window, the scheme and the roles, or an empty list if none conflict. apply()
+        /// refuses the bindings while the list is not empty.
+        QStringList conflictDescriptions() const;
+
+        /// The banner above the tabs that reports conflicts while any exist, while the widget
+        /// exists. Each conflicting box has a warning icon beside it, named after the box with
+        /// \c /conflict appended, whose tool tip names the other role, and the tab of the box
+        /// carries the warning icon.
+        QWidget *conflictBanner() const;
 
     protected:
         QWidget *createWidget() override;
@@ -55,9 +69,15 @@ namespace hello::daw {
             int scheme;
             int role;
             QPointer<QComboBox> box;
+            // The warning icon beside the box, shown while the role conflicts
+            QPointer<QLabel> mark;
         };
         QList<Box> m_boxes;
         QPointer<QPushButton> m_restore;
+        QPointer<QTabWidget> m_tabs;
+        QPointer<QWidget> m_conflictBanner;
+        // The tab of each kind of window, or -1 for a kind without modifier schemes
+        int m_tabIndex[std::size(Editor::windowKinds)] = {};
 
         void updateWidgets();
         QWidget *createSchemeGroup(Editor::WindowKind kind, int scheme);

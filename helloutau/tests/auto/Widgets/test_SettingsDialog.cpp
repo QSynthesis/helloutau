@@ -237,7 +237,7 @@ private Q_SLOTS:
     }
 
     // Apply is enabled while a page is modified, which is bold. Apply applies the modified pages.
-    // A page that fails to apply shows its reason and keeps OK from closing.
+    // A page that fails to apply shows its reason until it changes, and keeps OK from closing.
     void modified_pages_are_applied() {
         Pages pages;
         SettingsDialog dialog(&pages.catalog);
@@ -261,9 +261,12 @@ private Q_SLOTS:
         QCOMPARE(dialog.result(), int(QDialog::Rejected));
         QCOMPARE(dialog.currentPage(), pages.output);
         QCOMPARE(dialog.messageLabel()->text(), QStringLiteral("The text is empty."));
+        QVERIFY(!dialog.messageLabel()->isHidden());
         QCOMPARE(applied.size(), 1);
 
+        // A change of the page hides the reason, which may no longer hold.
         pages.output->edit->setText(QStringLiteral("1024"));
+        QVERIFY(dialog.messageLabel()->isHidden());
         dialog.accept();
         QCOMPARE(dialog.result(), int(QDialog::Accepted));
         QCOMPARE(pages.output->value, QStringLiteral("1024"));

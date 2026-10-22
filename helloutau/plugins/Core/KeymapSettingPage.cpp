@@ -1,5 +1,6 @@
 #include "KeymapSettingPage.h"
 
+#include <algorithm>
 #include <functional>
 #include <iterator>
 
@@ -16,6 +17,7 @@
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QStyle>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
@@ -97,6 +99,47 @@ namespace hello::daw {
         return result;
     }
 
+    QList<QKeySequence> KeymapSettingPage::conflictingShortcuts(const Command &command) const {
+        QList<QKeySequence> result;
+        for (const auto &key : shortcuts(command)) {
+            if (!conflicts(command, key).isEmpty()) {
+                result.push_back(key);
+            }
+        }
+        return result;
+    }
+
+    QStringList KeymapSettingPage::conflictDescriptions() const {
+        QStringList lines;
+        for (const auto &window : windowLayouts) {
+            const auto kind = window.kind;
+            // The shortcuts in the order of the commands, with the commands that have each
+            QList<QKeySequence> keys;
+            QHash<QKeySequence, QStringList> names;
+            for (const auto &id : m_commands[kind]) {
+                for (const auto &key : m_shortcuts[kind].value(id)) {
+                    if (!names.contains(key)) {
+                        keys.push_back(key);
+                    }
+                    names[key].push_back(nameOf({kind, id}));
+                }
+            }
+            for (const auto &key : std::as_const(keys)) {
+                const auto &commands = names[key];
+                if (commands.size() > 1) {
+                    lines.push_back(tr("%1 in %2: %3")
+                                        .arg(key.toString(QKeySequence::NativeText),
+                                             tr(window.name), commands.join(u", ")));
+                }
+            }
+        }
+        return lines;
+    }
+
+    QWidget *KeymapSettingPage::conflictBanner() const {
+        return m_conflictBanner;
+    }
+
     void KeymapSettingPage::addShortcut(const Command &command, const QKeySequence &key,
                                         const QList<Command> &removed) {
         for (const auto &other : removed) {
@@ -155,6 +198,16 @@ namespace hello::daw {
     }
 
     bool KeymapSettingPage::apply(QString *error) {
+        // Checked again here, because a shortcut of two commands of a window is ambiguous, and Qt
+        // triggers no action for an ambiguous shortcut.
+        const auto conflicting = conflictDescriptions();
+        if (!conflicting.isEmpty()) {
+            if (error) {
+                *error = tr("Some shortcuts are assigned to more than one command:") +
+                         QLatin1Char('\n') + conflicting.join(QLatin1Char('\n'));
+            }
+            return false;
+        }
         for (const auto kind : Editor::windowKinds) {
             // The overrides of commands that are not registered now, such as those of a plugin
             // turned off, stay.
@@ -278,7 +331,13 @@ namespace hello::daw {
         // The commands whose shortcuts differ from their manifests are drawn in the color of links,
         // as JetBrains IDEs mark them.
         const auto modified = m_tree->palette().color(QPalette::Link);
-        for (QTreeWidget *tree : m_trees) {
+        // The commands with a conflicting shortcut, the menus that contain them and their tabs
+        // carry the warning icon, so that a collapsed menu and another tab show the conflict.
+        const auto warning = m_tree->style()->standardIcon(QStyle::SP_MessageBoxWarning);
+        bool anyConflict = false;
+        for (int index = 0; index < int(std::size(m_trees)); ++index) {
+            QTreeWidget *tree = m_trees[index];
+            QSet<QTreeWidgetItem *> containing;
             for (QTreeWidgetItemIterator it(tree); *it; ++it) {
                 const auto command = commandOf(*it);
                 if (!command) {
@@ -289,8 +348,38 @@ namespace hello::daw {
                 const auto brush = keys == defaultsOf(*command) ? QBrush() : QBrush(modified);
                 (*it)->setForeground(0, brush);
                 (*it)->setForeground(1, brush);
+                QStringList conflictLines;
+                for (const auto &key : conflictingShortcuts(*command)) {
+                    QStringList names;
+                    for (const auto &other : conflicts(*command, key)) {
+                        names.push_back(nameOf(other));
+                    }
+                    conflictLines.push_back(
+                        tr("%1 is also assigned to %2.")
+                            .arg(key.toString(QKeySequence::NativeText), names.join(u", ")));
+                }
+                (*it)->setIcon(1, conflictLines.isEmpty() ? QIcon() : warning);
+                (*it)->setToolTip(1, conflictLines.join(QLatin1Char('\n')));
+                if (!conflictLines.isEmpty()) {
+                    for (auto parent = (*it)->parent(); parent; parent = parent->parent()) {
+                        containing.insert(parent);
+                    }
+                }
             }
+            for (QTreeWidgetItemIterator it(tree); *it; ++it) {
+                if (!commandOf(*it)) {
+                    (*it)->setIcon(1, containing.contains(*it) ? warning : QIcon());
+                }
+            }
+            const bool conflict = std::any_of(
+                m_commands[windowLayouts[index].kind].cbegin(),
+                m_commands[windowLayouts[index].kind].cend(), [this, index](const QString &id) {
+                    return !conflictingShortcuts({windowLayouts[index].kind, id}).isEmpty();
+                });
+            m_tabs->setTabIcon(index, conflict ? warning : QIcon());
+            anyConflict = anyConflict || conflict;
         }
+        m_conflictBanner->setVisible(anyConflict);
         filter();
         updateButtons();
     }
@@ -454,9 +543,28 @@ namespace hello::daw {
         content->addWidget(m_tabs, 1);
         content->addLayout(buttonColumn);
 
+        m_conflictBanner = new QWidget();
+        m_conflictBanner->setObjectName(QStringLiteral("conflictBanner"));
+        {
+            const auto size = widget->style()->pixelMetric(QStyle::PM_SmallIconSize);
+            auto icon = new QLabel();
+            icon->setPixmap(
+                widget->style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(size, size));
+            auto text = new QLabel(tr("Some shortcuts are assigned to more than one command of "
+                                      "a window. The commands, their menus and their tabs are "
+                                      "marked with the warning icon. The shortcuts cannot be "
+                                      "applied until each belongs to one command."));
+            text->setWordWrap(true);
+            auto bannerLayout = new QHBoxLayout(m_conflictBanner);
+            bannerLayout->setContentsMargins(0, 0, 0, 0);
+            bannerLayout->addWidget(icon, 0, Qt::AlignTop);
+            bannerLayout->addWidget(text, 1);
+        }
+
         auto layout = new QVBoxLayout(widget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addLayout(searchRow);
+        layout->addWidget(m_conflictBanner);
         layout->addLayout(content, 1);
 
         fillTree();

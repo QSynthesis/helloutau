@@ -125,6 +125,65 @@ private Q_SLOTS:
                  QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
     }
 
+    // The default shortcuts conflict nowhere. A shortcut left on two commands marks both, their
+    // menus and their tab, shows the banner, and makes apply() fail with the conflict. Removing
+    // the shortcut clears the marks, and apply() succeeds.
+    void conflicting_shortcuts_are_marked_until_resolved() {
+        using Command = KeymapSettingPage::Command;
+        QTemporaryDir dir;
+        const auto e = std::make_unique<Editor>(
+            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
+        new BuiltinActions(e.get());
+        e->setWatchesDisk(false);
+        KeymapSettingPage page(e.get());
+        const auto widget = page.widget();
+        const auto tabs = widget->findChild<QTabWidget *>(QStringLiteral("windows"));
+        const auto tree = qobject_cast<QTreeWidget *>(tabs->widget(0));
+        const auto banner = page.conflictBanner();
+        QVERIFY(tree && banner);
+        QVERIFY2(page.conflictDescriptions().isEmpty(),
+                 qPrintable(page.conflictDescriptions().join(u'\n')));
+        QVERIFY(!banner->isVisibleTo(widget));
+
+        const auto itemOf = [tree](const QString &id) -> QTreeWidgetItem * {
+            for (QTreeWidgetItemIterator it(tree); *it; ++it) {
+                if ((*it)->data(0, Qt::UserRole).toString() == id) {
+                    return *it;
+                }
+            }
+            return nullptr;
+        };
+        const Command combine{Editor::ProjectWindowKind,
+                              QStringLiteral("helloutau.edit.combineNotes")};
+        const Command insert{Editor::ProjectWindowKind,
+                             QStringLiteral("helloutau.edit.insertNote")};
+        const QKeySequence key(Qt::Key_Insert);
+        page.addShortcut(combine, key);
+        QCOMPARE(page.conflictingShortcuts(combine), QList<QKeySequence>{key});
+        QCOMPARE(page.conflictingShortcuts(insert), QList<QKeySequence>{key});
+        QCOMPARE(page.conflictDescriptions().size(), 1);
+        QVERIFY(banner->isVisibleTo(widget));
+        const auto combineItem = itemOf(combine.id);
+        QVERIFY(!combineItem->icon(1).isNull());
+        QVERIFY(!combineItem->toolTip(1).isEmpty());
+        QVERIFY(!itemOf(insert.id)->icon(1).isNull());
+        QVERIFY(!combineItem->parent()->icon(1).isNull());
+        QVERIFY(!tabs->tabIcon(0).isNull());
+        QVERIFY(tabs->tabIcon(1).isNull());
+        QString error;
+        QVERIFY(!page.apply(&error));
+        QVERIFY(error.contains(page.conflictDescriptions().first()));
+
+        page.removeShortcut(combine, key);
+        QVERIFY(page.conflictDescriptions().isEmpty());
+        QVERIFY(!banner->isVisibleTo(widget));
+        QVERIFY(combineItem->icon(1).isNull());
+        QVERIFY(combineItem->toolTip(1).isEmpty());
+        QVERIFY(combineItem->parent()->icon(1).isNull());
+        QVERIFY(tabs->tabIcon(0).isNull());
+        QVERIFY(page.apply(&error));
+    }
+
     // Each window kind has its own tab, and the windows have an Other group for commands in no
     // menu. A command of every kind, Undo, has shortcuts in each apart from the others. A
     // shortcut conflicts within one kind alone, and keymap.json has a section for each kind.

@@ -28,8 +28,28 @@
         <translation>鼠标与滚轮操作的修饰键。</translation>
     </message>
     <message>
-        <source>Modifier bindings conflict with each other.</source>
-        <translation>修饰键配置相互冲突。</translation>
+        <source>Some modifier keys conflict:</source>
+        <translation>部分修饰键互相冲突：</translation>
+    </message>
+    <message>
+        <source>%1, %2: %3 and %4</source>
+        <translation>%1，%2：%3 与 %4</translation>
+    </message>
+    <message>
+        <source>%1, %2: %3 cannot act without modifiers</source>
+        <translation>%1，%2：%3 没有修饰键时无法生效</translation>
+    </message>
+    <message>
+        <source>Conflicts with %1.</source>
+        <translation>与「%1」冲突。</translation>
+    </message>
+    <message>
+        <source>Cannot act without modifiers.</source>
+        <translation>没有修饰键时无法生效。</translation>
+    </message>
+    <message>
+        <source>Some modifier keys conflict. The boxes and their tabs are marked with the warning icon, whose tool tip names the other role. The modifier keys cannot be applied until the conflicts are resolved.</source>
+        <translation>部分修饰键互相冲突。冲突的下拉框及其标签页带有警告图标，图标的提示写明与哪一项冲突。冲突解决之前，修饰键无法应用。</translation>
     </message>
     <message>
         <source>Off</source>
@@ -63,8 +83,20 @@
         <translation>命令的快捷键。</translation>
     </message>
     <message>
+        <source>%1 in %2: %3</source>
+        <translation>%2 中的 %1：%3</translation>
+    </message>
+    <message>
+        <source>Some shortcuts are assigned to more than one command:</source>
+        <translation>部分快捷键分配给了多个命令：</translation>
+    </message>
+    <message>
         <source>Other</source>
         <translation>其他</translation>
+    </message>
+    <message>
+        <source>%1 is also assigned to %2.</source>
+        <translation>%1 同时分配给了 %2。</translation>
     </message>
     <message>
         <source>Add Keyboard Shortcut</source>
@@ -125,6 +157,10 @@
     <message>
         <source>Restore &amp;Defaults</source>
         <translation>恢复默认值(&amp;D)</translation>
+    </message>
+    <message>
+        <source>Some shortcuts are assigned to more than one command of a window. The commands, their menus and their tabs are marked with the warning icon. The shortcuts cannot be applied until each belongs to one command.</source>
+        <translation>部分快捷键分配给了同一窗口中的多个命令。这些命令、所在的菜单及其标签页带有警告图标。每个快捷键只属于一个命令之前，快捷键无法应用。</translation>
     </message>
     <message>
         <source>Remove %1</source>

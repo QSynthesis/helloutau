@@ -81,6 +81,51 @@ private Q_SLOTS:
                      .value_or(Qt::NoModifier));
     }
 
+    // A box set to the modifiers of another role of its scene marks both boxes and their tab,
+    // shows the banner and makes apply() fail with the conflict. Setting it back clears the
+    // marks, and apply() succeeds.
+    void conflicting_modifiers_are_marked_until_resolved() {
+        QTemporaryDir dir;
+        const auto e = editorIn(dir);
+        KeyboardModifierSettingPage page(e.get());
+        const auto widget = page.widget();
+        const auto banner = page.conflictBanner();
+        const auto tabs = widget->findChild<QTabWidget *>(QStringLiteral("windows"));
+        const auto horizontal = widget->findChild<QComboBox *>(
+            QStringLiteral("projectWindow/noteView/horizontalScroll"));
+        const auto horizontalMark = widget->findChild<QWidget *>(
+            QStringLiteral("projectWindow/noteView/horizontalScroll/conflict"));
+        const auto zoomMark = widget->findChild<QWidget *>(
+            QStringLiteral("projectWindow/noteView/timeZoom/conflict"));
+        const auto verticalMark = widget->findChild<QWidget *>(
+            QStringLiteral("projectWindow/noteView/verticalScroll/conflict"));
+        QVERIFY(banner && tabs && horizontal && horizontalMark && zoomMark && verticalMark);
+        QVERIFY(page.conflictDescriptions().isEmpty());
+        QVERIFY(!banner->isVisibleTo(widget));
+        QVERIFY(!horizontalMark->isVisibleTo(widget));
+
+        const auto original = horizontal->currentIndex();
+        horizontal->setCurrentIndex(horizontal->findData(int(Qt::ControlModifier)));
+        QCOMPARE(page.conflictDescriptions().size(), 1);
+        QVERIFY(banner->isVisibleTo(widget));
+        QVERIFY(horizontalMark->isVisibleTo(widget));
+        QVERIFY(zoomMark->isVisibleTo(widget));
+        QVERIFY(!verticalMark->isVisibleTo(widget));
+        QVERIFY(!horizontalMark->toolTip().isEmpty());
+        QVERIFY(!tabs->tabIcon(0).isNull());
+        QString error;
+        QVERIFY(!page.apply(&error));
+        QVERIFY(error.contains(page.conflictDescriptions().first()));
+
+        horizontal->setCurrentIndex(original);
+        QVERIFY(page.conflictDescriptions().isEmpty());
+        QVERIFY(!banner->isVisibleTo(widget));
+        QVERIFY(!horizontalMark->isVisibleTo(widget));
+        QVERIFY(!zoomMark->isVisibleTo(widget));
+        QVERIFY(tabs->tabIcon(0).isNull());
+        QVERIFY(page.apply(&error));
+    }
+
     // An option of modifiers is named as the platform writes the modifiers of a shortcut.
     void the_modifier_options_are_named_as_shortcuts_are() {
         QTemporaryDir dir;

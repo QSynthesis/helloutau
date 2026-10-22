@@ -6,8 +6,10 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QScrollArea>
+#include <QtWidgets/QStyle>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -99,15 +101,13 @@ namespace hello::daw {
     }
 
     bool KeyboardModifierSettingPage::apply(QString *error) {
-        for (const auto &list : m_modifiers) {
-            for (const auto &bindings : list) {
-                if (!bindings.isValid()) {
-                    if (error) {
-                        *error = tr("Modifier bindings conflict with each other.");
-                    }
-                    return false;
-                }
+        const auto conflicting = conflictDescriptions();
+        if (!conflicting.isEmpty()) {
+            if (error) {
+                *error = tr("Some modifier keys conflict:") + QLatin1Char('\n') +
+                         conflicting.join(QLatin1Char('\n'));
             }
+            return false;
         }
         for (const auto kind : Editor::windowKinds) {
             m_editor->setKeyboardModifierBindings(kind, m_modifiers[kind]);
@@ -129,14 +129,65 @@ namespace hello::daw {
         Q_EMIT modifiedChanged();
     }
 
+    QStringList KeyboardModifierSettingPage::conflictDescriptions() const {
+        QStringList lines;
+        for (const auto &window : windowNames) {
+            for (const auto &bindings : m_modifiers[window.kind]) {
+                const auto &scheme = bindings.scheme();
+                for (const auto &conflict : bindings.conflicts()) {
+                    lines.push_back(conflict.second ? tr("%1, %2: %3 and %4")
+                                                          .arg(tr(window.name), scheme.name(),
+                                                               scheme.roleName(conflict.first),
+                                                               scheme.roleName(*conflict.second))
+                                                    : tr("%1, %2: %3 cannot act without modifiers")
+                                                          .arg(tr(window.name), scheme.name(),
+                                                               scheme.roleName(conflict.first)));
+                }
+            }
+        }
+        return lines;
+    }
+
+    QWidget *KeyboardModifierSettingPage::conflictBanner() const {
+        return m_conflictBanner;
+    }
+
     void KeyboardModifierSettingPage::updateWidgets() {
+        bool conflictOf[std::size(Editor::windowKinds)] = {};
         for (const auto &item : std::as_const(m_boxes)) {
             if (!item.box) {
                 continue;
             }
-            const auto modifiers = m_modifiers[item.kind].at(item.scheme).modifiers(item.role);
+            const auto &bindings = m_modifiers[item.kind].at(item.scheme);
+            const auto modifiers = bindings.modifiers(item.role);
             const QSignalBlocker blocker(item.box);
             item.box->setCurrentIndex(item.box->findData(modifiers ? modifiers->toInt() : offData));
+            QStringList lines;
+            for (const auto &conflict : bindings.conflicts()) {
+                if (conflict.first != item.role && conflict.second != item.role) {
+                    continue;
+                }
+                lines.push_back(
+                    conflict.second
+                        ? tr("Conflicts with %1.")
+                              .arg(bindings.scheme().roleName(
+                                  conflict.first == item.role ? *conflict.second : conflict.first))
+                        : tr("Cannot act without modifiers."));
+            }
+            item.mark->setVisible(!lines.isEmpty());
+            item.mark->setToolTip(lines.join(QLatin1Char('\n')));
+            conflictOf[item.kind] = conflictOf[item.kind] || !lines.isEmpty();
+        }
+        if (m_tabs) {
+            const auto warning = m_tabs->style()->standardIcon(QStyle::SP_MessageBoxWarning);
+            bool any = false;
+            for (const auto kind : Editor::windowKinds) {
+                if (m_tabIndex[kind] >= 0) {
+                    m_tabs->setTabIcon(m_tabIndex[kind], conflictOf[kind] ? warning : QIcon());
+                }
+                any = any || conflictOf[kind];
+            }
+            m_conflictBanner->setVisible(any);
         }
         if (m_restore) {
             bool changed = false;
@@ -180,8 +231,18 @@ namespace hello::daw {
                         updateWidgets();
                         Q_EMIT modifiedChanged();
                     });
-            m_boxes.push_back({kind, scheme, role.id, box});
-            form->addRow(bindings.scheme().roleName(role.id), box);
+            // The warning icon beside the box, shown by updateWidgets() while the role conflicts
+            auto mark = new QLabel();
+            mark->setObjectName(box->objectName() + QStringLiteral("/conflict"));
+            const auto size = group->style()->pixelMetric(QStyle::PM_SmallIconSize);
+            mark->setPixmap(
+                group->style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(size, size));
+            mark->hide();
+            auto field = new QHBoxLayout();
+            field->addWidget(box, 1);
+            field->addWidget(mark);
+            m_boxes.push_back({kind, scheme, role.id, box, mark});
+            form->addRow(bindings.scheme().roleName(role.id), field);
         }
         return group;
     }
@@ -199,10 +260,15 @@ namespace hello::daw {
         m_boxes.clear();
         auto tabs = new QTabWidget();
         tabs->setObjectName(QStringLiteral("windows"));
+        m_tabs = tabs;
+        for (auto &index : m_tabIndex) {
+            index = -1;
+        }
         for (const auto &window : windowNames) {
             if (m_modifiers[window.kind].isEmpty()) {
                 continue;
             }
+            m_tabIndex[window.kind] = tabs->count();
             auto groups = new QWidget();
             auto groupLayout = new QVBoxLayout(groups);
             for (int scheme = 0; scheme < m_modifiers[window.kind].size(); ++scheme) {
@@ -224,7 +290,28 @@ namespace hello::daw {
         buttonColumn->addStretch();
         buttonColumn->addWidget(m_restore);
 
-        layout->addWidget(tabs, 1);
+        m_conflictBanner = new QWidget();
+        m_conflictBanner->setObjectName(QStringLiteral("conflictBanner"));
+        {
+            const auto size = widget->style()->pixelMetric(QStyle::PM_SmallIconSize);
+            auto icon = new QLabel();
+            icon->setPixmap(
+                widget->style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(size, size));
+            auto text = new QLabel(tr("Some modifier keys conflict. The boxes and their tabs are "
+                                      "marked with the warning icon, whose tool tip names the "
+                                      "other role. The modifier keys cannot be applied until the "
+                                      "conflicts are resolved."));
+            text->setWordWrap(true);
+            auto bannerLayout = new QHBoxLayout(m_conflictBanner);
+            bannerLayout->setContentsMargins(0, 0, 0, 0);
+            bannerLayout->addWidget(icon, 0, Qt::AlignTop);
+            bannerLayout->addWidget(text, 1);
+        }
+        auto tabColumn = new QVBoxLayout();
+        tabColumn->addWidget(m_conflictBanner);
+        tabColumn->addWidget(tabs, 1);
+
+        layout->addLayout(tabColumn, 1);
         layout->addLayout(buttonColumn);
 
         updateWidgets();

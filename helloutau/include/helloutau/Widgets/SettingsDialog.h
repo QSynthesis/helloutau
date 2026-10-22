@@ -88,6 +88,9 @@ namespace hello::daw {
         QDialogButtonBox *m_buttons;
         QHash<SettingPage *, QTreeWidgetItem *> m_items;
         QPointer<QWidget> m_category;
+        // The page whose error m_message shows, whose next change hides the error, which may no
+        // longer hold
+        QPointer<SettingPage> m_failedPage;
         QList<QPair<QPointer<QWidget>, QPalette>> m_highlighted;
 
         void addItems(const QList<SettingPage *> &pages, QTreeWidgetItem *parent);

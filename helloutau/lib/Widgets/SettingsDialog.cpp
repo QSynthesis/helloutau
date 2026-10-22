@@ -163,6 +163,7 @@ namespace hello::daw {
                 m_tree->setCurrentItem(m_items.value(page));
                 m_message->setText(error.isEmpty() ? tr("This page could not be applied.") : error);
                 m_message->show();
+                m_failedPage = page;
                 return false;
             }
         }
@@ -234,7 +235,13 @@ namespace hello::daw {
             item->setToolTip(0, page->description());
             item->setData(0, PageRole, QVariant::fromValue<void *>(page));
             m_items.insert(page, item);
-            connect(page, &SettingPage::modifiedChanged, this, [this] { updateModified(); });
+            connect(page, &SettingPage::modifiedChanged, this, [this, page] {
+                if (page == m_failedPage) {
+                    m_failedPage = nullptr;
+                    m_message->hide();
+                }
+                updateModified();
+            });
             addItems(page->pages(), item);
         }
     }

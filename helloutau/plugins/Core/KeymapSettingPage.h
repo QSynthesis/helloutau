@@ -69,6 +69,19 @@ namespace hello::daw {
         /// \a key.
         QList<Command> conflicts(const Command &command, const QKeySequence &key) const;
 
+        /// Returns the shortcuts of \a command that another command of its kind of window has.
+        QList<QKeySequence> conflictingShortcuts(const Command &command) const;
+
+        /// Returns a line for each shortcut that more than one command of a kind of window has,
+        /// with the shortcut, the kind of window and the commands, or an empty list if no
+        /// shortcut conflicts. apply() refuses the shortcuts while the list is not empty.
+        QStringList conflictDescriptions() const;
+
+        /// The banner above the commands that reports conflicting shortcuts while any exist,
+        /// while the widget exists. The conflicting commands, the menus that contain them and
+        /// their tabs carry the warning icon.
+        QWidget *conflictBanner() const;
+
         /// Adds \a key to the shortcuts of \a command, after removing it from \a removed.
         void addShortcut(const Command &command, const QKeySequence &key,
                          const QList<Command> &removed = {});
@@ -108,6 +121,7 @@ namespace hello::daw {
         QPointer<QPushButton> m_add;
         QPointer<QPushButton> m_remove;
         QPointer<QPushButton> m_reset;
+        QPointer<QWidget> m_conflictBanner;
 
         void load();
         void fillTree();
