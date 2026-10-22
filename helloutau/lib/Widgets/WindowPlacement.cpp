@@ -1,6 +1,7 @@
 #include "WindowPlacement.h"
 
 #include <algorithm>
+#include <tuple>
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
@@ -45,6 +46,11 @@ namespace hello::daw {
                    : available.center() - QPoint(size.width() / 2, size.height() / 2);
         const int right = std::max(available.left(), available.right() - size.width() + 1);
         const int bottom = std::max(available.top(), available.bottom() - size.height() + 1);
+        // A window moved to another screen before its native window exists is shown on the
+        // primary screen, at a position that Windows chooses. Moved after the native window is
+        // created, it is shown where it was moved (measured with Qt 6.11 on two screens,
+        // 2026-10-22).
+        std::ignore = window->winId();
         window->move(std::clamp(wanted.x(), available.left(), right),
                      std::clamp(wanted.y(), available.top(), bottom));
     }

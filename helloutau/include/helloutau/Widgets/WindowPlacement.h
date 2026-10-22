@@ -29,7 +29,8 @@ namespace hello::daw {
         /// Moves \a window, a new top-level window that is not shown yet, onto the screen of
         /// \a pointer, or of the primary screen if no screen contains \a pointer: cascaded from
         /// the window that anchorOf() returns among \a windows, or else centered on the screen,
-        /// and kept within the available area of the screen.
+        /// and kept within the available area of the screen. The native window of \a window is
+        /// created first.
         static void place(QWidget *window, const QList<QPointer<QWidget>> &windows,
                           const QPoint &pointer);
 
