@@ -501,6 +501,10 @@
         <translation>降低八度(&amp;C)</translation>
     </message>
     <message>
+        <source>By &amp;Interval...</source>
+        <translation>指定音程(&amp;I)...</translation>
+    </message>
+    <message>
         <source>&amp;Select Tool</source>
         <translation>选择工具(&amp;S)</translation>
     </message>
@@ -3745,6 +3749,29 @@ Trust and use them for rendering?</source>
     <message>
         <source>The margins must be one, two or four lengths.</source>
         <translation>边距必须为一个、两个或四个长度值。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::TransposeDialog</name>
+    <message>
+        <source>Transpose</source>
+        <translation>移调</translation>
+    </message>
+    <message>
+        <source> semitones</source>
+        <translation> 半音</translation>
+    </message>
+    <message>
+        <source>&amp;Interval:</source>
+        <translation>音程(&amp;I)：</translation>
+    </message>
+    <message>
+        <source>%1 to %2</source>
+        <translation>%1 至 %2</translation>
+    </message>
+    <message>
+        <source>The notes span %1, and %2 after the transposition. Within the keyboard range of UTAU, %3, the notes can be transposed by %4 to %5 semitones.</source>
+        <translation>音符的音高为 %1，移调后为 %2。在 UTAU 的音高范围 %3 之内，可以移调 %4 至 %5 个半音。</translation>
     </message>
 </context>
 <context>

@@ -113,6 +113,9 @@
                 shortcut="Ctrl+Shift+Up" />
         <action id="helloutau.edit.octaveDown" text="Down an O&amp;ctave" category="Transpose"
                 shortcut="Ctrl+Shift+Down" />
+        <!-- By a number of semitones that the user enters (TransposeDialog) -->
+        <action id="helloutau.edit.transposeByInterval" text="By &amp;Interval..."
+                category="Transpose" />
         <action id="helloutau.select.selectTool" text="&amp;Select Tool" category="Select"
                 shortcut="V" />
         <action id="helloutau.select.penTool" text="P&amp;en Tool" category="Select" shortcut="B" />
@@ -401,6 +404,8 @@
             <action id="helloutau.edit.transposeDown" />
             <action id="helloutau.edit.octaveUp" />
             <action id="helloutau.edit.octaveDown" />
+            <separator />
+            <action id="helloutau.edit.transposeByInterval" />
         </menu>
     </layouts>
 </actionExtension>

@@ -56,6 +56,7 @@
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
 
+#include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -102,6 +103,7 @@
 #include <helloutau/Editor/Dialogs/PasteParametersDialog.h>
 #include <helloutau/Editor/Dialogs/ScalePitchDialog.h>
 #include <helloutau/Editor/Dialogs/PitchControlDialog.h>
+#include <helloutau/Editor/Dialogs/TransposeDialog.h>
 #include <helloutau/Editor/Dialogs/VoiceBankDecodingDialog.h>
 #include <helloutau/Editor/SettingPages/FrequencyMapSettingPage.h>
 #include <helloutau/Editor/SettingPages/SystemSettingsPage.h>
@@ -959,6 +961,49 @@ private Q_SLOTS:
         });
         scale->trigger();
         QCOMPARE(depth(), before * 2);
+    }
+
+    // Transpose > By Interval opens the dialog for the keys of the selected notes, whose box is
+    // kept within the keyboard range, and transposes them by the entered semitones in one step.
+    void the_notes_are_transposed_by_an_entered_interval() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "t.usth"));
+        QVERIFY(window);
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto transpose =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.transposeByInterval"));
+        QVERIFY(transpose);
+        QVERIFY(!transpose->isEnabled());
+
+        roll->selectAll();
+        QVERIFY(transpose->isEnabled());
+        const auto keys = [window] {
+            // The snapshot is held, because the loop would otherwise read a destroyed temporary
+            const auto project = window->document()->session()->snapshot();
+            QList<int> result;
+            for (const auto &note : project.tracks[0].notes) {
+                result.push_back(note.noteNum);
+            }
+            return result;
+        };
+        const auto before = keys();
+        const int lowest = *std::min_element(before.begin(), before.end());
+        const int highest = *std::max_element(before.begin(), before.end());
+        handleNextDialog<TransposeDialog>([lowest, highest](TransposeDialog *dialog) {
+            QCOMPARE(dialog->semitoneBox()->value(), 0);
+            QCOMPARE(dialog->semitoneBox()->minimum(), kit::lowestNoteNum - lowest);
+            QCOMPARE(dialog->semitoneBox()->maximum(), kit::highestNoteNum - highest);
+            dialog->semitoneBox()->setValue(-5);
+            dialog->accept();
+        });
+        const int step = window->document()->session()->currentStep();
+        transpose->trigger();
+        const auto after = keys();
+        QCOMPARE(after.size(), before.size());
+        for (int i = 0; i < before.size(); ++i) {
+            QCOMPARE(after[i], before[i] - 5);
+        }
+        QCOMPARE(window->document()->session()->currentStep(), step + 1);
     }
 
     void nothing_chosen_pastes_nothing() {

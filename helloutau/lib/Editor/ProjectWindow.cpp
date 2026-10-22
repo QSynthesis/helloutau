@@ -89,6 +89,7 @@
 #include "RegionDialog.h"
 #include "ScalePitchDialog.h"
 #include "PitchControlDialog.h"
+#include "TransposeDialog.h"
 #include "VoiceBankDecodingDialog.h"
 #include "VoiceBankWindow.h"
 
@@ -1696,6 +1697,8 @@ namespace hello::daw {
                     });
                 });
             }
+            addCommand(QStringLiteral("helloutau.edit.transposeByInterval"),
+                       [this] { transposeByInterval(); });
 
             // Checked as the project has it. A click turns it over as an edit.
             const auto mode2 = addCommand(QStringLiteral("helloutau.edit.mode2"), [this] {
@@ -2178,7 +2181,8 @@ namespace hello::daw {
                   "helloutau.edit.resetPortamento", "helloutau.edit.resetVibratos",
                   "helloutau.edit.resetEnvelopes", "helloutau.edit.resetAll",
                   "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
-                  "helloutau.edit.octaveUp", "helloutau.edit.octaveDown", "helloutau.edit.setTempo",
+                  "helloutau.edit.octaveUp", "helloutau.edit.octaveDown",
+                  "helloutau.edit.transposeByInterval", "helloutau.edit.setTempo",
                   "helloutau.edit.noteProperties", "helloutau.edit.replaceLyrics"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
@@ -2234,6 +2238,31 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             roll->pasteParameters(pastedParameters, diagnostics);
             DiagnosticBox::report(&decl, tr("Paste Parameters"), diagnostics);
+        }
+
+        // Transposes the selected notes, rests included, by the semitones that the user enters,
+        // within the keyboard range.
+        void transposeByInterval() {
+            stdc_decl_t;
+            const auto indices = roll->selectedIndices();
+            if (indices.isEmpty() || roll->lyricEditor()->isVisible()) {
+                return;
+            }
+            int lowest = kit::highestNoteNum;
+            int highest = kit::lowestNoteNum;
+            for (const int index : indices) {
+                const int key = roll->timeline()->note(index).key;
+                lowest = std::min(lowest, key);
+                highest = std::max(highest, key);
+            }
+            TransposeDialog dialog(lowest, highest, &decl);
+            if (dialog.exec() != QDialog::Accepted || dialog.semitones() == 0) {
+                return;
+            }
+            const int semitones = dialog.semitones();
+            edit(tr("Transpose"), [this, semitones](kit::DiagnosticList &diagnostics) {
+                return roll->transposeSelected(semitones, diagnostics);
+            });
         }
 
         // Scales the pitch of the selected sung notes by the factors that the user enters.
