@@ -12,7 +12,13 @@
 ///   ustrender song.usth out.wav --voice ... --plan
 ///   ustrender song.ust out.wav --voice ... --compare-pitch
 ///   ustrender song.ust out.wav --voice ... --resampler ... --wavtool ... --compare-mix
+///   ustrender song.usth out.wav --voice ... --resampler ... --wavtool ... --note-range 6:10 \
+///       --cache-dir D:/cache
 /// \endcode
+///
+/// \c --note-range renders the notes of a closed range of note numbers, as the plan prints them,
+/// counted from 1. The plan still reads the neighbors of the range, so that the calls of these
+/// notes equal those of the whole song, and only the track file holds the range alone.
 
 #include <chrono>
 #include <cmath>
@@ -201,14 +207,22 @@ namespace {
 
     /// Computes the pitch curve of each note of \a plan with PitchCurve, as the editor draws it,
     /// and compares it with the curve the resampler receives, which must agree value for value.
-    int comparePitch(const Project &project, const SynthPlan &plan) {
+    /// \a plan covers every note, because the timing of a note depends on the next note, and only
+    /// the notes of \a range, if given, are compared.
+    int comparePitch(const Project &project, const SynthPlan &plan,
+                     const std::optional<std::pair<int, int>> &range) {
         const auto &notes = project.tracks.first().notes;
         const auto tempos = TempoMap::of(project);
         const auto &steps = plan.steps();
+        int compared = 0;
         int differing = 0;
         qsizetype values = 0;
         for (qsizetype i = 0; i < steps.size(); ++i) {
             const auto &step = steps[i];
+            if (range && (step.noteIndex < range->first || step.noteIndex > range->second)) {
+                continue;
+            }
+            ++compared;
             PitchCurve::Timing timing;
             timing.preUtterance = step.preUtterance;
             timing.startPoint = step.startPoint;
@@ -226,8 +240,8 @@ namespace {
                 stdc::u8printf("pitch: note %d differs\n", step.noteIndex + 1);
             }
         }
-        stdc::u8printf("pitch: %d notes, %d values, %d notes differ\n", int(steps.size()),
-                       int(values), differing);
+        stdc::u8printf("pitch: %d notes, %d values, %d notes differ\n", compared, int(values),
+                       differing);
         return differing == 0 ? 0 : 2;
     }
 
@@ -285,6 +299,28 @@ namespace {
         return result.valueForOption<std::string>(token).value_or(std::string());
     }
 
+    /// Reads \a text, a note number or a closed range of note numbers such as 6:10, counted from
+    /// 1, as a range of track indices of the \a count notes.
+    ///
+    /// \return the range, or \c std::nullopt if \a text is no range of the notes, reported
+    std::optional<std::pair<int, int>> noteRangeOf(const std::string &text, int count) {
+        const auto value = fromStd(text);
+        const auto parts = value.split(QLatin1Char(':'));
+        bool firstValid = false;
+        bool lastValid = parts.size() == 1;
+        const int first = parts.first().toInt(&firstValid);
+        const int last = parts.size() == 2 ? parts.last().toInt(&lastValid) : first;
+        if (parts.size() > 2 || !firstValid || !lastValid || first < 1 || last < first ||
+            last > count) {
+            stdc::console::u8fprintf(stderr,
+                                     "error: --note-range %s is no range of the notes 1 to %d, "
+                                     "such as 6:10\n",
+                                     text.c_str(), count);
+            return std::nullopt;
+        }
+        return std::pair(first - 1, last - 1);
+    }
+
     int render(const stdc::cli::ParseResult &result) {
         const fs::path input = pathOf(*result.value(0));
         const fs::path output = pathOf(*result.value(1));
@@ -323,10 +359,28 @@ namespace {
 
         SynthPlan::Options options;
         options.outputFile = output;
-        options.cacheDirectory = output.parent_path() / output.stem();
-        options.cacheDirectory += ".cache";
+        const auto cacheDirectory = option(result, "--cache-dir");
+        if (cacheDirectory.empty()) {
+            options.cacheDirectory = output.parent_path() / output.stem();
+            options.cacheDirectory += ".cache";
+        } else {
+            options.cacheDirectory = pathOf(cacheDirectory);
+        }
         options.projectDirectory = input.parent_path();
         options.resampler = pathOf(option(result, "--resampler"));
+        std::optional<std::pair<int, int>> range;
+        if (const auto text = option(result, "--note-range"); !text.empty()) {
+            range = noteRangeOf(text, int(project->tracks.first().notes.size()));
+            if (!range) {
+                return 1;
+            }
+        }
+        // The comparison of the pitch reads the next note of each note, so its plan covers every
+        // note and the comparison takes the range.
+        const bool comparesPitch = result.option("--compare-pitch").has_value();
+        if (!comparesPitch) {
+            options.range = range;
+        }
 
         diagnostics.clear();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
@@ -351,8 +405,8 @@ namespace {
             return 0;
         }
 
-        if (result.option("--compare-pitch")) {
-            return comparePitch(*project, *plan);
+        if (comparesPitch) {
+            return comparePitch(*project, *plan, range);
         }
 
         SynthTools synthTools;
@@ -535,6 +589,14 @@ int main(int argc, char *argv[]) {
             .addOption(cli::Option({"--compare-mix"},
                                    "Concatenate the fragments in the process as well, and compare "
                                    "the result with the file the wavtool wrote"))
+            .addOption(cli::Option({"--note-range"},
+                                   "Render only the notes of a range of note numbers counted from "
+                                   "1, such as 6:10, with the calls of the whole song")
+                           .arg(cli::Argument("range")))
+            .addOption(cli::Option({"--cache-dir"},
+                                   "The folder of the fragments, the output beside .cache by "
+                                   "default")
+                           .arg(cli::Argument("folder")))
             .setHandler(render)
             .addCommand(
                 cli::Command("script",
