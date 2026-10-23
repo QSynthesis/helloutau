@@ -372,7 +372,7 @@ int main(int argc, char *argv[]) {
                 cli::Option({"--examples"}, "The number of example notes listed per difference")
                     .arg(cli::Argument("count")))
             .setHandler(run)
-            .addHelpOption(true)
+            .addHelpOption(true, true)
             .addVersionOption("0.0.1"));
 
     return parser.invoke(system::command_line_arguments());

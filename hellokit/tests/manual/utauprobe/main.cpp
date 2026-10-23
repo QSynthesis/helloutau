@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
                                    "the machine running UTAU. Defaults to that of this machine")
                            .arg(cli::Argument("name")))
             .setHandler(run)
-            .addHelpOption(true)
+            .addHelpOption(true, true)
             .addVersionOption("0.0.1"));
 
     return parser.invoke(system::command_line_arguments());

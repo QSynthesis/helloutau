@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
             .addOption(cli::Option({"--dump-changes"},
                                    "Print each change as a line of JSON to standard output"))
             .setHandler(run)
-            .addHelpOption(true)
+            .addHelpOption(true, true)
             .addVersionOption("0.0.1"));
 
     // Not argv, which on Windows is limited to the ANSI code page and has already lost every

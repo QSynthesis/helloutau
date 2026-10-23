@@ -350,7 +350,7 @@ int main(int argc, char *argv[]) {
                 {"--check"},
                 "Write the input back and report the differences introduced by the round trip"))
             .setHandler(run)
-            .addHelpOption(true)
+            .addHelpOption(true, true)
             .addVersionOption("0.0.1"));
 
     // Not argv, which on Windows is limited to the ANSI code page and has already lost every

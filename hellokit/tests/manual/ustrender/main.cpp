@@ -655,7 +655,7 @@ int main(int argc, char *argv[]) {
                     .addArgument(cli::Argument("from", "The voice bank folder"))
                     .addArgument(cli::Argument("to", "A new folder"))
                     .setHandler(copy))
-            .addHelpOption(true)
+            .addHelpOption(true, true)
             .addVersionOption("0.0.1"));
 
     return parser.invoke(system::command_line_arguments());
